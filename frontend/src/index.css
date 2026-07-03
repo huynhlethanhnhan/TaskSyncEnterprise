@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/* 🌙 GLOBAL DARK MODE STYLE OVERRIDES */
+html.dark {
+  /* Override main body and root containers */
+  body, #root, .bg-\[\#f8fafc\] {
+    background-color: #0f172a !important; /* slate-900 */
+    color: #e2e8f0 !important; /* slate-200 */
+  }
+
+  /* Override white card backgrounds & layout panels */
+  .bg-white, 
+  .bg-slate-50\/20, 
+  .bg-slate-50\/30, 
+  .bg-slate-50\/50, 
+  .bg-slate-50\/80 {
+    background-color: #1e293b !important; /* slate-800 */
+    color: #f8fafc !important;
+    border-color: #334155 !important; /* slate-700 */
+  }
+
+  /* Override borders globally for cards, headers, tables, etc. */
+  .border-slate-100, 
+  .border-slate-200, 
+  .border-slate-50,
+  .border-slate-100\/80 {
+    border-color: #334155 !important; /* slate-700 */
+  }
+
+  /* Text color overrides to ensure readability */
+  .text-slate-800, 
+  .text-slate-900, 
+  .text-slate-700, 
+  .text-slate-600 {
+    color: #f1f5f9 !important;
+  }
+  .text-slate-500, 
+  .text-slate-400 {
+    color: #94a3b8 !important; /* slate-400 */
+  }
+
+  /* Form inputs, dropdown select tags, and buttons */
+  input, 
+  select, 
+  textarea, 
+  .bg-slate-50,
+  .bg-slate-100 {
+    background-color: #334155 !important; /* slate-700 */
+    color: #f8fafc !important;
+    border-color: #475569 !important; /* slate-600 */
+  }
+
+  /* Custom table hover classes in dark mode */
+  .hover\:bg-slate-50:hover {
+    background-color: #334155 !important;
+  }
+
+  /* Sidebar active navigation styling */
+  .bg-blue-50\/70 {
+    background-color: #2563eb/20 !important;
+    color: #60a5fa !important;
+  }
+}
