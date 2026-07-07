@@ -1,12 +1,12 @@
 # 📂 FILE: app/main.py
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles  # 🟢 1. THÊM IMPORT NÀY
-
-
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-import app.models  
+import app.models
 
 from app.routers.v1 import (
     health,
@@ -40,8 +40,11 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
-# 🟢 2. CHÈN LỆNH NÀY VÀO ĐÂY (Cho phép Frontend gọi link tải/xem ảnh đại diện và file đính kèm)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
+uploads_dir.mkdir(parents=True, exist_ok=True)
+(uploads_dir / "avatars").mkdir(parents=True, exist_ok=True)
+(uploads_dir / "attachments").mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 # ----------------------------------------------------------------------
 # 🛣️ ĐĂNG KÝ DANH SÁCH ROUTERS ĐỘNG

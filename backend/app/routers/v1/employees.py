@@ -5,7 +5,7 @@ from sqlalchemy import update
 
 from app.database import get_db
 from app.core.constants import ROLE_ADMIN
-from app.core.deps import RequireAdmin, RequireEmployee, get_current_user
+from app.core.deps import RequireAdmin, RequireManager, RequireEmployee, get_current_user
 from app.services.storage_service import StorageService
 from app.models.employee import Employee
 from app.schemas.employee import (
@@ -28,7 +28,7 @@ router = APIRouter(
 @router.get(
     "",
     response_model=list[EmployeeResponse],
-    dependencies=[Depends(RequireEmployee)] # <-- Cho phép cả Employee xem danh sách đồng nghiệp
+    dependencies=[Depends(RequireManager)] # <-- Chỉ cho phép Admin và Manager xem danh sách nhân viên
 )
 def get_employees(
         skip: int = 0,
