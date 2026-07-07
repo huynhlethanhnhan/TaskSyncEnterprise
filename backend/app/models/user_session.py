@@ -14,4 +14,4 @@ class UserSession(Base):
     ip_address: Mapped[str | None] = mapped_column(String(50), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("GETDATE()"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("SYSUTCDATETIME()"))

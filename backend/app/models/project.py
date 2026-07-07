@@ -44,12 +44,12 @@ class Project(Base):
 
     status: Mapped[str] = mapped_column(
         String(30),
-        server_default=text("'Planning'")
+        server_default=text("N'Planning'")
     )
 
     priority: Mapped[str] = mapped_column(
         String(20),
-        server_default=text("'Medium'")
+        server_default=text("N'Medium'")
     )
 
     budget: Mapped[float | None] = mapped_column(
@@ -72,7 +72,7 @@ class Project(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        server_default=text("GETDATE()")
+        server_default=text("SYSUTCDATETIME()")
     )
 
     updated_at: Mapped[datetime | None]

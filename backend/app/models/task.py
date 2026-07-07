@@ -39,12 +39,12 @@ class Task(Base):
 
     priority: Mapped[str] = mapped_column(
         String(20),
-        server_default=text("'Medium'")
+        server_default=text("N'Medium'")
     )
 
     status: Mapped[str] = mapped_column(
         String(30),
-        server_default=text("'To Do'")
+        server_default=text("N'To Do'")
     )
 
     story_points: Mapped[int] = mapped_column(
@@ -70,7 +70,7 @@ class Task(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        server_default=text("GETDATE()")
+        server_default=text("SYSUTCDATETIME()")
     )
 
     assignments = relationship(

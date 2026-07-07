@@ -1,15 +1,19 @@
 # 📂 FILE: app/models/audit.py
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, func
-from sqlalchemy.orm import relationship
+from datetime import datetime
+from sqlalchemy import Integer, String, DateTime, ForeignKey, text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import Optional
+
 from app.database import Base
+
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
-    employee_email = Column(String(255), index=True) # Duy nhất cột này
-    action = Column(String(255), index=True)
-    timestamp = Column(DateTime, server_default=func.now())
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    employee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("employees.id"), nullable=True)
+    employee_email: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    action: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=text("SYSUTCDATETIME()"))
 
-    employee = relationship("Employee")
+    employee: Mapped[Optional["Employee"]] = relationship("Employee")

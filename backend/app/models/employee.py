@@ -90,7 +90,7 @@ class Employee(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        server_default=text("GETDATE()")
+        server_default=text("SYSUTCDATETIME()")
     )
 
     updated_at: Mapped[datetime | None]

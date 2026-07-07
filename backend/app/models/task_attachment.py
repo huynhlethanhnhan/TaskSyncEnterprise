@@ -15,7 +15,7 @@ class TaskAttachment(Base):
     file_size: Mapped[int] = mapped_column(Integer)          # Dung lượng file (Bytes)
     mime_type: Mapped[str] = mapped_column(String(100))      # Kiểu file (application/pdf, image/png...)
     
-    uploaded_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("GETDATE()"))
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("SYSUTCDATETIME()"))
     uploaded_by_id: Mapped[int] = mapped_column(ForeignKey("employees.id"))
 
     # Thiết lập mối quan hệ
