@@ -1,317 +1,117 @@
-# 🚀 TaskSync Enterprise V2
+# 🚀 TaskSyncEnterprise — Enterprise HRM & Project Management
 
-> **Hệ thống quản lý nhân sự và công việc doanh nghiệp** — xây dựng với FastAPI (Backend) + React Vite (Frontend) + SQL Server.
-
----
-
-## 📋 Mục lục
-
-- [Tính năng chính](#-tính-năng-chính)
-- [Kiến trúc hệ thống](#-kiến-trúc-hệ-thống)
-- [Yêu cầu cài đặt](#-yêu-cầu-cài-đặt)
-- [Cài đặt Backend](#-cài-đặt-backend)
-- [Cài đặt Frontend](#-cài-đặt-frontend)
-- [Cấu hình Database](#-cấu-hình-database)
-- [Khởi chạy hệ thống](#-khởi-chạy-hệ-thống)
-- [Tài khoản mặc định](#-tài-khoản-mặc-định)
-- [Cấu trúc thư mục](#-cấu-trúc-thư-mục)
+TaskSyncEnterprise is an enterprise-grade platform that integrates Human Resource Management (HRM) and Project Management functionalities. Designed with strict security policies, real-time notification alerts, global audit logging, and modern React dashboard structures.
 
 ---
 
-## ✨ Tính năng chính
+## 🏛️ Project Overview
 
-| Module | Tính năng |
-|--------|-----------|
-| **Xác thực** | Đăng nhập JWT, phân quyền RBAC (Admin / Manager / Employee) |
-| **Dashboard** | Thống kê tiến độ dự án, deadline, biểu đồ Kanban |
-| **Tasks** | Tạo, chỉnh sửa, xóa task; Kanban board; cập nhật trạng thái kéo-thả |
-| **Tài liệu đính kèm** | Upload/xóa file đính kèm theo task (phân quyền theo người upload & người được giao) |
-| **Nhân viên** | Quản lý hồ sơ, phòng ban, vai trò |
-| **Dự án** | CRUD dự án, thống kê tiến độ |
-| **Nghỉ phép** | Xin nghỉ phép, duyệt/từ chối (Admin/Manager) |
-| **Thông báo** | Thông báo thời gian thực khi được gán task |
-| **Lịch** | Calendar view theo task deadline |
-| **Audit Log** | Ghi nhận toàn bộ hoạt động hệ thống |
+### High-Level Architecture
+TaskSyncEnterprise implements a decoupled Client-Server architecture:
+*   **Frontend (SPA):** Built using React 19, React Router Dom v7, and TailwindCSS v4. It manages client-side routing, theme modes (dark/light), and dashboard visualizations using Recharts.
+*   **Backend (REST API):** Developed using FastAPI ASGI server. It provides high-performance asynchronous request handling, stateless JWT authentication, and structured validation.
+*   **Database (Storage):** Microsoft SQL Server running under the `dbo` schema. It stores structural employee profiles, tasks, attachments metadata, and system audit logs. Database schema migrations are handled by Alembic, connected via SQLAlchemy 2.x and PyMSSQL.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                   FRONTEND (React 19)                    │
+│   TailwindCSS v4  │  Axios API Client  │  Recharts Stats │
+└────────────────────────────┬─────────────────────────────┘
+                             │ HTTP REST API (JWT Bearer)
+┌────────────────────────────▼─────────────────────────────┐
+│                    BACKEND (FastAPI)                     │
+│   ASGI Endpoint Routers  │  Auth/RBAC  │  Logging Filter │
+└────────────────────────────┬─────────────────────────────┘
+                             │ pymssql
+┌────────────────────────────▼─────────────────────────────┐
+│                  DATABASE (SQL Server)                   │
+│   Schema: dbo  │  Alembic Migrations  │  Audit Tracking  │
+└──────────────────────────────────────────────────────────┘
+```
+
+### Technology Stack
+*   **Language:** Python `3.11+` (Backend), JavaScript / JSX (Frontend)
+*   **API Layer:** FastAPI, Uvicorn, Pydantic V2
+*   **Data Access Layer:** SQLAlchemy 2.x (using PyMSSQL driver)
+*   **Database Engine:** MS SQL Server 2019+
+*   **Client Core:** React 19, Vite, TailwindCSS v4, React Router v7, Axios, TanStack React Query v5
+*   **Testing:** Pytest
 
 ---
 
-## 🏗 Kiến trúc hệ thống
+## ⚙️ Development Workflow
 
-```
-┌─────────────────────────────────────────────────┐
-│                  FRONTEND (React Vite)           │
-│  Port: 5173  │  Tailwind CSS  │  Axios API calls │
-└──────────────────────┬──────────────────────────┘
-                       │ HTTP REST API
-┌──────────────────────▼──────────────────────────┐
-│               BACKEND (FastAPI)                  │
-│  Port: 8001  │  JWT Auth  │  SQLAlchemy ORM      │
-└──────────────────────┬──────────────────────────┘
-                       │ pymssql
-┌──────────────────────▼──────────────────────────┐
-│            DATABASE (SQL Server)                 │
-│  Database: TaskSyncEnterprise  │  Port: 1433     │
-└─────────────────────────────────────────────────┘
-```
+### Git Branching Strategy
+We adopt a structured feature-branch workflow. All changes must go through Pull Requests:
+*   `master`: Mirror of production release. Direct commits are blocked.
+*   `develop`: Integration branch where feature branches merge.
+*   `feature/phase-[ID]-[description]`: Feature-specific branch (e.g. `feature/phase-01-discovery`).
+*   `bugfix/[issue-number]-[description]`: Short-lived bug mitigation branch.
 
----
+### AI Collaboration Workflow
+To maintain high code quality and prevent system regressions, AI agents and developers collaborate using specific roles and tools:
+*   **Read-Before-Code:** Always read [workspace_configuration.md](file:///e:/TaskSyncEnterprise/workspace_configuration.md) and [enterprise_development_standards.md](file:///e:/TaskSyncEnterprise/enterprise_development_standards.md) before executing tasks.
+*   **Zero Placeholders Rule:** Code modifications must be fully functional and complete. Placeholders like `// TODO` are prohibited.
+*   **Continuous Verification:** Run testing suites (`pytest`) and database migrations checks (`alembic check`) immediately after edits.
 
-## 🛠 Yêu cầu cài đặt
+### AI Responsibilities
 
-Trước khi bắt đầu, hãy đảm bảo máy tính đã cài đặt:
+#### Antigravity (Lead AI Coding Agent)
+*   **Role:** Architect, Pair Programmer, and Code Implementer.
+*   **Responsibilities:**
+    *   Creating detailed implementation plans for user approval.
+    *   Orchestrating subagents to perform browser automation, security scans, or codebase audits.
+    *   Enforcing enterprise development standards and database policies.
+    *   Writing and updating project handbooks, roadmap trackers, and walkthrough files.
 
-| Phần mềm | Phiên bản tối thiểu | Link tải |
-|----------|-------------------|----------|
-| **Python** | 3.11+ | https://python.org |
-| **Node.js** | 18+ | https://nodejs.org |
-| **SQL Server** | 2019+ (hoặc Express) | https://microsoft.com/sql-server |
-| **Git** | Bất kỳ | https://git-scm.com |
-
----
-
-## 📥 Clone dự án
-
-```bash
-git clone https://github.com/huynhlethanhnhan/TaskSyncEnterprise.git
-cd TaskSyncEnterprise
-```
+#### Copilot (Contextual Autocomplete & CLI Helper)
+*   **Role:** Inline assistant and development tool.
+*   **Responsibilities:**
+    *   Providing real-time inline code completions.
+    *   Offering contextual syntactical advice during manual file edits.
+    *   Providing quick terminal commands execution assistance.
 
 ---
 
-## 🐍 Cài đặt Backend
+## 📊 Project Status
 
-### Bước 1 — Tạo môi trường ảo Python
+### Completed Milestones
+*   **Foundation:** Configured workspace base structures.
+*   **Workspace Discovery:** Analyzed files, dependencies, and packages.
+*   **Git Setup:** Established branching strategies and clean feature checkouts.
+*   **AI Workspace Configuration:** Integrated agent rules in customization paths.
+*   **Enterprise Development Standards:** Published the development handbook.
+*   **Project Discovery:** Conducted a comprehensive read-only code audit.
+*   **Enterprise Planning:** Constructed the future phases execution roadmap.
+*   **Cleanup & Stabilization:** Standardized startup pathing and auto-directory creation.
 
-```bash
-cd backend
-
-# Windows
-python -m venv .venv
-.venv\Scripts\activate
-
-# macOS / Linux
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-### Bước 2 — Cài thư viện
-
-```bash
-pip install -r requirements.txt
-```
-
-### Bước 3 — Tạo file `.env`
-
-Tạo file `backend/.env` với nội dung sau:
-
-```env
-MSSQL_CLIENT_ID=tasksync_spa_react_prod_2026
-MSSQL_CLIENT_SECRET=U3VwZXJfU2VjcmV0X0NsaWVudF9LZXlfMjAyNl9OaGFuSHV5bmhfUmFuZG9tXzMydTBlOWQ
-```
-
-### Bước 4 — Cấu hình kết nối SQL Server
-
-Mở file `backend/app/config.py` và chỉnh sửa:
-
-```python
-MSSQL_HOST: str = "TÊN_MÁY_TÍNH_CỦA_BẠN"   # Ví dụ: "DESKTOP-ABC123" hoặc "localhost"
-MSSQL_DATABASE: str = "TaskSyncEnterprise"
-```
-
-> **Lưu ý:** Hệ thống dùng **Windows Authentication** (không cần username/password SQL). SQL Server phải bật TCP/IP ở port 1433.
+### Current Branch
+*   `feature/phase-01-discovery`
 
 ---
 
-## 🗄 Cấu hình Database
+## 🚀 Next Phase
 
-### Bước 1 — Tạo Database trống trong SQL Server
+### Phase 2 — Infrastructure Validation
 
-Mở **SQL Server Management Studio (SSMS)** → New Query → chạy:
-
-```sql
-CREATE DATABASE TaskSyncEnterprise;
-```
-
-### Bước 2 — Tạo bảng bằng Alembic (Migration)
-
-```bash
-# Đảm bảo đang ở thư mục backend/ và đã activate .venv
-cd backend
-alembic upgrade head
-```
-
-### Bước 3 — Nạp dữ liệu mẫu (Seed Data)
-
-```bash
-python seed_v2.py
-```
-
-Lệnh này sẽ tự động tạo:
-- 1 Phòng ban: **Information Technology**
-- 3 Tài khoản mẫu (xem bên dưới)
-- 1 Dự án mẫu với 3 task
+#### Objectives
+*   **Validate SQL Server Connectivity:** Ensure the pymssql engine connects successfully to the database.
+*   **Validate Alembic Migrations:** Check that migration versioning is synced and doesn't contain schema conflicts.
+*   **Validate Seed Data:** Verify that the seeding script runs and populates all database structures.
+*   **Validate FastAPI Startup:** Confirm the backend starts up without errors and handles CORS/logging.
+*   **Validate Swagger:** Verify the `/docs` route renders standard schemas.
+*   **Validate React Development Environment:** Ensure the Vite server runs and compiles TailwindCSS v4 styles.
+*   **Validate Authentication Flow:** Verify login credentials checking, session registrations, and token blacklist filters.
 
 ---
 
-## ⚛️ Cài đặt Frontend
+## 🗺️ Project Roadmap
 
-```bash
-# Từ thư mục gốc dự án
-cd frontend
-
-# Cài đặt dependencies
-npm install
-```
-
-> **Không cần** tạo file `.env` cho frontend — URL API đã được cấu hình sẵn trỏ đến `http://127.0.0.1:8001`.
-
----
-
-## ▶️ Khởi chạy hệ thống
-
-### Terminal 1 — Khởi động Backend
-
-```bash
-cd backend
-.venv\Scripts\activate        # Windows
-# hoặc: source .venv/bin/activate   # macOS/Linux
-
-uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
-```
-
-✅ Backend chạy tại: `http://127.0.0.1:8001`  
-📖 Swagger UI tại: `http://127.0.0.1:8001/docs`
-
-### Terminal 2 — Khởi động Frontend
-
-```bash
-cd frontend
-npm run dev
-```
-
-✅ Frontend chạy tại: `http://localhost:5173`
-
----
-
-## 🔑 Tài khoản mặc định
-
-Sau khi chạy `seed_v2.py`, hệ thống có các tài khoản sau:
-
-| Vai trò | Email | Mật khẩu | Quyền hạn |
-|---------|-------|----------|-----------|
-| **Admin** | `admin@company.com` | `Admin123!` | Toàn quyền hệ thống |
-| **Manager** | `manager@company.com` | `Manager123!` | Tạo/sửa/xóa task, duyệt nghỉ phép |
-| **Employee** | `employee@company.com` | `Employee123!` | Xem task, upload file, xin nghỉ phép |
-
-> ⚠️ **Bảo mật:** Đổi mật khẩu ngay sau khi đăng nhập lần đầu trong môi trường production.
-
----
-
-## 📁 Cấu trúc thư mục
-
-```
-TaskSyncEnterprise/
-│
-├── backend/                        # FastAPI Backend
-│   ├── app/
-│   │   ├── core/                   # JWT, RBAC, dependencies
-│   │   ├── crud/                   # Database operations
-│   │   ├── models/                 # SQLAlchemy ORM models
-│   │   ├── routers/v1/             # API endpoints
-│   │   ├── schemas/                # Pydantic request/response schemas
-│   │   ├── services/               # Business logic
-│   │   ├── config.py               # ⚙️ Cấu hình hệ thống
-│   │   ├── database.py             # Kết nối database
-│   │   └── main.py                 # Entry point FastAPI
-│   ├── alembic/                    # Database migrations
-│   ├── uploads/                    # File uploads (auto-created)
-│   ├── seed_v2.py                  # 🌱 Script tạo dữ liệu mẫu
-│   ├── requirements.txt            # Python dependencies
-│   └── .env                        # 🔐 Biến môi trường (tự tạo)
-│
-├── frontend/                       # React Vite Frontend
-│   ├── src/
-│   │   ├── api/                    # Axios configuration
-│   │   ├── components/             # Reusable components
-│   │   ├── pages/                  # Các trang chính
-│   │   │   ├── auth/               # Đăng nhập
-│   │   │   ├── dashboard/          # Dashboard chính
-│   │   │   ├── tasks/              # Kanban board
-│   │   │   ├── employees/          # Quản lý nhân viên
-│   │   │   ├── projects/           # Quản lý dự án
-│   │   │   ├── vacations/          # Nghỉ phép
-│   │   │   ├── calendar/           # Lịch
-│   │   │   └── notifications/      # Thông báo
-│   │   ├── router/                 # React Router setup
-│   │   └── layouts/                # Layout templates
-│   ├── package.json
-│   └── vite.config.js
-│
-├── DB_V2.sql                       # 📊 Schema SQL (backup thủ công)
-├── .gitignore
-└── README.md
-```
-
----
-
-## 🔧 Xử lý lỗi thường gặp
-
-### ❌ `Connection refused` khi kết nối SQL Server
-- Mở **SQL Server Configuration Manager** → SQL Server Network Configuration → Protocols → **TCP/IP** → Enable
-- Mở **Windows Firewall** → Allow TCP port **1433**
-- Khởi động lại service **SQL Server**
-
-### ❌ `Module not found` khi chạy backend
-```bash
-# Đảm bảo đang trong môi trường ảo
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### ❌ Frontend báo lỗi `403 Forbidden` hoặc `CORS`
-- Kiểm tra Backend đang chạy ở port **8001**
-- Kiểm tra `backend/app/config.py` → `BACKEND_CORS_ORIGINS` phải có `http://localhost:5173`
-
-### ❌ Alembic lỗi `Table already exists`
-```bash
-# Reset migration state
-alembic stamp head
-alembic upgrade head
-```
-
----
-
-## 📡 API Documentation
-
-Sau khi khởi động backend, truy cập:
-
-- **Swagger UI**: http://127.0.0.1:8001/docs
-- **ReDoc**: http://127.0.0.1:8001/redoc
-
----
-
-## 🛡 Phân quyền (RBAC)
-
-| Endpoint | Admin | Manager | Employee |
-|----------|:-----:|:-------:|:--------:|
-| Tạo/Xóa Task | ✅ | ✅ | ❌ |
-| Cập nhật trạng thái Task | ✅ | ✅ | ✅ (task được giao) |
-| Upload file | ✅ | ✅ | ✅ |
-| Xóa file | ✅ | ✅ | ✅ (file do mình upload) |
-| Duyệt nghỉ phép | ✅ | ✅ | ❌ |
-| Xem nhân viên | ✅ | ✅ | ✅ |
-| CRUD nhân viên | ✅ | ❌ | ❌ |
-| Audit Log | ✅ | ❌ | ❌ |
-
----
-
-## 👨‍💻 Tác giả
-
-**Huỳnh Lê Thành Nhân**  
-GitHub: [@huynhlethanhnhan](https://github.com/huynhlethanhnhan)
-
----
-
-## 📄 License
-
-MIT License — Tự do sử dụng cho mục đích học tập và phát triển.
+*   **Foundation** — Base Workspace Configuration ✅
+*   **Phase 1** — Enterprise Project Discovery ✅
+*   **Phase 2** — Infrastructure Validation *(Next)*
+*   **Phase 3** — Model & Database Harmonization
+*   **Phase 4** — API Authorization Refactoring
+*   **Phase 5** — File Upload Pipeline Hardening
+*   **Phase 6** **to** **39** — Agile Sprint Feature Implementation (HRM Core, Leave Management, Tasks, Kanban Board, Notifications, Real-Time Widgets, Analytics Dashboard, and Integrations)
+*   **Phase 40** — Production Deployment, CI/CD, and Handover
