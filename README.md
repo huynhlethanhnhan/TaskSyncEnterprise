@@ -1,117 +1,241 @@
-# 🚀 TaskSyncEnterprise — Enterprise HRM & Project Management
-
-TaskSyncEnterprise is an enterprise-grade platform that integrates Human Resource Management (HRM) and Project Management functionalities. Designed with strict security policies, real-time notification alerts, global audit logging, and modern React dashboard structures.
+# TaskSync Enterprise V2
+TaskSync Enterprise is an enterprise-grade web platform integrating Human Resource Management (HRM) and Project Management functionalities. Designed with strict security policies, real-time notification alerts, global audit logging, and modern React dashboard structures, it represents a state-of-the-art reference implementation for distributed full-stack applications.
 
 ---
 
-## 🏛️ Project Overview
+## Project Overview
+TaskSync Enterprise is designed to streamline corporate operations by combining employee directories, department hierarchy organization, role-based access control (RBAC), task planning, and resource tracking into a single unified workspace. The platform separates concerns logically and physically to enforce security boundaries, ACID transaction compliance, and high availability.
 
-### High-Level Architecture
-TaskSyncEnterprise implements a decoupled Client-Server architecture:
-*   **Frontend (SPA):** Built using React 19, React Router Dom v7, and TailwindCSS v4. It manages client-side routing, theme modes (dark/light), and dashboard visualizations using Recharts.
-*   **Backend (REST API):** Developed using FastAPI ASGI server. It provides high-performance asynchronous request handling, stateless JWT authentication, and structured validation.
-*   **Database (Storage):** Microsoft SQL Server running under the `dbo` schema. It stores structural employee profiles, tasks, attachments metadata, and system audit logs. Database schema migrations are handled by Alembic, connected via SQLAlchemy 2.x and PyMSSQL.
+---
 
+## Features
+*   **Structured Employee Management:** Role tracking, department hierarchy, and manager assignment directories.
+*   **Comprehensive Project & Task Workspaces:** Real-time assignment tracking, progress tracking, and file uploads.
+*   **Security & Audit Logging:** Row-level IDOR validation, encrypted session storage, upload whitelists, and compliance logs.
+*   **Eager Layout Performance:** Persistent layouts utilizing nested routing, minimizing redundant database query loops.
+
+---
+
+## Technology Stack
+
+### Backend
+*   **FastAPI:** Stateless, high-performance ASGI framework.
+*   **Pydantic V2:** Structural input/output schemas and configuration management.
+*   **Uvicorn:** Asynchronous HTTP server implementation.
+
+### Frontend
+*   **React 19:** Component declaration layer.
+*   **Vite:** Core client bundler tool.
+*   **TailwindCSS v4:** Utility-first styling engine.
+*   **TanStack React Query:** Client-side caching and state synchronization.
+
+### Database
+*   **MS SQL Server:** Primary transactional database engine.
+*   **SQLAlchemy 2.0:** Declarative ORM mapping with type annotated variables.
+*   **Alembic:** Structural schema version control and migrations runner.
+
+### Authentication
+*   **JWT Bearer Tokens:** Encrypted access and refresh tokens.
+*   **HTTP-Only Cookies:** Secure token caching preventing client XSS exploits.
+*   **RBAC (Role-Based Access Control):** Admin, Manager, and Employee request authorization routing.
+
+### Architecture
+*   **Layered Architectural Design:** decoupling Routers ──► Dependencies ──► Services ──► CRUD ──► ORM Models.
+
+---
+
+## System Architecture Diagram
+
+```mermaid
+graph TD
+    Client["Client Tier (React Frontend)"]
+    API["API Gateway / FastAPI Backend"]
+    Cache["In-Memory Cache (Redis)"]
+    DB["Database Tier (MS SQL Server)"]
+    FS["FileSystem Storage (Secure Disk)"]
+
+    Client -->|HTTPS / API Requests| API
+    API <-->|Session / Blacklist Cache| Cache
+    API <-->|Transactional Operations| DB
+    API <-->|Physical File Reads/Writes| FS
 ```
-┌──────────────────────────────────────────────────────────┐
-│                   FRONTEND (React 19)                    │
-│   TailwindCSS v4  │  Axios API Client  │  Recharts Stats │
-└────────────────────────────┬─────────────────────────────┘
-                             │ HTTP REST API (JWT Bearer)
-┌────────────────────────────▼─────────────────────────────┐
-│                    BACKEND (FastAPI)                     │
-│   ASGI Endpoint Routers  │  Auth/RBAC  │  Logging Filter │
-└────────────────────────────┬─────────────────────────────┘
-                             │ pymssql
-┌────────────────────────────▼─────────────────────────────┐
-│                  DATABASE (SQL Server)                   │
-│   Schema: dbo  │  Alembic Migrations  │  Audit Tracking  │
-└──────────────────────────────────────────────────────────┘
+
+---
+
+## Folder Structure
+
+*   `backend/`: Source directories for the FastAPI application.
+    *   `alembic/`: Schema migrations history and environments.
+    *   `app/`: Core backend code modules.
+        *   `core/`: Security setups, database config, and request middleware.
+        *   `models/`: SQLAlchemy tables mapping entities.
+        *   `schemas/`: Pydantic input/output validation models.
+        *   `routers/`: HTTP request API endpoint routing.
+        *   `services/`: Workflows and business validations.
+        *   `repositories/`: Database CRUD abstractions.
+*   `frontend/`: Source code for the client React SPA.
+    *   `src/components/`: Reusable presentation widgets.
+    *   `src/layouts/`: MainLayout persistent templates.
+    *   `src/pages/`: Page containers (e.g., Dashboard, Employees, Tasks).
+    *   `src/services/`: Token services and cookie managers.
+    *   `src/router/`: AppRouter nested route declarations.
+*   `docs/`: Discovery documents, roadmaps, and validation reports.
+*   `.agents/`: Workspace-scoped agent customization guidelines.
+
+---
+
+## Getting Started
+
+### Prerequisites
+*   Python 3.11+
+*   Node.js 18+
+*   MS SQL Server Express / Developer Edition (configured on port 1433)
+
+### Installation
+Clone the repository and enter the workspace directory:
+```bash
+git clone https://github.com/huynhlethanhnhan/TaskSyncEnterprise.git
+cd TaskSyncEnterprise
 ```
 
-### Technology Stack
-*   **Language:** Python `3.11+` (Backend), JavaScript / JSX (Frontend)
-*   **API Layer:** FastAPI, Uvicorn, Pydantic V2
-*   **Data Access Layer:** SQLAlchemy 2.x (using PyMSSQL driver)
-*   **Database Engine:** MS SQL Server 2019+
-*   **Client Core:** React 19, Vite, TailwindCSS v4, React Router v7, Axios, TanStack React Query v5
-*   **Testing:** Pytest
+### Backend Setup
+1.  Navigate to the backend folder:
+    ```bash
+    cd backend
+    ```
+2.  Create a virtual environment and activate it:
+    ```bash
+    python -m venv .venv
+    # Windows:
+    .venv\Scripts\activate
+    # Unix:
+    source .venv/bin/activate
+    ```
+3.  Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### Frontend Setup
+1.  Navigate to the frontend folder:
+    ```bash
+    cd ../frontend
+    ```
+2.  Install packages:
+    ```bash
+    npm install
+    ```
+
+### Database Setup
+1.  Ensure SQL Server is running.
+2.  Navigate to backend directory and run Alembic database schema migrations:
+    ```bash
+    alembic upgrade head
+    ```
+3.  Seed database with demo workspace accounts:
+    ```bash
+    python seed_v2.py
+    ```
+
+### Environment Configuration
+1.  Configure database variables in a backend `.env` file:
+    ```env
+    MSSQL_USER=sa
+    MSSQL_PASSWORD=YourPassword
+    MSSQL_HOST=127.0.0.1
+    MSSQL_PORT=1433
+    SECRET_KEY=YourSecretKey
+    ```
+2.  Configure frontend variables in a frontend `.env.development` file:
+    ```env
+    VITE_API_URL=http://127.0.0.1:8000/api/v1
+    ```
+
+### Run Development Server
+*   **Run Backend:**
+    ```bash
+    cd backend
+    uvicorn app.main:app --reload --port 8000
+    ```
+*   **Run Frontend:**
+    ```bash
+    cd frontend
+    npm run dev
+    ```
+
+### Run Tests
+To run the automated backend test suite, run:
+```bash
+cd backend
+python -m pytest
+```
 
 ---
 
-## ⚙️ Development Workflow
+## API Documentation
 
-### Git Branching Strategy
-We adopt a structured feature-branch workflow. All changes must go through Pull Requests:
-*   `master`: Mirror of production release. Direct commits are blocked.
-*   `develop`: Integration branch where feature branches merge.
-*   `feature/phase-[ID]-[description]`: Feature-specific branch (e.g. `feature/phase-01-discovery`).
-*   `bugfix/[issue-number]-[description]`: Short-lived bug mitigation branch.
+### Swagger UI
+FastAPI generates interactive documentation at runtime. Once the server is running, navigate to:
+*   **Swagger:** `http://127.0.0.1:8000/docs`
+*   **ReDoc:** `http://127.0.0.1:8000/redoc`
 
-### AI Collaboration Workflow
-To maintain high code quality and prevent system regressions, AI agents and developers collaborate using specific roles and tools:
-*   **Read-Before-Code:** Always read [workspace_configuration.md](file:///e:/TaskSyncEnterprise/workspace_configuration.md) and [enterprise_development_standards.md](file:///e:/TaskSyncEnterprise/enterprise_development_standards.md) before executing tasks.
-*   **Zero Placeholders Rule:** Code modifications must be fully functional and complete. Placeholders like `// TODO` are prohibited.
-*   **Continuous Verification:** Run testing suites (`pytest`) and database migrations checks (`alembic check`) immediately after edits.
-
-### AI Responsibilities
-
-#### Antigravity (Lead AI Coding Agent)
-*   **Role:** Architect, Pair Programmer, and Code Implementer.
-*   **Responsibilities:**
-    *   Creating detailed implementation plans for user approval.
-    *   Orchestrating subagents to perform browser automation, security scans, or codebase audits.
-    *   Enforcing enterprise development standards and database policies.
-    *   Writing and updating project handbooks, roadmap trackers, and walkthrough files.
-
-#### Copilot (Contextual Autocomplete & CLI Helper)
-*   **Role:** Inline assistant and development tool.
-*   **Responsibilities:**
-    *   Providing real-time inline code completions.
-    *   Offering contextual syntactical advice during manual file edits.
-    *   Providing quick terminal commands execution assistance.
+### Authentication
+Security relies on Access and Refresh JWT tokens passed inside secure cookies. Protected routes require login and parse role permissions dynamically.
 
 ---
 
-## 📊 Project Status
-
-### Completed Milestones
-*   **Foundation:** Configured workspace base structures.
-*   **Workspace Discovery:** Analyzed files, dependencies, and packages.
-*   **Git Setup:** Established branching strategies and clean feature checkouts.
-*   **AI Workspace Configuration:** Integrated agent rules in customization paths.
-*   **Enterprise Development Standards:** Published the development handbook.
-*   **Project Discovery:** Conducted a comprehensive read-only code audit.
-*   **Enterprise Planning:** Constructed the future phases execution roadmap.
-*   **Cleanup & Stabilization:** Standardized startup pathing and auto-directory creation.
-
-### Current Branch
-*   `feature/phase-01-discovery`
+## Git Branch Strategy
+To maintain production stability, we follow a strict branching model:
+*   `master`: Mirror of stable production code. No direct commits allowed.
+*   `develop`: The integration branch where feature branches merge.
+*   `feature/*`: Feature-specific work branches (e.g. `feature/phase-3-backend-foundation`).
 
 ---
 
-## 🚀 Next Phase
-
-### Phase 2 — Infrastructure Validation
-
-#### Objectives
-*   **Validate SQL Server Connectivity:** Ensure the pymssql engine connects successfully to the database.
-*   **Validate Alembic Migrations:** Check that migration versioning is synced and doesn't contain schema conflicts.
-*   **Validate Seed Data:** Verify that the seeding script runs and populates all database structures.
-*   **Validate FastAPI Startup:** Confirm the backend starts up without errors and handles CORS/logging.
-*   **Validate Swagger:** Verify the `/docs` route renders standard schemas.
-*   **Validate React Development Environment:** Ensure the Vite server runs and compiles TailwindCSS v4 styles.
-*   **Validate Authentication Flow:** Verify login credentials checking, session registrations, and token blacklist filters.
+## Development Workflow
+Our workflow ensures that no undocumented debt is introduced:
+1.  **Architecture Review:** Verify impacts on database models and APIs before code changes.
+2.  **Task Breakdown:** Split implementation roadmap phases into 30–60 minute tasks.
+3.  **Implementation:** Develop changes inside designated feature branches.
+4.  **Code Review:** Perform audits against security whitelists, SOLID principles, and regressions.
+5.  **Release:** Fast-forward merge changes into integration and production tracks.
 
 ---
 
-## 🗺️ Project Roadmap
+## AI Collaboration Workflow
+The project leverages a collaborative group of specialized AI agents:
+*   🏛️ **Enterprise Architect:** Models DB structures, validates roadmaps, and designs architectures.
+*   📋 **Technical Lead:** Organizes plans into granular checklists and enforces branch naming rules.
+*   💻 **Backend Developer:** Modifies code, writes models, and runs database migrations.
+*   🔍 **Code Reviewer:** Reviews implementations against checklists to verify security and performance.
+*   ✅ **Release Manager:** Handles branch configurations, git commits, staging, and pushes.
 
-*   **Foundation** — Base Workspace Configuration ✅
-*   **Phase 1** — Enterprise Project Discovery ✅
-*   **Phase 2** — Infrastructure Validation *(Next)*
-*   **Phase 3** — Model & Database Harmonization
-*   **Phase 4** — API Authorization Refactoring
-*   **Phase 5** — File Upload Pipeline Hardening
-*   **Phase 6** **to** **39** — Agile Sprint Feature Implementation (HRM Core, Leave Management, Tasks, Kanban Board, Notifications, Real-Time Widgets, Analytics Dashboard, and Integrations)
-*   **Phase 40** — Production Deployment, CI/CD, and Handover
+---
+
+## Project Roadmap
+
+We group the development roadmap into structural phases:
+*   **Phase 1 — Setup & Discovery:** Workspace discovery, dependency mappings, and validation reviews.
+*   **Phase 2 — Database Harmonization:** Migrating legacy models to SQLAlchemy 2.0 type annotated mapping style and timezone standardizations.
+*   **Phase 3 — Backend Foundation:** Security updates, upload whitelists, pagination, and cookie authentication sessions.
+*   **Phase 4 — Frontend Layout Refactoring:** Nested routing and TanStack React Query caching configurations.
+*   **Phases 5 to 40 — Performance & Scaling:** Distributed caching, event brokers, database clustering, logging collectors, and deployment tracks.
+
+---
+
+## Documentation Index
+*   [workspace_configuration.md](file:///e:/TaskSyncEnterprise/workspace_configuration.md): Workspace environments and IDE paths.
+*   [enterprise_development_standards.md](file:///e:/TaskSyncEnterprise/enterprise_development_standards.md): Official coding and styling handbook.
+*   [phase2_database_review.md](file:///e:/TaskSyncEnterprise/phase2_database_review.md): Database normalization audit report.
+*   [docs/discovery_report.md](file:///e:/TaskSyncEnterprise/docs/discovery_report.md): Initial code discovery logs.
+*   [docs/enterprise_roadmap.md](file:///e:/TaskSyncEnterprise/docs/enterprise_roadmap.md): Priority backlog tracker.
+
+---
+
+## Contributing
+Please consult the [enterprise_development_standards.md](file:///e:/TaskSyncEnterprise/enterprise_development_standards.md) handbook before starting work. Open a pull request from a clean feature branch targeting the `develop` branch.
+
+---
+
+## License
+Proprietary and Confidential. Registered to TaskSync Enterprise.
