@@ -16,6 +16,12 @@ MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 🟢 Đã sửa thành dấu # (20 Meg
 # Danh sách định dạng ảnh được phép làm Avatar
 ALLOWED_AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
+# Danh sách định dạng file đính kèm được phép upload an toàn
+ALLOWED_ATTACHMENT_EXTENSIONS = {
+    ".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv",
+    ".ppt", ".pptx", ".zip", ".rar", ".jpg", ".jpeg", ".png", ".webp"
+}
+
 class StorageService:
     
     @staticmethod
@@ -69,8 +75,15 @@ class StorageService:
         if file_size > MAX_ATTACHMENT_SIZE:
             raise HTTPException(status_code=400, detail="Dung lượng file đính kèm không được vượt quá 20MB!")
 
-        # 2. Đổi tên file để lưu trữ vật lý an toàn
+        # 2. Kiểm tra định dạng file
         file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Định dạng file không hỗ trợ! Chỉ chấp nhận: {', '.join(sorted(ALLOWED_ATTACHMENT_EXTENSIONS))}"
+            )
+
+        # 3. Đổi tên file để lưu trữ vật lý an toàn
         unique_filename = f"{uuid.uuid4()}{file_ext}"
         physical_path = os.path.join(ATTACHMENT_DIR, unique_filename)
 

@@ -14,6 +14,6 @@ class AuditLog(Base):
     employee_id: Mapped[Optional[int]] = mapped_column(ForeignKey("employees.id"), nullable=True)
     employee_email: Mapped[Optional[str]] = mapped_column(String(255), index=True)
     action: Mapped[Optional[str]] = mapped_column(String(255), index=True)
-    timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime, server_default=text("SYSUTCDATETIME()"))
+    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=text("SYSUTCDATETIME()"))
 
     employee: Mapped[Optional["Employee"]] = relationship("Employee")

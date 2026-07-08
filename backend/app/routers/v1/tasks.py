@@ -2,7 +2,7 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.database import get_db
 from app.models.employee import Employee
@@ -26,8 +26,15 @@ router = APIRouter(
 
 # --- Định nghĩa Schema nhanh cho Employee cập nhật tiến độ ---
 class TaskEmployeeUpdate(BaseModel):
-    status: str = Field(..., example="In Progress")
-    progress_percent: float = Field(..., example=50.0)
+    status: str = Field(..., json_schema_extra={"example": "In Progress"})
+    progress_percent: float = Field(..., json_schema_extra={"example": 50.0})
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        if v not in ["To Do", "In Progress", "Done"]:
+            raise ValueError("Status must be 'To Do', 'In Progress', or 'Done'")
+        return v
 
 
 # ==========================================
