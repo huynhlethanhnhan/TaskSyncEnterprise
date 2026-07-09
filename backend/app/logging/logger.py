@@ -62,6 +62,26 @@ def setup_logging() -> None:
         error_handler.setFormatter(formatter)
         root_logger.addHandler(error_handler)
 
+        # access.log: Captures API access logs separately
+        access_handler = RotatingFileHandler(
+            settings.LOG_DIR_PATH / "access.log",
+            maxBytes=settings.LOG_ROTATION_SIZE,
+            backupCount=settings.LOG_BACKUP_COUNT,
+            encoding="utf-8"
+        )
+        access_handler.setLevel(settings.LOG_LEVEL)
+        access_handler.setFormatter(formatter)
+        
+        access_logger.setLevel(settings.LOG_LEVEL)
+        access_logger.handlers.clear()
+        access_logger.addHandler(access_handler)
+        if settings.ENABLE_CONSOLE_LOGGING:
+            access_console = logging.StreamHandler()
+            access_console.setLevel(settings.LOG_LEVEL)
+            access_console.setFormatter(formatter)
+            access_logger.addHandler(access_console)
+        access_logger.propagate = False
+
         # audit.log: Dedicated compliance & audit event log file
         audit_handler = RotatingFileHandler(
             settings.LOG_DIR_PATH / "audit.log",
@@ -77,14 +97,22 @@ def setup_logging() -> None:
         audit_logger.handlers.clear()
         audit_logger.addHandler(audit_handler)
         if settings.ENABLE_CONSOLE_LOGGING:
-            audit_logger.addHandler(logging.StreamHandler())
+            audit_console = logging.StreamHandler()
+            audit_console.setLevel(logging.INFO)
+            audit_console.setFormatter(formatter)
+            audit_logger.addHandler(audit_console)
         audit_logger.propagate = False
 
     # 6. Align internal FastAPI/Uvicorn log streams with the centralized root logger
-    for name in ("uvicorn", "uvicorn.access", "uvicorn.error", "fastapi"):
+    for name in ("uvicorn", "uvicorn.error", "fastapi"):
         l = logging.getLogger(name)
         l.handlers.clear()
         l.propagate = True
+
+    # Disable uvicorn access logs since we have enterprise access_logger
+    uv_access = logging.getLogger("uvicorn.access")
+    uv_access.handlers.clear()
+    uv_access.propagate = False
 
     # 7. Configure logger levels
     app_logger.setLevel(settings.LOG_LEVEL)
