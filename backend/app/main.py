@@ -1,11 +1,12 @@
 # 📂 FILE: app/main.py
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
+from app.core.validation import validate_startup
 import app.models
 
 from app.routers.v1 import (
@@ -26,6 +27,9 @@ from app.routers.v1 import (
 from app.core.middleware import LoggingMiddleware
 from app.core.errors import register_exception_handlers
 
+# Run startup validations before instantiating FastAPI application
+validate_startup()
+
 app = FastAPI(title=settings.APP_NAME)
 
 # 🧱 CẤU HÌNH MIDDLEWARES
@@ -40,11 +44,8 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
-uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
-uploads_dir.mkdir(parents=True, exist_ok=True)
-(uploads_dir / "avatars").mkdir(parents=True, exist_ok=True)
-(uploads_dir / "attachments").mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+uploads_dir = settings.UPLOAD_DIR_PATH
+app.mount(f"/{settings.STORAGE_UPLOAD_DIR}", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 # ----------------------------------------------------------------------
 # 🛣️ ĐĂNG KÝ DANH SÁCH ROUTERS ĐỘNG
@@ -68,9 +69,10 @@ for r in routers:
     app.include_router(r, prefix=settings.API_V1_STR)
 
 @app.get("/")
-def read_root():
+def read_root(request: Request):
+    base_url = str(request.base_url).rstrip("/")
     return {
         "success": True,
         "message": f"Chào mừng đến với {settings.APP_NAME} API!",
-        "docs_url": "http://127.0.0.1:8000/docs"
+        "docs_url": f"{base_url}/docs"
     }

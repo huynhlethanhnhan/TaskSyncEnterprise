@@ -1,4 +1,4 @@
-﻿# ?? FILE: app/routers/v1/auth.py
+# ?? FILE: app/routers/v1/auth.py
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -14,7 +14,7 @@ from app.models.user_session import UserSession
 from app.models.audit import AuditLog
 from app.core.security import verify_password, create_access_token, create_refresh_token, get_password_hash
 from app.core.deps import get_current_user, oauth2_scheme
-from app.core.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE
+from app.core.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE, ROLE_MAP
 from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -58,15 +58,10 @@ class SessionResponse(BaseModel):
     is_active: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
-ROLE_MAP = {
-    ROLE_ADMIN: "admin",
-    ROLE_MANAGER: "manager",
-    ROLE_EMPLOYEE: "employee",
-}
+
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -78,8 +73,8 @@ def login_user(
     c_id = form_data.client_id.strip() if form_data.client_id else ""
     c_secret = form_data.client_secret.strip() if form_data.client_secret else ""
     if c_id and c_id != "string":
-        if c_id != settings.MSSQL_CLIENT_ID or c_secret != settings.MSSQL_CLIENT_SECRET:
-            raise HTTPException(status_code=401, detail="?ng d?ng khách không h?p l?!")
+        if c_id != settings.MSSQL_CLIENT_ID or c_secret != settings.MSSQL_CLIENT_SECRET.get_secret_value():
+            raise HTTPException(status_code=401, detail="Ứng dụng khách không hợp lệ!")
 
     stmt = select(Employee).where(Employee.email == form_data.username)
     user = db.execute(stmt).scalar_one_or_none()
@@ -104,7 +99,7 @@ def login_user(
 
     ip_address = request.client.host if request.client else "Unknown"
     user_agent = request.headers.get("user-agent", "Unknown")
-    expire_at = datetime.now(timezone.utc) + timedelta(days=7)
+    expire_at = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
     db.add(RefreshToken(employee_id=user.id, token=refresh_token, expires_at=expire_at))
     db.add(UserSession(
@@ -146,7 +141,7 @@ def login_user(
 def refresh_access_token(req_data: RefreshRequest, db: Session = Depends(get_db)):
     from jose import jwt, JWTError
     try:
-        payload = jwt.decode(req_data.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(req_data.refresh_token, settings.SECRET_KEY.get_secret_value(), algorithms=[settings.ALGORITHM])
         user_id = payload.get("sub")
     except JWTError:
         raise HTTPException(status_code=401, detail="Token không h?p l?!")
@@ -161,7 +156,7 @@ def refresh_access_token(req_data: RefreshRequest, db: Session = Depends(get_db)
     new_access = create_access_token(data={"sub": str(user.id), "email": user.email, "role": user.role_id})
     new_refresh = create_refresh_token(user_id=user.id)
 
-    db.add(RefreshToken(employee_id=user.id, token=new_refresh, expires_at=datetime.now(timezone.utc) + timedelta(days=7)))
+    db.add(RefreshToken(employee_id=user.id, token=new_refresh, expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)))
     db.execute(update(UserSession).where(UserSession.refresh_token == req_data.refresh_token).values(access_token=new_access, refresh_token=new_refresh))
 
     db.commit()

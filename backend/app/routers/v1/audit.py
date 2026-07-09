@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.core.deps import RequireAdmin
 from app.schemas.audit import AuditLogResponse
@@ -17,7 +18,7 @@ router = APIRouter(
 @router.get("", response_model=list[AuditLogResponse])
 def get_audit_logs(
     skip: int = 0,
-    limit: int = 20,
+    limit: int = settings.DEFAULT_PAGE_SIZE,
     db: Session = Depends(get_db),
 ):
     return audit_service.get_all_audit_logs(db, skip=skip, limit=limit)

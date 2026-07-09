@@ -23,16 +23,16 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY.get_secret_value(), algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 # 2. Sinh Refresh Token (Thời hạn dài: 7 ngày) - MỚI BỔ SUNG
 def create_refresh_token(user_id: int) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=7)  # Sống 7 ngày
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)  # Sống theo cấu hình settings
     payload = {
         "sub": str(user_id),
         "type": "refresh",  # Đánh dấu đây là mã gia hạn, không phải mã truy cập
         "exp": expire
     }
-    encoded_jwt = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    encoded_jwt = jwt.encode(payload, settings.SECRET_KEY.get_secret_value(), algorithm=settings.ALGORITHM)
     return encoded_jwt

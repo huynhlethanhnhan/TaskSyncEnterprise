@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import update
 
+from app.config import settings
 from app.database import get_db
 from app.core.constants import ROLE_ADMIN
 from app.core.deps import RequireAdmin, RequireManager, RequireEmployee, get_current_user
@@ -32,7 +33,7 @@ router = APIRouter(
 )
 def get_employees(
         skip: int = 0,
-        limit: int = 20,
+        limit: int = settings.DEFAULT_PAGE_SIZE,
         db: Session = Depends(get_db)
 ):
     return crud_employee.get_all(

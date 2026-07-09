@@ -9,9 +9,9 @@ from app.config import settings
 from app.database import get_db
 from app.models.employee import Employee
 from app.models.token_blacklist import TokenBlacklist # <-- Import model danh sách đen
-from app.core.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE
+from app.core.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE, ROLE_MAP
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
 def get_current_user(
     token: str = Depends(oauth2_scheme), 
@@ -23,7 +23,7 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY.get_secret_value(), algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
@@ -54,13 +54,8 @@ def require_roles(allowed_roles: list[int | str]):
         roles = allowed_roles
         print(f"Current User Role: {current_user.role_id} - Allowed Roles: {roles}")
         
-        role_map = {
-            1: "admin",
-            2: "manager",
-            3: "employee"
-        }
         user_role_id = current_user.role_id
-        user_role_name = role_map.get(user_role_id, "").lower()
+        user_role_name = ROLE_MAP.get(user_role_id, "").lower()
         
         allowed_normalized = []
         for r in allowed_roles:

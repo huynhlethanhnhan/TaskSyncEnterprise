@@ -4,23 +4,22 @@ import shutil
 import uuid
 from fastapi import UploadFile, HTTPException
 
+from app.config import settings
+
 # Cấu hình đường dẫn gốc lưu trữ file
-UPLOAD_DIR = "uploads"
-AVATAR_DIR = os.path.join(UPLOAD_DIR, "avatars")
-ATTACHMENT_DIR = os.path.join(UPLOAD_DIR, "attachments")
+UPLOAD_DIR = settings.STORAGE_UPLOAD_DIR
+AVATAR_DIR = str(settings.AVATAR_DIR_PATH)
+ATTACHMENT_DIR = str(settings.ATTACHMENT_DIR_PATH)
 
-# Giới hạn dung lượng: 5MB cho Avatar, 20MB cho Tài liệu đính kèm Task
-MAX_AVATAR_SIZE = 5 * 1024 * 1024       # 🟢 Đã sửa thành dấu # (5 Megabytes)
-MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 🟢 Đã sửa thành dấu # (20 Megabytes)
+# Giới hạn dung lượng từ cấu hình
+MAX_AVATAR_SIZE = settings.STORAGE_MAX_AVATAR_SIZE
+MAX_ATTACHMENT_SIZE = settings.STORAGE_MAX_ATTACHMENT_SIZE
 
-# Danh sách định dạng ảnh được phép làm Avatar
-ALLOWED_AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+# Danh sách định dạng ảnh được phép làm Avatar từ cấu hình
+ALLOWED_AVATAR_EXTENSIONS = set(settings.STORAGE_ALLOWED_AVATAR_EXTENSIONS)
 
-# Danh sách định dạng file đính kèm được phép upload an toàn
-ALLOWED_ATTACHMENT_EXTENSIONS = {
-    ".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv",
-    ".ppt", ".pptx", ".zip", ".rar", ".jpg", ".jpeg", ".png", ".webp"
-}
+# Danh sách định dạng file đính kèm được phép upload an toàn từ cấu hình
+ALLOWED_ATTACHMENT_EXTENSIONS = set(settings.STORAGE_ALLOWED_ATTACHMENT_EXTENSIONS)
 
 class StorageService:
     
@@ -60,7 +59,7 @@ class StorageService:
             shutil.copyfileobj(file.file, buffer)
             
         # Trả về đường dẫn lưu trong DB để Frontend gọi link truy cập
-        return f"/uploads/avatars/{unique_filename}"
+        return f"/{settings.STORAGE_UPLOAD_DIR}/{settings.STORAGE_AVATAR_SUBDIR}/{unique_filename}"
 
     @staticmethod
     def save_attachment(file: UploadFile) -> dict:
@@ -94,7 +93,7 @@ class StorageService:
         # Trả về metadata đầy đủ để router chèn thông tin vào bảng task_attachments
         return {
             "file_name": file.filename,
-            "file_path": f"/uploads/attachments/{unique_filename}",
+            "file_path": f"/{settings.STORAGE_UPLOAD_DIR}/{settings.STORAGE_ATTACHMENT_SUBDIR}/{unique_filename}",
             "file_size": file_size,
             "mime_type": file.content_type or "application/octet-stream"
         }

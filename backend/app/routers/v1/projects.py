@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.core.deps import RequireManager, RequireEmployee # <-- Admin, Manager và Employee
 
@@ -25,7 +26,7 @@ router = APIRouter(
 )
 def get_projects(
         skip: int = 0,
-        limit: int = 20,
+        limit: int = settings.DEFAULT_PAGE_SIZE,
         db: Session = Depends(get_db)
 ):
     return crud_project.get_all(
