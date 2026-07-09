@@ -84,6 +84,25 @@ graph TD
 
 ---
 
+## Phase 3.1: Hardened Infrastructure & Observability
+
+During Phase 3.1, the TaskSyncEnterprise backend was upgraded to support production-grade operations:
+- **Centralized Configuration**: Immutable frozen Settings class utilizing Pydantic Settings V2.
+- **Observability Streams**: Separated logging files (`app.log`, `error.log`, `audit.log`) stamped with ContextVar-based request correlation IDs.
+- **SRE Health Check Probes**: Independent liveness (`/health/live`) and readiness (`/health/ready`) checks with connection timeouts.
+- **OWASP HTTP Hardening**: Injected custom security headers, disabled client caching on APIs, and restricted host spoofing.
+
+For students and developers, see the comprehensive learning guides:
+*   [Learning Guide 01: Backend Foundation](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.1/01_Backend_Foundation.md)
+*   [Learning Guide 02: Configuration Management](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.1/02_Configuration_Management.md)
+*   [Learning Guide 03: Enterprise Logging & Exception Handling](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.1/03_Enterprise_Logging.md)
+*   [Learning Guide 04: Health Checks & Diagnostics Probes](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.1/04_Health_Checks.md)
+*   [Learning Guide 05: Production Hardening & Audit](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.1/05_Production_Hardening.md)
+*   [Backend Architecture Blueprint Blueprint](file:///e:/TaskSyncEnterprise/docs/architecture/Backend_Architecture.md)
+*   [Backend Architectural Glossary](file:///e:/TaskSyncEnterprise/docs/learning/Glossary.md)
+
+---
+
 ## Getting Started
 
 ### Prerequisites
