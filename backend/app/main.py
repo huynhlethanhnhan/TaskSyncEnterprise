@@ -1,6 +1,5 @@
 # 📂 FILE: app/main.py
 from contextlib import asynccontextmanager
-from pathlib import Path
 import platform
 import sys
 
@@ -9,8 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.core.logger import setup_logging, app_logger
-from app.core.validation import validate_startup
+from app.core.logger import app_logger
 import app.models
 
 from app.routers.v1 import (
@@ -30,13 +28,12 @@ from app.routers.v1 import (
 
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.core.middleware import LoggingMiddleware, SecurityHeadersMiddleware
-from app.core.errors import register_exception_handlers
+from app.handlers.exception_handler import register_exception_handlers
 
-# Setup enterprise logging system first
-setup_logging()
+from app.lifecycle.startup import run_startup
 
-# Run startup validations before instantiating FastAPI application
-validate_startup()
+# Run startup bootstrapping validations
+run_startup()
 
 
 @asynccontextmanager
@@ -59,17 +56,8 @@ async def lifespan(app: FastAPI):
     yield
     
     # Graceful shutdown event handling
-    app_logger.info("Initiating graceful shutdown procedures...")
-    try:
-        app_logger.info("Closing database engine pool...")
-        engine.dispose()
-        app_logger.info("Database engine pool disposed successfully.")
-    except Exception as e:
-        app_logger.error(f"Error disposing database engine pool during shutdown: {e}")
-        
-    app_logger.info("Flushing logging handlers...")
-    import logging
-    logging.shutdown()
+    from app.lifecycle.shutdown import run_shutdown
+    run_shutdown()
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)

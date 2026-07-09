@@ -1,8 +1,7 @@
+# 📂 FILE: app/database/__init__.py
 from collections.abc import Generator
-
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-
 from app.config import settings
 
 engine = create_engine(
@@ -32,3 +31,6 @@ def get_db() -> Generator:
         yield db
     finally:
         db.close()
+
+# Import query monitor to register execution event listeners on startup
+import app.database.query_monitor
