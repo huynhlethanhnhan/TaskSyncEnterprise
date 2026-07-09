@@ -355,6 +355,97 @@ class Settings(BaseSettings):
         )
     )
 
+    # =========================================================================
+    # 📝 7. LOGGING SETTINGS
+    # =========================================================================
+    
+    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
+        default="INFO",
+        description=(
+            "Purpose: Global logging level threshold.\n"
+            "Default: 'INFO'\n"
+            "Production Recommendation: 'INFO' or 'WARNING' to balance disk I/O and trace data.\n"
+            "Development Recommendation: 'DEBUG' or 'INFO' for verbose debugging details.\n"
+            "Security Consideration: None."
+        )
+    )
+
+    LOG_FORMAT: str = Field(
+        default="%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s",
+        description=(
+            "Purpose: Structure template for log entries.\n"
+            "Default: Standard template containing time, log name, level, request correlation ID, and payload.\n"
+            "Production Recommendation: Keep default or adapt to JSON formats for log aggregation systems.\n"
+            "Development Recommendation: Keep default.\n"
+            "Security Consideration: Ensure formatted output is sanitized."
+        )
+    )
+
+    LOG_DIRECTORY: str = Field(
+        default="logs",
+        description=(
+            "Purpose: Path of folder where system logs are stored.\n"
+            "Default: 'logs'\n"
+            "Production Recommendation: Point to dedicated, high-speed persistent storage volumes.\n"
+            "Development Recommendation: Relative path 'logs'.\n"
+            "Security Consideration: Restrict folder read permission strictly to administrators."
+        )
+    )
+
+    LOG_ROTATION_SIZE: PositiveInt = Field(
+        default=10 * 1024 * 1024,
+        description=(
+            "Purpose: Limit threshold in bytes at which log files roll over to backup files.\n"
+            "Default: 10,485,760 (10 Megabytes)\n"
+            "Production Recommendation: 10MB to 50MB depending on disk capabilities.\n"
+            "Development Recommendation: 10MB.\n"
+            "Security Consideration: Prevents denial-of-service due to full system disks."
+        )
+    )
+
+    LOG_BACKUP_COUNT: PositiveInt = Field(
+        default=5,
+        description=(
+            "Purpose: Maximum number of backup logs kept before the oldest are deleted.\n"
+            "Default: 5\n"
+            "Production Recommendation: 5 to 14 days depending on audit log storage rules.\n"
+            "Development Recommendation: 5.\n"
+            "Security Consideration: Essential to control overall logging space consumption."
+        )
+    )
+
+    ENABLE_FILE_LOGGING: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Enable writing logs directly to filesystem logs.\n"
+            "Default: True\n"
+            "Production Recommendation: True (enables offline diagnostics and auditing).\n"
+            "Development Recommendation: True.\n"
+            "Security Consideration: Files must be secured against user reads."
+        )
+    )
+
+    ENABLE_CONSOLE_LOGGING: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Enable writing logs directly to stdout/console streams.\n"
+            "Default: True\n"
+            "Production Recommendation: True for container environments (Docker/Kubernetes stdout tracking), False otherwise.\n"
+            "Development Recommendation: True (allows live tracking inside IDE terminals).\n"
+            "Security Consideration: Console outputs should be guarded from casual bystander viewing."
+        )
+    )
+
+    @property
+    def LOG_DIR_PATH(self) -> Path:
+        """Resolves the absolute Path to the logs folder."""
+        path = Path(self.LOG_DIRECTORY)
+        if not path.is_absolute():
+            # Resolve relative to the root backend project directory (parent of app)
+            path = Path(__file__).resolve().parent.parent / path
+        return path
+
+
     @property
     def UPLOAD_DIR_PATH(self) -> Path:
         """Resolves the absolute Path to the main uploads folder."""

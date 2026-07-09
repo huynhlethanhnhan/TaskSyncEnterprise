@@ -132,11 +132,18 @@ def validate_startup() -> None:
             logger.debug("Startup validations already executed. Skipping redundant run.")
             return
 
-        logger.info("Executing TaskSyncEnterprise startup validations...")
-        validate_pagination_settings()
-        validate_security_settings()
-        validate_directory_settings()
-        validate_database_settings()
-        logger.info("Startup validations completed successfully.")
-        
-        _validation_run = True
+        try:
+            logger.info("Executing TaskSyncEnterprise startup validations...")
+            validate_pagination_settings()
+            validate_security_settings()
+            validate_directory_settings()
+            validate_database_settings()
+            logger.info("Startup validations completed successfully.")
+            _validation_run = True
+        except Exception as e:
+            from app.core.logger import error_logger
+            error_logger.critical(
+                f"TaskSyncEnterprise startup validation failed! Error: {e}", 
+                exc_info=True
+            )
+            raise e
