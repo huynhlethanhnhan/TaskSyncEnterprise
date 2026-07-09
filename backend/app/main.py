@@ -11,20 +11,8 @@ from app.config import settings
 from app.core.logger import app_logger
 import app.models
 
-from app.routers.v1 import (
-    health,
-    roles,
-    departments,
-    teams,
-    employees,
-    projects,
-    tasks,
-    auth,
-    audit,
-    dashboard,
-    vacations,
-    notifications
-)
+from app.routers.api import api_router
+from app.routers.v1 import health
 
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.core.middleware import LoggingMiddleware, SecurityHeadersMiddleware
@@ -88,25 +76,10 @@ uploads_dir = settings.UPLOAD_DIR_PATH
 app.mount(f"/{settings.STORAGE_UPLOAD_DIR}", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 # ----------------------------------------------------------------------
-# 🛣️ ĐĂNG KÝ DANH SÁCH ROUTERS ĐỘNG
+# 🛣️ ĐĂNG KÝ DANH SÁCH ROUTERS
 # ----------------------------------------------------------------------
-routers = [
-    health.router,
-    roles.router,
-    departments.router,
-    teams.router,
-    employees.router,
-    projects.router,
-    tasks.router,
-    auth.router,
-    audit.router,
-    dashboard.router,
-    vacations.router,
-    notifications.router,
-]
-
-for r in routers:
-    app.include_router(r, prefix=settings.API_V1_STR)
+# Mount all API routers under the API version prefix
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Mount health checks at root level for SRE platform visibility (Kubernetes/AWS probes)
 app.include_router(health.router)
