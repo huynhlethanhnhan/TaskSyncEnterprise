@@ -1,98 +1,83 @@
-# Phase 3.1: Health Checks & Runtime Diagnostics (P3-INF-004)
+# Kiểm Tra Sức Khỏe Hệ Thống & Chẩn Đoán Khởi Chạy (Health Checks & Runtime Diagnostics)
 
-## Overview
-This document explains the health checks and monitoring architecture of the TaskSyncEnterprise backend. It discusses the differences between liveness and readiness probes, modular dependency check patterns, and the integration of lightweight telemetry metrics to prepare the application for Kubernetes, Docker, and cloud deployments.
+## Mục tiêu
+Thiết kế và triển khai hệ thống kiểm tra sức khỏe (Health Check) phân tách rõ ràng giữa Liveness và Readiness Probes, xây dựng cấu trúc kiểm thử dependencies theo khối độc lập và thiết lập bộ đo lường hiệu năng khởi chạy.
 
----
+## Kiến thức nền
+Trong môi trường điện toán đám mây hiện đại (như Docker, Kubernetes hay AWS ECS), việc hạ tầng tự động phát hiện lỗi và tự phục hồi (self-healing) phụ thuộc hoàn toàn vào kết quả phản hồi của các endpoint `/health`.
 
-## Learning Objectives
-By the end of this guide, you will be able to:
-1. Differentiate between Liveness and Readiness probes.
-2. Structure custom, modular checkers for dependencies.
-3. Configure connection timeouts for SRE checks.
-4. Implement metrics tracking for application uptime and requests.
+## Giải thích chi tiết
 
----
+### 1. Liveness Probe (Kiểm tra sự sống)
+Trả lời câu hỏi: *"Tiến trình của ứng dụng còn chạy bình thường không?"*. Nếu liveness check thất bại (ví dụ: do ứng dụng bị treo luồng - deadlock), container sẽ bị khởi động lại (restart) tự động.
+*   **Nguyên tắc:** Phải thực hiện cực kỳ nhanh, chỉ kiểm tra tiến trình ứng dụng nội bộ, tuyệt đối không truy vấn cơ sở dữ liệu hay gọi API bên thứ ba.
 
-## Concepts Explained
+### 2. Readiness Probe (Kiểm tra mức độ sẵn sàng)
+Trả lời câu hỏi: *"Ứng dụng đã sẵn sàng nhận traffic từ người dùng chưa?"*. Nếu readiness check thất bại (ví dụ: database bị quá tải hoặc ổ đĩa bị đầy), load balancer sẽ ngừng chuyển traffic đến container này và chuyển sang container khác. Container gặp sự cố sẽ **không bị khởi động lại**, giúp nó có thời gian tự phục hồi kết nối.
 
-### 1. Liveness vs. Readiness Probes
-In production container environments (like Kubernetes or AWS ECS):
-- **Liveness Probe**: Asks, "*Is the application alive?*" If the liveness check fails (e.g. because of a deadlock), the orchestrator restarts the container. This check should be fast and avoid external calls like database queries.
-- **Readiness Probe**: Asks, "*Is the application ready to handle user requests?*" If the readiness check fails (e.g., due to database connectivity issues), the load balancer stops routing traffic to the container. The container is *not* restarted; traffic is simply redirected until the dependency recovers.
+### 3. Thời gian chờ (Timeout)
+Mọi kiểm tra kết nối hạ tầng bên ngoài phải đi kèm giới hạn thời gian chờ cực ngắn (ví dụ: 3 giây) để tránh tình trạng kiểm tra sức khỏe làm treo luồng xử lý chính.
 
-### 2. Metrics Telemetry
-Telemetry metrics track the health of an active service, measuring properties such as request counts, startup durations, and health check latencies. Collecting these metrics helps operators set up alerts before service degradation occurs.
+## Luồng hoạt động
 
----
+```mermaid
+graph TD
+    LB[Load Balancer / Kubernetes] -->|Poll /health/live| LiveProbe{Liveness Check}
+    LiveProbe -->|Pass 200| KeepContainer[Keep Container Running]
+    LiveProbe -->|Fail 500| RestartContainer[Restart Container]
+    
+    LB -->|Poll /health/ready| ReadyProbe{Readiness Check}
+    ReadyProbe -->|Pass 200| RouteTraffic[Route User Traffic]
+    ReadyProbe -->|Fail 503| BlockTraffic[Block User Traffic from Container]
+```
 
-## Why this Architecture was Chosen
-- **Zero-Downtime Deployments**: By separating liveness and readiness probes, load balancers can route traffic away from degrading nodes without trigger-happy restarts.
-- **Isolated Pings**: Checks are executed with short timeouts to prevent the health check itself from hanging the application process.
-- **Self-Healing Infrastructure**: Orchestrators use liveness probes to recover from application deadlocks automatically.
-
----
-
-## Project Implementation
-In `backend/app/services/health_service.py`, health checks are structured as modular components:
+## Ví dụ trong TaskSyncEnterprise
+Trong [checks.py](file:///e:/TaskSyncEnterprise/backend/app/health/checks.py), kiểm tra database được cấu hình thời gian chờ:
 
 ```python
-class DatabaseHealthChecker(HealthChecker):
-    def name(self) -> str:
-        return "database"
-
-    def check(self) -> tuple[bool, str]:
-        # Connects with short timeout limit to prevent hanging threads
+class DatabaseCheck:
+    @staticmethod
+    def run() -> tuple[bool, str]:
+        from sqlalchemy import create_engine
         val_engine = create_engine(
             settings.SQLALCHEMY_DATABASE_URI,
-            connect_args={"login_timeout": settings.HEALTH_TIMEOUT}
+            connect_args={"login_timeout": settings.HEALTH_TIMEOUT, "timeout": settings.HEALTH_TIMEOUT}
         )
         try:
             with val_engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            return True, "Database is healthy."
+            return True, "Database connection is healthy."
         except Exception as e:
             return False, str(e)
+        finally:
+            val_engine.dispose()
 ```
-
-In `backend/app/routers/v1/health.py`, status codes map directly to check results:
+Trong [health.py](file:///e:/TaskSyncEnterprise/backend/app/routers/health.py), mã lỗi HTTP được trả về tương ứng:
 
 ```python
-@router.get("/ready")
-def readiness_check(response: Response):
-    is_ready, report = health_service.get_readiness_status()
+@router.get("/ready", response_model=ReadinessResponse)
+def readiness_probe(response: Response):
+    is_ready, report = health_service.get_readiness()
     if not is_ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return report
 ```
 
----
+## Khi nào sử dụng
+*   Luôn cấu hình **Liveness Probe** (`/health/live`) cho các bộ quản lý container (Kubernetes, AWS ECS) để tự động khởi động lại ứng dụng khi bị treo.
+*   Luôn cấu hình **Readiness Probe** (`/health/ready`) trước khi chạy deploy phiên bản mới để tránh tình trạng người dùng truy cập vào container khi database migration chưa chạy xong.
 
-## Real-world Examples
-In a cloud auto-scaling group, as traffic spikes, new virtual machines are initialized. The load balancer polls `/health/ready` every 5 seconds. The database migration script takes 30 seconds to finish. During this time, `/health/ready` returns `503`, preventing users from hitting the uninitialized container. Once migration succeeds, the probe returns `200`, and the load balancer begins routing user requests.
-
----
+## Sai lầm thường gặp
+*   **Truy vấn Database trong Liveness Check:** Nếu SQL Server gặp sự cố quá tải tạm thời (ví dụ: khóa bảng), tất cả các container sẽ báo Liveness thất bại đồng thời. Hệ thống điều phối sẽ khởi động lại toàn bộ các container cùng một lúc, gây ra sập hệ thống trên diện rộng thay vì chỉ tạm dừng định tuyến traffic.
 
 ## Best Practices
-- **Do Not Poll DB in Liveness Probes**: Liveness checks should be lightweight. Poll the database only in readiness probes.
-- **Enforce Connection Timeouts**: Set short timeouts on pings to avoid locking the application thread pool.
-- **Include Correlation IDs**: Log correlation IDs in check failures to aid troubleshooting.
+1. Luôn cấu hình kết nối database trong health check với `login_timeout` ngắn (ví dụ: từ 2 đến 3 giây).
+2. Tách biệt kiểm tra logic ghi dữ liệu lên ổ cứng (`StorageCheck`) khỏi các kiểm tra đơn giản về RAM/CPU.
 
----
+## Checklist ghi nhớ
+- [x] Liveness check KHÔNG được query database.
+- [x] Readiness check kiểm tra database, file storage và cấu hình.
+- [x] Trả về mã lỗi HTTP 503 khi hệ thống chưa sẵn sàng.
 
-## Common Mistakes
-- **Database in Liveness**: Checking database health inside `/health/live`. If the database lags temporarily, the orchestrator will restart all container instances simultaneously, causing a complete system outage.
-
----
-
-## Interview Questions
-1. **What happens if a readiness probe returns a 503 status code in Kubernetes?**
-   *Answer*: Kubernetes removes the container's IP from the corresponding Service endpoints, preventing the load balancer from routing new traffic to it. The container continues running.
-2. **Why do we use timeouts on database health checks?**
-   *Answer*: If database connectivity is blocked by a firewall, a check without a timeout might block the network thread indefinitely, exhausting server resources.
-
----
-
-## References
-- [Kubernetes Liveness, Readiness and Startups Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
-- [FastAPI: Response Status Codes](https://fastapi.tiangolo.com/tutorial/response-status-code/)
+## Tổng kết
+Phân tách rõ ràng giữa Liveness và Readiness giúp hạ tầng đám mây tự sửa lỗi và điều phối tải thông minh, đảm bảo tính sẵn sàng cao (High Availability) cho hệ thống doanh nghiệp.

@@ -1,102 +1,86 @@
-# Phase 3.1: Production Hardening & Readiness Audit (P3-INF-005)
+# Tối Ưu Hóa Bảo Mật & Đánh Giá Sẵn Sàng Vận Hành (Production Hardening & Readiness Audit)
 
-## Overview
-This document explains the final production hardening and security measures implemented in the TaskSyncEnterprise backend. It focuses on Host header validation, OWASP response headers injection, browser caching inhibition, and graceful application shutdown resource cleanup.
+## Mục tiêu
+Hướng dẫn triển khai các biện pháp bảo mật nâng cao cho môi trường Production, bao gồm xác thực máy chủ (Trusted Hosts), chèn mã bảo mật OWASP Headers vào phản hồi HTTP, vô hiệu hóa bộ nhớ đệm trình duyệt cho các dữ liệu nhạy cảm, và giải phóng tài nguyên an toàn khi tắt ứng dụng.
 
----
+## Kiến thức nền
+Khi đưa ứng dụng lên internet, hệ thống sẽ liên tục đối mặt với các cuộc dò quét tự động. Cấu hình bảo mật mặc định của các framework thường rất lỏng lẻo. Chúng ta phải chủ động gia cố ứng dụng ở mọi lớp hạ tầng.
 
-## Learning Objectives
-By the end of this guide, you will be able to:
-1. Explain HTTP Host Header Injection attacks and how to defend against them.
-2. Implement OWASP-recommended HTTP security headers.
-3. Understand client-side caching behaviors and configure cache-invalidation headers.
-4. Execute clean resource disposal (database pools, log streams) during shutdown.
+## Giải thích chi tiết
 
----
+### 1. Tấn công HTTP Host Header Injection
+HTTP request header chứa một trường `Host` chỉ định domain đích của server. Nếu ứng dụng backend tin cậy hoàn toàn giá trị này để sinh các đường link chuyển hướng (redirect) hoặc sinh link reset mật khẩu gửi qua email, kẻ tấn công có thể thay đổi giá trị `Host` thành tên miền độc hại của chúng, dẫn tới việc chiếm đoạt tài khoản người dùng.
+*   **Giải pháp:** Sử dụng `TrustedHostMiddleware` để giới hạn danh sách domain hợp lệ.
 
-## Concepts Explained
+### 2. Các Header Bảo Mật của OWASP
+Trình duyệt web hiện đại hỗ trợ nhiều tính năng bảo mật thông qua cấu hình HTTP Response Header:
+*   `X-Frame-Options: DENY`: Ngăn chặn website bị nhúng vào bên trong các thẻ `<iframe>` của trang web khác, bảo vệ người dùng khỏi tấn công đánh lừa nhấp chuột (Clickjacking).
+*   `X-Content-Type-Options: nosniff`: Yêu cầu trình duyệt tuân thủ chính xác định dạng file trả về, ngăn chặn việc thực thi các đoạn mã độc giả dạng tệp tin hình ảnh.
+*   `Referrer-Policy`: Kiểm soát lượng thông tin URL giới thiệu được gửi kèm khi người dùng click link liên kết ngoài.
 
-### 1. HTTP Host Header Injection
-HTTP request headers include a `Host` field specifying the target server domain. If backend routers trust this value blindly to construct redirect links or absolute emails reset links, attackers can modify the `Host` header to redirect users to malicious domains. Restricting host headers to a list of allowed hosts mitigates this risk.
+### 3. Graceful Shutdown (Tắt máy an toàn)
+Khi có sự kiện tắt ứng dụng (ví dụ: deploy phiên bản mới thay thế), ứng dụng không được ngắt đột ngột. Nó cần ngắt tiếp nhận kết nối mới, chờ các tác vụ xử lý đang dở hoàn thành nốt, đóng các kết nối database pool, ghi lại nhật ký log cuối cùng, rồi mới thoát tiến trình.
 
-### 2. OWASP Security Headers
-Modern browsers implement security controls driven by HTTP headers:
-- `X-Frame-Options: DENY`: Prevents the site from being embedded in frames, protecting against clickjacking.
-- `X-Content-Type-Options: nosniff`: Prevents browsers from executing scripts disguised as images or text files.
-- `Referrer-Policy`: Controls how much referrer information is sent along with requests.
+## Luồng hoạt động
 
-### 3. Graceful Shutdown
-When a server shuts down (e.g. during a rolling deployment), active connections should not be severed abruptly. The server should stop accepting new connections, finish outstanding tasks, release resources (like database pools), flush remaining log buffers, and exit cleanly.
+```mermaid
+sequenceDiagram
+    Client Request->>TrustedHostMiddleware: HTTP Request
+    Note over TrustedHostMiddleware: Kiểm tra Host Header trong ALLOWED_HOSTS
+    alt Hợp lệ
+        TrustedHostMiddleware->>API Endpoint: Tiếp tục xử lý
+        API Endpoint->>SecurityHeadersMiddleware: Trả về Response
+        Note over SecurityHeadersMiddleware: Inject X-Frame-Options: DENY<br/>Inject Cache-Control: no-store
+        SecurityHeadersMiddleware-->>Client: HTTP Response
+    else Không hợp lệ
+        TrustedHostMiddleware-->>Client: Trả về 400 Bad Request
+    end
+```
 
----
-
-## Why this Architecture was Chosen
-- **Client Security**: Enforces secure browser headers globally.
-- **Cache Prevention**: Prevents sensitive client or task details from being cached in public or browser caches.
-- **Zero Resource Leaks**: Disposing of connection pools prevents dangling sockets or database connection exhaustion during scale-down events.
-
----
-
-## Project Implementation
-In `backend/app/core/middleware.py`, headers are dynamically injected into outgoing responses:
+## Ví dụ trong TaskSyncEnterprise
+Trong [middleware.py](file:///e:/TaskSyncEnterprise/backend/app/core/middleware.py), các header bảo mật và vô hiệu hóa bộ nhớ đệm được chèn tự động:
 
 ```python
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
         
-        # 1. Standard OWASP Security Headers
+        # 1. Các Header bảo mật chuẩn OWASP
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         
-        # 2. Disable cache for all API routes
+        # 2. Vô hiệu hóa cache cho các API động
         if request.url.path.startswith(settings.API_V1_STR):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             
         return response
 ```
-
-In `backend/app/main.py`, database pools are disposed of inside the lifespan shutdown block:
+Trong [shutdown.py](file:///e:/TaskSyncEnterprise/backend/app/lifecycle/shutdown.py), giải phóng database pool được thực thi:
 
 ```python
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
-    # Shutdown logic
-    from app.database import engine
+def run_shutdown() -> None:
+    app_logger.info("Closing database engine pool...")
     engine.dispose()
     logging.shutdown()
 ```
 
----
+## Khi nào sử dụng
+*   Luôn bật `SecurityHeadersMiddleware` và `TrustedHostMiddleware` cho mọi môi trường triển khai thực tế.
+*   Cấu hình `ALLOWED_HOSTS` chi tiết trong production (ví dụ: `ALLOWED_HOSTS = ["api.tasksync.com"]`), tuyệt đối không dùng giá trị mặc định wildcard `["*"]`.
 
-## Real-world Examples
-If an enterprise web application handles financial or medical records, users might access this data from public libraries. Without anti-caching headers, if a user logs out, a subsequent user could click the browser's "Back" button to view cached pages of the previous session. Implementing `Cache-Control: no-store` prevents this behavior.
-
----
+## Sai lầm thường gặp
+*   **Ngắt tiến trình thô bạo (Hard Kill):** Sử dụng lệnh `SIGKILL` (`kill -9`) để dừng container thay vì gửi tín hiệu tắt an toàn `SIGTERM`. Điều này làm đứt gãy các tiến trình ghi file, làm hỏng dữ liệu dở dang hoặc giữ trạng thái treo kết nối trên database server.
 
 ## Best Practices
-- **Restrict Allowed Hosts**: Never leave `ALLOWED_HOSTS = ["*"]` in production environments.
-- **Verify Middleware Order**: Ensure logging and security middlewares wrap CORS configuration correctly.
-- **Implement Lifespan Context**: Use lifespan contexts instead of legacy startup/shutdown events.
+1. Luôn cấu hình `Cache-Control: no-store` cho tất cả các API trả về thông tin nhạy cảm của nhân viên để ngăn chặn lưu cache ở máy tính công cộng.
+2. Kiểm tra thứ tự đăng ký Middleware trong [main.py](file:///e:/TaskSyncEnterprise/backend/app/main.py#L67-L87): Middleware xử lý CORS và bảo mật Header phải nằm ở ngoài cùng của chuỗi xử lý.
 
----
+## Checklist ghi nhớ
+- [x] Giới hạn `ALLOWED_HOSTS` bằng tên miền chính thức trong production.
+- [x] Chèn `X-Frame-Options: DENY` bảo vệ clickjacking.
+- [x] Đóng database engine pool `engine.dispose()` khi tắt app.
 
-## Common Mistakes
-- **Abrupt Termination**: Killing containers using `SIGKILL` instead of allowing graceful shutdowns (`SIGTERM`), leaving transactions incomplete and database connections hung.
-
----
-
-## Interview Questions
-1. **How does `X-Frame-Options: DENY` protect users from Clickjacking?**
-   *Answer*: It instructs the browser not to render the page inside `<frame>`, `<iframe>`, `<embed>`, or `<object>` elements, preventing attackers from overlaying hidden frames to trick users into clicking buttons.
-2. **What is the purpose of `engine.dispose()` on application shutdown?**
-   *Answer*: It closes all active connection sockets in SQLAlchemy's connection pool, releasing resources on the database server.
-
----
-
-## References
-- [OWASP Secure Headers Project](https://owasp.org/www-project-secure-headers/)
-- [Starlette: TrustedHostMiddleware](https://www.starlette.io/middleware/#trustedhostmiddleware)
+## Tổng kết
+Thực hiện tối ưu hóa bảo mật và dọn dẹp tài nguyên an toàn giúp ứng dụng TaskSyncEnterprise đạt độ tin cậy cao, vượt qua các đợt kiểm thử an ninh chuyên sâu và đảm bảo hạ tầng vận hành ổn định lâu dài.
