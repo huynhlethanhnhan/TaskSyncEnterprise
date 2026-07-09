@@ -97,6 +97,9 @@ routers = [
 for r in routers:
     app.include_router(r, prefix=settings.API_V1_STR)
 
+# Mount health checks at root level for SRE platform visibility (Kubernetes/AWS probes)
+app.include_router(health.router)
+
 @app.get("/")
 def read_root(request: Request):
     base_url = str(request.base_url).rstrip("/")

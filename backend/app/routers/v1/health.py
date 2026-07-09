@@ -1,25 +1,67 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
+# 📂 FILE: app/routers/v1/health.py
+from fastapi import APIRouter, Response, Request, status
+from app.services.health_service import health_service
+from app.core.logger import error_logger
 
-from app.database import get_db
-
-router = APIRouter(prefix="/health", tags=["Health"])
+router = APIRouter(prefix="/health", tags=["Health Checks"])
 
 
 @router.get("")
-def health_check(db: Session = Depends(get_db)):
+def health_check(request: Request, response: Response) -> dict:
+    """
+    Detailed operational health status report.
+    Aggregates metrics, process statistics, database connectivity, and filesystem states.
+    """
     try:
-        db.execute(text("SELECT 1"))
+        routes_count = len(request.app.routes) if request.app else 0
+        is_ready, report = health_service.get_detailed_report(routes_count=routes_count)
+        if not is_ready:
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            error_logger.warning("Operational diagnostics check completed: NOT READY.")
+        return report
+    except Exception as e:
+        error_logger.error(f"Unexpected failure during health report construction: {e}", exc_info=True)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return {
-            "status": "online",
-            "database": "online",
-            "message": "Database connection is healthy",
+            "status": "DOWN",
+            "message": "An unexpected error occurred during health diagnostics execution."
         }
-    except SQLAlchemyError as exc:
+
+
+@router.get("/live")
+def liveness_check(response: Response) -> dict:
+    """
+    Liveness Probe.
+    Checks whether the Python ASGI process is active and configurations are loaded.
+    """
+    try:
+        return health_service.get_liveness_status()
+    except Exception as e:
+        error_logger.error(f"Liveness probe verification failed: {e}", exc_info=True)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return {
-            "status": "offline",
-            "database": "offline",
-            "message": str(exc),
+            "status": "DOWN",
+            "message": "Liveness probe execution failed."
+        }
+
+
+@router.get("/ready")
+def readiness_check(response: Response) -> dict:
+    """
+    Readiness Probe.
+    Checks whether active connection channels to database and filesystem storage paths are healthy.
+    Returns HTTP 503 if any system dependency fails ready checks.
+    """
+    try:
+        is_ready, report = health_service.get_readiness_status()
+        if not is_ready:
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            error_logger.warning(f"Readiness probe check failed: {report}")
+        return report
+    except Exception as e:
+        error_logger.error(f"Readiness probe verification failed unexpectedly: {e}", exc_info=True)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return {
+            "status": "DOWN",
+            "message": "Readiness probe execution encountered an unexpected error."
         }

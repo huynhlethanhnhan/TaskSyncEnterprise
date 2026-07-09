@@ -432,9 +432,79 @@ class Settings(BaseSettings):
             "Default: True\n"
             "Production Recommendation: True for container environments (Docker/Kubernetes stdout tracking), False otherwise.\n"
             "Development Recommendation: True (allows live tracking inside IDE terminals).\n"
-            "Security Consideration: Console outputs should be guarded from casual bystander viewing."
         )
     )
+
+    # =========================================================================
+    # 🩺 8. HEALTH CHECK & MONITORING SETTINGS
+    # =========================================================================
+    
+    ENABLE_HEALTH_ENDPOINTS: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Toggle API visibility for SRE health check endpoints (/health, /health/live, /health/ready).\n"
+            "Default: True\n"
+            "Production Recommendation: True (enables orchestrator monitoring probes).\n"
+            "Development Recommendation: True.\n"
+            "Security Consideration: None directly, but endpoints should exclude detailed internals."
+        )
+    )
+
+    ENABLE_RUNTIME_DIAGNOSTICS: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Toggle showing detailed runtime system info (uptime, Python version, paths, environment).\n"
+            "Default: True\n"
+            "Production Recommendation: True (improves monitoring), or False if strict security rules block platform footprint disclosures.\n"
+            "Development Recommendation: True.\n"
+            "Security Consideration: Ensure absolute server paths and environment credentials are never exposed."
+        )
+    )
+
+    HEALTH_TIMEOUT: PositiveInt = Field(
+        default=3,
+        description=(
+            "Purpose: Latency connection timeout (in seconds) for external dependency queries (e.g. database connect).\n"
+            "Default: 3\n"
+            "Production Recommendation: 3 or 5 seconds to fail quickly if database server lags.\n"
+            "Development Recommendation: 3.\n"
+            "Security Consideration: None."
+        )
+    )
+
+    SHOW_VERSION: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Show the application deployment version in the health status response payload.\n"
+            "Default: True\n"
+            "Production Recommendation: True.\n"
+            "Development Recommendation: True.\n"
+            "Security Consideration: Minimally exposes system version information."
+        )
+    )
+
+    SHOW_ENVIRONMENT: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Show the application environment (e.g. production, staging, development) in health payloads.\n"
+            "Default: True\n"
+            "Production Recommendation: True.\n"
+            "Development Recommendation: True.\n"
+            "Security Consideration: None."
+        )
+    )
+
+    SHOW_UPTIME: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Show the application process uptime duration in health payloads.\n"
+            "Default: True\n"
+            "Production Recommendation: True.\n"
+            "Development Recommendation: True.\n"
+            "Security Consideration: None."
+        )
+    )
+
 
     @property
     def LOG_DIR_PATH(self) -> Path:

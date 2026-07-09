@@ -51,6 +51,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # 4. Proceed with request processing down the chain
         try:
             response = await call_next(request)
+            # Increment request counter metric
+            from app.services.health_service import metrics_registry
+            metrics_registry.increment_request_count()
         finally:
             # Calculate execution duration
             process_time = time.time() - start_time
