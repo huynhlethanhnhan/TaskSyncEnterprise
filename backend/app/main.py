@@ -28,7 +28,8 @@ from app.routers.v1 import (
     notifications
 )
 
-from app.core.middleware import LoggingMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from app.core.middleware import LoggingMiddleware, SecurityHeadersMiddleware
 from app.core.errors import register_exception_handlers
 
 # Setup enterprise logging system first
@@ -56,13 +57,35 @@ async def lifespan(app: FastAPI):
     app_logger.info("Application startup validation check: Passed")
     app_logger.info("TaskSyncEnterprise successfully started and ready to handle requests.")
     yield
-    app_logger.info("TaskSyncEnterprise shutting down.")
+    
+    # Graceful shutdown event handling
+    app_logger.info("Initiating graceful shutdown procedures...")
+    try:
+        app_logger.info("Closing database engine pool...")
+        engine.dispose()
+        app_logger.info("Database engine pool disposed successfully.")
+    except Exception as e:
+        app_logger.error(f"Error disposing database engine pool during shutdown: {e}")
+        
+    app_logger.info("Flushing logging handlers...")
+    import logging
+    logging.shutdown()
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 
 # 🧱 CẤU HÌNH MIDDLEWARES
 app.add_middleware(LoggingMiddleware)
+
+# Trusted Host checking to prevent Host Header spoofing
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=settings.ALLOWED_HOSTS
+)
+
+# Standard OWASP response security headers and caching control
+app.add_middleware(SecurityHeadersMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,

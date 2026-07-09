@@ -505,6 +505,17 @@ class Settings(BaseSettings):
         )
     )
 
+    ALLOWED_HOSTS: list[str] = Field(
+        default_factory=lambda: ["*"],
+        description=(
+            "Purpose: List of allowed hostnames/IP addresses for TrustedHostMiddleware to prevent Host Header injection attacks.\n"
+            "Default: ['*'] (allows all for local development compatibility).\n"
+            "Production Recommendation: Set to specific domains or IP addresses mapping application endpoints.\n"
+            "Security Consideration: Restricting host headers prevents server side cache poisoning and redirects hijacking."
+        )
+    )
+
+
 
     @property
     def LOG_DIR_PATH(self) -> Path:
