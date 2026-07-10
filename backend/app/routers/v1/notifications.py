@@ -1,43 +1,103 @@
 # 📂 FILE: app/routers/v1/notifications.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user
 from app.database import get_db
+from app.core.deps import get_current_user
 from app.models.employee import Employee
-from app.schemas.notification import NotificationResponse
-from app.crud import notification as notification_crud
+from app.core.response_builder import ResponseBuilder
+from app.schemas.response import SuccessResponse, PagedResponse
+from app.schemas.pagination import PaginationParams, BaseFilterParams, SortParams
+from app.schemas.notification import NotificationResponse, UnreadCountResponse
+from app.services.notification_service import notification_service
 
-router = APIRouter(prefix="/notifications", tags=["Notifications"])
+router = APIRouter(
+    prefix="/notifications",
+    tags=["Notifications"]
+)
 
-@router.get("", response_model=list[NotificationResponse])
-def list_notifications(
-    current_user: Employee = Depends(get_current_user),
-    db: Session = Depends(get_db)
+
+@router.get(
+    "",
+    response_model=PagedResponse[NotificationResponse]
+)
+def get_my_notifications(
+    pagination_params: PaginationParams = Depends(),
+    filter_params: BaseFilterParams = Depends(),
+    sort_params: SortParams = Depends(),
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
 ):
     """
-    Lấy danh sách thông báo của nhân viên hiện tại
+    Retrieves a paginated list of notifications for the authenticated employee.
+    Integrates searching, sorting, and pagination.
     """
-    return notification_crud.get_by_employee(db, employee_id=current_user.id)
+    items, total = notification_service.get_user_notifications(
+        db=db,
+        employee_id=current_user.id,
+        pagination_params=pagination_params,
+        filter_params=filter_params,
+        sort_params=sort_params
+    )
+    return ResponseBuilder.pagination(
+        items=items,
+        page=pagination_params.page,
+        size=pagination_params.size,
+        total=total,
+        message="Notifications retrieved successfully."
+    )
 
-@router.patch("/{id}/read", response_model=NotificationResponse)
+
+@router.get(
+    "/unread-count",
+    response_model=SuccessResponse[UnreadCountResponse]
+)
+def get_my_unread_count(
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
+):
+    """
+    Retrieves the count of unread notifications for the authenticated employee.
+    """
+    count = notification_service.get_unread_count(db, current_user.id)
+    return ResponseBuilder.success(
+        data={"unread_count": count},
+        message="Unread notification count retrieved successfully."
+    )
+
+
+@router.patch(
+    "/{notification_id:int}/read",
+    response_model=SuccessResponse[NotificationResponse]
+)
 def mark_notification_as_read(
-    id: int,
-    current_user: Employee = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    notification_id: int,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
 ):
     """
-    Đánh dấu thông báo là đã đọc
+    Marks a specific notification as read, validating ownership.
     """
-    notification = notification_crud.get_by_id(db, notification_id=id)
-    if not notification:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Thông báo không tồn tại"
-        )
-    if notification.employee_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Bạn không có quyền đọc thông báo này"
-        )
-    return notification_crud.mark_as_read(db, notification=notification)
+    notification = notification_service.mark_as_read(db, notification_id, current_user.id)
+    return ResponseBuilder.success(
+        data=notification,
+        message="Notification marked as read successfully."
+    )
+
+
+@router.patch(
+    "/read-all",
+    response_model=SuccessResponse[dict]
+)
+def mark_all_notifications_as_read(
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
+):
+    """
+    Marks all notifications for the authenticated employee as read.
+    """
+    count = notification_service.mark_all_as_read(db, current_user.id)
+    return ResponseBuilder.success(
+        data={"marked_read_count": count},
+        message="All notifications marked as read successfully."
+    )

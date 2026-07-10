@@ -1,39 +1,49 @@
 # 📂 FILE: app/routers/v1/dashboard.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+
 from app.database import get_db
-from app.models.task import Task
-from app.core.deps import get_current_user
+from app.core.deps import RequireEmployee
+from app.core.response_builder import ResponseBuilder
+from app.schemas.response import SuccessResponse
+from app.schemas.dashboard import DashboardOverviewResponse, DashboardAnalyticsResponse
+from app.services.dashboard_service import dashboard_service
 
 router = APIRouter(
     prefix="/dashboard",
-    tags=["Dashboard"],
-    dependencies=[Depends(get_current_user)]
+    tags=["Dashboard"]
 )
 
-@router.get("/progress")
-def get_project_progress(db: Session = Depends(get_db)):
-    # 1. Đếm tổng số task chưa bị xóa (is_deleted = 0)
-    total_tasks = db.execute(
-        select(func.count(Task.id)).where(Task.is_deleted == False)
-    ).scalar() or 0
-    
-    if total_tasks == 0:
-        return {"progress_percent": 0, "todo": 0, "in_progress": 0, "done": 0, "total": 0}
 
-    # 2. Đếm số task theo đúng các trạng thái (status) trong Model của bạn
-    todo_count = db.execute(select(func.count(Task.id)).where(Task.status == "To Do", Task.is_deleted == False)).scalar() or 0
-    in_progress_count = db.execute(select(func.count(Task.id)).where(Task.status == "In Progress", Task.is_deleted == False)).scalar() or 0
-    done_count = db.execute(select(func.count(Task.id)).where(Task.status == "Done", Task.is_deleted == False)).scalar() or 0
+@router.get(
+    "/overview",
+    response_model=SuccessResponse[DashboardOverviewResponse],
+    dependencies=[Depends(RequireEmployee)]
+)
+def get_dashboard_overview(db: Session = Depends(get_db)):
+    """
+    Retrieves a unified overview of all dashboard widget counts.
+    Requires an authenticated Employee.
+    """
+    overview_data = dashboard_service.get_overview(db)
+    return ResponseBuilder.success(
+        data=overview_data,
+        message="Dashboard overview metrics retrieved successfully."
+    )
 
-    # 3. Tính phần trạng tiến độ tổng quan dựa trên các task đã "Done"
-    progress_percent = round((done_count / total_tasks) * 100, 2)
 
-    return {
-        "progress_percent": progress_percent,
-        "todo": todo_count,
-        "in_progress": in_progress_count,
-        "done": done_count,
-        "total": total_tasks
-    }
+@router.get(
+    "/analytics",
+    response_model=SuccessResponse[DashboardAnalyticsResponse],
+    dependencies=[Depends(RequireEmployee)]
+)
+def get_dashboard_analytics(db: Session = Depends(get_db)):
+    """
+    Retrieves full widget overview counts along with categorized status breakdowns.
+    Requires an authenticated Employee.
+    """
+    analytics_data = dashboard_service.get_detailed_analytics(db)
+    return ResponseBuilder.success(
+        data=analytics_data,
+        message="Dashboard analytical breakdowns retrieved successfully."
+    )

@@ -1,27 +1,32 @@
 # 📂 FILE: app/core/exceptions.py
+import logging
 from typing import Any
 from app.core import error_codes
 
-class AppException(Exception):
+class BaseAppException(Exception):
     """
     Base enterprise exception for all custom runtime and application errors.
-    Supports a HTTP status code, specific error code, user message, and optional details.
+    Supports a HTTP status code, specific error code, user message, optional details, and log level.
     """
     def __init__(
         self,
         message: str,
         error_code: str = error_codes.SYSTEM_INTERNAL_ERROR,
         status_code: int = 500,
-        details: Any = None
+        details: Any = None,
+        log_level: int = logging.ERROR
     ):
         super().__init__(message)
         self.message = message
         self.error_code = error_code
         self.status_code = status_code
         self.details = details
+        self.log_level = log_level
 
+# Maintain backward compatibility
+AppException = BaseAppException
 
-class BusinessException(AppException):
+class BusinessRuleException(BaseAppException):
     """Base exception for database constraints, business rule validation and logic violations."""
     def __init__(
         self,
@@ -34,11 +39,14 @@ class BusinessException(AppException):
             message=message,
             error_code=error_code,
             status_code=status_code,
-            details=details
+            details=details,
+            log_level=logging.WARNING
         )
 
+# Maintain backward compatibility
+BusinessException = BusinessRuleException
 
-class ValidationException(AppException):
+class ValidationException(BaseAppException):
     """Raised when custom schemas or API input payload parameter validation fails."""
     def __init__(
         self,
@@ -50,11 +58,11 @@ class ValidationException(AppException):
             message=message,
             error_code=error_code,
             status_code=422,
-            details=details
+            details=details,
+            log_level=logging.WARNING
         )
 
-
-class AuthenticationException(AppException):
+class AuthenticationException(BaseAppException):
     """Raised when user credentials validation, JWT extraction, or JWT decryption fails."""
     def __init__(
         self,
@@ -66,11 +74,11 @@ class AuthenticationException(AppException):
             message=message,
             error_code=error_code,
             status_code=401,
-            details=details
+            details=details,
+            log_level=logging.WARNING
         )
 
-
-class AuthorizationException(AppException):
+class AuthorizationException(BaseAppException):
     """Raised when active user role has insufficient privileges or permissions."""
     def __init__(
         self,
@@ -82,11 +90,11 @@ class AuthorizationException(AppException):
             message=message,
             error_code=error_code,
             status_code=403,
-            details=details
+            details=details,
+            log_level=logging.WARNING
         )
 
-
-class NotFoundException(AppException):
+class ResourceNotFoundException(BaseAppException):
     """Raised when a queried entity or database resource is not found."""
     def __init__(
         self,
@@ -98,11 +106,14 @@ class NotFoundException(AppException):
             message=message,
             error_code=error_code,
             status_code=404,
-            details=details
+            details=details,
+            log_level=logging.WARNING
         )
 
+# Maintain backward compatibility
+NotFoundException = ResourceNotFoundException
 
-class ConflictException(AppException):
+class ConflictException(BaseAppException):
     """Raised when a command conflicts with current database resource states (e.g. duplicate keys)."""
     def __init__(
         self,
@@ -114,11 +125,11 @@ class ConflictException(AppException):
             message=message,
             error_code=error_code,
             status_code=409,
-            details=details
+            details=details,
+            log_level=logging.WARNING
         )
 
-
-class DatabaseException(AppException):
+class DatabaseException(BaseAppException):
     """Raised for database integrity issues, timeout conditions, or general ORM errors."""
     def __init__(
         self,
@@ -130,11 +141,11 @@ class DatabaseException(AppException):
             message=message,
             error_code=error_code,
             status_code=500,
-            details=details
+            details=details,
+            log_level=logging.ERROR
         )
 
-
-class StorageException(AppException):
+class StorageException(BaseAppException):
     """Raised when saving or loading static files to/from storage disk partitions fails."""
     def __init__(
         self,
@@ -146,11 +157,11 @@ class StorageException(AppException):
             message=message,
             error_code=error_code,
             status_code=500,
-            details=details
+            details=details,
+            log_level=logging.ERROR
         )
 
-
-class ExternalServiceException(AppException):
+class ExternalServiceException(BaseAppException):
     """Raised when connection timeouts or server errors occur during external API communication."""
     def __init__(
         self,
@@ -162,5 +173,22 @@ class ExternalServiceException(AppException):
             message=message,
             error_code=error_code,
             status_code=500,
-            details=details
+            details=details,
+            log_level=logging.ERROR
+        )
+
+class UnexpectedApplicationException(BaseAppException):
+    """Raised when an unhandled, unexpected exception escapes at runtime."""
+    def __init__(
+        self,
+        message: str = "Hệ thống gặp sự cố nội bộ.",
+        error_code: str = error_codes.SYSTEM_INTERNAL_ERROR,
+        details: Any = None
+    ):
+        super().__init__(
+            message=message,
+            error_code=error_code,
+            status_code=500,
+            details=details,
+            log_level=logging.CRITICAL
         )

@@ -75,7 +75,9 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         finally:
             # 5. Measure duration
             duration = time.time() - start_time
+            duration_ms = duration * 1000
             ctx_data["duration"] = duration
+            ctx_data["duration_ms"] = duration_ms
 
             # 6. Add X-Request-ID and X-Process-Time headers
             if 'response' in locals():
@@ -89,12 +91,26 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             is_error = status_code >= 500
             metrics.record_request(duration, is_error=is_error)
 
-            # 8. Write structured access log
-            access_logger.info(
+            # 8. Retrieve error_code from context dictionary if populated
+            error_code = ctx_data.get("error_code", "-")
+
+            # 9. Write structured access log message and extra fields for ELK/APM
+            log_msg = (
                 f"HTTP Request Completed: method={method} path={path} status={status_code} "
-                f"duration={duration:.4f}s ip={client_ip} user_id={user_id}"
+                f"duration={duration:.4f}s ip={client_ip} user_id={user_id} "
+                f"duration_ms={duration_ms:.2f}ms user_agent={user_agent} "
+                f"request_id={request_id} error_code={error_code}"
+            )
+            access_logger.info(
+                log_msg,
+                extra={
+                    "duration_ms": duration_ms,
+                    "status_code": status_code,
+                    "error_code": error_code,
+                    "user_agent": user_agent
+                }
             )
 
-            # 9. Reset context variables
+            # 10. Reset context variables
             _request_context.reset(token_ctx)
             request_id_ctx.reset(token_rid)

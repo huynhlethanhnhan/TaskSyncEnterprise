@@ -37,6 +37,11 @@ class StructuredFormatter(logging.Formatter):
             record.duration = "-"
             duration_val = None
 
+        # Additional fields for request logging
+        record.duration_ms = ctx.get("duration_ms", 0.0)
+        record.user_agent = ctx.get("user_agent", "-")
+        record.error_code = ctx.get("error_code", "-")
+
         if self.use_json:
             log_data = {
                 "timestamp": datetime.fromtimestamp(record.created, timezone.utc).isoformat(),
@@ -46,10 +51,13 @@ class StructuredFormatter(logging.Formatter):
                 "module": record.module,
                 "message": record.getMessage(),
                 "duration": duration_val,
+                "duration_ms": record.duration_ms if record.duration_ms > 0 else (duration_val * 1000 if duration_val else 0.0),
                 "method": record.method if record.method != "-" else None,
                 "path": record.path if record.path != "-" else None,
                 "client_ip": record.client_ip if record.client_ip != "-" else None,
                 "user_id": record.user_id if record.user_id != "-" else None,
+                "user_agent": record.user_agent if record.user_agent != "-" else None,
+                "error_code": record.error_code if record.error_code != "-" else None,
             }
             # Include traceback details if exception info is present
             if record.exc_info:

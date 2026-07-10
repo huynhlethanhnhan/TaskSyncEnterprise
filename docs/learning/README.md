@@ -11,6 +11,7 @@ graph TD
     P1[Phase 1: REST API Routing] --> P2[Phase 2: Database Integrity & Foundations]
     P2 --> P3_1[Phase 3.1: Enterprise Infrastructure Foundations]
     P3_1 --> P3_2[Phase 3.2: Observability & Production Hardening]
+    P3_2 --> P3_3[Phase 3.3: Core Infrastructure & Orchestration]
 ```
 
 ---
@@ -38,3 +39,6 @@ graph TD
 *   **[02. Global Exception Handling](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.2/02_Global_Exception_Handling.md):** Xây dựng phễu xử lý lỗi toàn cục và định dạng mã lỗi nhất quán.
 *   **[03. Enterprise Response Architecture](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.2/03_Enterprise_Response.md):** Đóng gói chuẩn hóa dữ liệu trả về cho API, hỗ trợ phân trang Generics.
 *   **[04. Observability & Monitoring Layer](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.2/04_Enterprise_Observability.md):** Theo dõi hiệu năng hệ thống, giám sát pool SQL Server, và phát hiện câu lệnh SQL chạy chậm.
+
+### [Phase 3.3: Hạ Tầng Lõi Doanh Nghiệp & Điều Phối Bất Đồng Bộ](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.3/README.md)
+*   **[Báo Cáo Học Tập & Mẫu Lập Trình (Vietnamese)](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.3/README.md):** Báo cáo chi tiết các nguyên lý SOLID, mẫu thiết kế áp dụng trong Phase 3.3.

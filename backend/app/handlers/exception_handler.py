@@ -1,134 +1,165 @@
 # 📂 FILE: app/handlers/exception_handler.py
 import logging
+import time
+from datetime import datetime, timezone
 from fastapi import Request, FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from pydantic import ValidationError
 
-from app.core.exceptions import AppException
+from app.core.exceptions import (
+    BaseAppException,
+    AuthenticationException,
+    AuthorizationException,
+    ValidationException,
+    BusinessRuleException,
+    ConflictException,
+    ResourceNotFoundException,
+    DatabaseException,
+    UnexpectedApplicationException
+)
 from app.core import error_codes
 from app.core.logger import error_logger, request_id_ctx
+from app.schemas.response import ErrorResponse, ValidationErrorResponse
+
+async def unified_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """
+    Centralized exception handler that processes all exceptions, maps them to standard
+    enterprise exceptions, logs with dynamic levels, and returns standardized envelopes.
+    """
+    request_id = request_id_ctx.get()
+    
+    # 1. Map incoming exception to BaseAppException
+    mapped_exc: BaseAppException
+    
+    if isinstance(exc, BaseAppException):
+        mapped_exc = exc
+    elif isinstance(exc, StarletteHTTPException):
+        if exc.status_code == 401:
+            mapped_exc = AuthenticationException(message=str(exc.detail), details=None)
+        elif exc.status_code == 403:
+            mapped_exc = AuthorizationException(message=str(exc.detail), details=None)
+        elif exc.status_code == 404:
+            mapped_exc = ResourceNotFoundException(message=str(exc.detail), details=None)
+        else:
+            mapped_exc = BaseAppException(
+                message=str(exc.detail),
+                error_code="HTTP_ERROR",
+                status_code=exc.status_code,
+                details=None,
+                log_level=logging.WARNING
+            )
+    elif isinstance(exc, (RequestValidationError, ValidationError)):
+        details = exc.errors() if hasattr(exc, "errors") else str(exc)
+        mapped_exc = ValidationException(
+            message="Dữ liệu gửi lên không hợp lệ!",
+            error_code=error_codes.VALIDATION_REQUEST_FAILED,
+            details=details
+        )
+    elif isinstance(exc, SQLAlchemyError):
+        # Prevent leaking database schema details or connection strings to client
+        mapped_exc = DatabaseException(
+            message="Đã xảy ra lỗi tương tác cơ sở dữ liệu hệ thống.",
+            details=None
+        )
+    elif isinstance(exc, PermissionError):
+        mapped_exc = AuthorizationException(
+            message="Quyền truy cập bị từ chối.",
+            details=str(exc)
+        )
+    elif isinstance(exc, (ValueError, KeyError)):
+        mapped_exc = BusinessRuleException(
+            message=str(exc),
+            error_code="VALUE_ERROR" if isinstance(exc, ValueError) else "KEY_ERROR",
+            status_code=400,
+            details=None
+        )
+    else:
+        # Unexpected, unhandled exceptions
+        mapped_exc = UnexpectedApplicationException(
+            message="Hệ thống gặp sự cố nội bộ.",
+            details=str(exc)
+        )
+
+    ctx_data = {}
+    try:
+        from app.core.request_context import get_request_context
+        ctx_data = get_request_context()
+        if ctx_data:
+            ctx_data["error_code"] = mapped_exc.error_code
+    except Exception:
+        pass
+        
+    execution_time = None
+    if ctx_data and "start_time" in ctx_data:
+        execution_time = time.time() - ctx_data["start_time"]
+
+    log_metadata = {
+        "request_id": request_id,
+        "path": request.url.path,
+        "method": request.method,
+        "status_code": mapped_exc.status_code,
+        "error_code": mapped_exc.error_code,
+        "exception_type": exc.__class__.__name__,
+        "execution_time": execution_time
+    }
+
+    # 3. Log based on severity/level specified by the exception class
+    log_msg = (
+        f"Handled Exception [{log_metadata['exception_type']}]: {mapped_exc.message} | "
+        f"Path: {log_metadata['path']} | Method: {log_metadata['method']} | "
+        f"Status Code: {mapped_exc.status_code} | Error Code: {mapped_exc.error_code} | "
+        f"Execution Time: {execution_time}s"
+    )
+
+    if mapped_exc.log_level >= logging.CRITICAL:
+        error_logger.critical(log_msg, exc_info=True)
+    elif mapped_exc.log_level >= logging.ERROR:
+        error_logger.error(log_msg, exc_info=True)
+    elif mapped_exc.log_level >= logging.WARNING:
+        error_logger.warning(log_msg)
+    else:
+        error_logger.info(log_msg)
+
+    # 4. Construct and return response body using P3.3-INF-001 schemas
+    if isinstance(mapped_exc, ValidationException):
+        response_model = ValidationErrorResponse(
+            success=False,
+            message=mapped_exc.message,
+            error_code=mapped_exc.error_code,
+            details=mapped_exc.details,
+            trace_id=request_id
+        )
+    else:
+        response_model = ErrorResponse(
+            success=False,
+            message=mapped_exc.message,
+            error_code=mapped_exc.error_code,
+            details=mapped_exc.details,
+            trace_id=request_id
+        )
+
+    return JSONResponse(
+        status_code=mapped_exc.status_code,
+        headers={"X-Request-ID": request_id},
+        content=response_model.model_dump()
+    )
+
 
 def register_exception_handlers(app: FastAPI) -> None:
     """
     Registers centralized global exception handlers for the FastAPI application.
     Converts diverse runtime errors into structured, client-safe JSON responses.
     """
-
-    @app.exception_handler(AppException)
-    async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
-        request_id = request_id_ctx.get()
-        
-        # Log based on severity: warning for client-side issues (4xx), error for server issues (5xx)
-        if exc.status_code >= 500:
-            error_logger.error(
-                f"AppException [{exc.__class__.__name__}]: {exc.message} | Error Code: {exc.error_code}",
-                exc_info=True
-            )
-        else:
-            error_logger.warning(
-                f"AppException [{exc.__class__.__name__}]: {exc.message} | Error Code: {exc.error_code}"
-            )
-            
-        return JSONResponse(
-            status_code=exc.status_code,
-            headers={"X-Request-ID": request_id},
-            content={
-                "success": False,
-                "message": exc.message,
-                "error_code": exc.error_code,
-                "request_id": request_id,
-                "data": exc.details
-            },
-        )
-
-    @app.exception_handler(StarletteHTTPException)
-    async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-        request_id = request_id_ctx.get()
-        
-        # Map HTTP status codes to standard error codes
-        if exc.status_code == 401:
-            error_code = error_codes.AUTH_UNAUTHORIZED
-        elif exc.status_code == 403:
-            error_code = error_codes.AUTH_FORBIDDEN
-        elif exc.status_code == 404:
-            error_code = error_codes.SYSTEM_INTERNAL_ERROR
-        else:
-            error_code = "HTTP_ERROR"
-            
-        error_logger.warning(f"HTTPException [{exc.status_code}]: {exc.detail} | Error Code: {error_code}")
-        
-        return JSONResponse(
-            status_code=exc.status_code,
-            headers={"X-Request-ID": request_id},
-            content={
-                "success": False,
-                "message": str(exc.detail),
-                "error_code": error_code,
-                "request_id": request_id,
-                "data": None
-            },
-        )
-
-    @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-        request_id = request_id_ctx.get()
-        error_logger.warning(f"RequestValidationError: {exc.errors()}")
-        
-        return JSONResponse(
-            status_code=422,
-            headers={"X-Request-ID": request_id},
-            content={
-                "success": False,
-                "message": "Dữ liệu gửi lên không hợp lệ!",
-                "error_code": error_codes.VALIDATION_REQUEST_FAILED,
-                "request_id": request_id,
-                "data": exc.errors()
-            },
-        )
-
-    @app.exception_handler(SQLAlchemyError)
-    async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
-        request_id = request_id_ctx.get()
-        
-        # Log query trace detail locally for debugging
-        error_logger.error(
-            f"Database integrity or query execution failure: {exc}", 
-            exc_info=True
-        )
-        
-        # Do not leak database schema traces or column specifics to the client
-        return JSONResponse(
-            status_code=500,
-            headers={"X-Request-ID": request_id},
-            content={
-                "success": False,
-                "message": "Đã xảy ra lỗi tương tác cơ sở dữ liệu hệ thống.",
-                "error_code": error_codes.DATABASE_INTEGRITY_VIOLATION,
-                "request_id": request_id,
-                "data": None
-            },
-        )
-
-    @app.exception_handler(Exception)
-    async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        request_id = request_id_ctx.get()
-        
-        # Log unhandled exceptions with full tracebacks for diagnostics
-        error_logger.critical(
-            f"Unhandled internal server error: {exc}", 
-            exc_info=True
-        )
-        
-        return JSONResponse(
-            status_code=500,
-            headers={"X-Request-ID": request_id},
-            content={
-                "success": False,
-                "message": "Hệ thống gặp sự cố nội bộ.",
-                "error_code": error_codes.SYSTEM_INTERNAL_ERROR,
-                "request_id": request_id,
-                "data": None
-            },
-        )
+    # Centralize registration to flow through unified_exception_handler
+    app.add_exception_handler(BaseAppException, unified_exception_handler)
+    app.add_exception_handler(StarletteHTTPException, unified_exception_handler)
+    app.add_exception_handler(RequestValidationError, unified_exception_handler)
+    app.add_exception_handler(ValidationError, unified_exception_handler)
+    app.add_exception_handler(SQLAlchemyError, unified_exception_handler)
+    app.add_exception_handler(PermissionError, unified_exception_handler)
+    app.add_exception_handler(ValueError, unified_exception_handler)
+    app.add_exception_handler(KeyError, unified_exception_handler)
+    app.add_exception_handler(Exception, unified_exception_handler)

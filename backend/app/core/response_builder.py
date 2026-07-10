@@ -1,8 +1,16 @@
 # 📂 FILE: app/core/response_builder.py
 import math
-from typing import Any, list
+from typing import Any, List
 from fastapi.responses import JSONResponse
-from app.schemas.response import ApiResponse, PagedResponse, PaginationMeta
+from app.schemas.response import (
+    SuccessResponse,
+    CreatedResponse,
+    UpdatedResponse,
+    DeletedResponse,
+    ResponseMeta,
+    PagedResponse,
+    PaginationMeta
+)
 from app.core.logger import request_id_ctx
 
 
@@ -24,14 +32,19 @@ class ResponseBuilder:
         data: Any = None,
         message: str = "Success",
         meta: Any = None
-    ) -> ApiResponse[Any]:
-        """Constructs an ApiResponse with status code 200."""
-        return ApiResponse(
+    ) -> SuccessResponse[Any]:
+        """Constructs a SuccessResponse with status code 200."""
+        meta_obj = None
+        if meta is not None:
+            if isinstance(meta, dict):
+                meta_obj = ResponseMeta(**meta)
+            else:
+                meta_obj = meta
+        return SuccessResponse(
             success=True,
             message=message,
             data=data,
-            request_id=cls._get_request_id(),
-            meta=meta
+            meta=meta_obj or ResponseMeta()
         )
 
     @classmethod
@@ -40,14 +53,19 @@ class ResponseBuilder:
         data: Any = None,
         message: str = "Resource created successfully",
         meta: Any = None
-    ) -> ApiResponse[Any]:
-        """Constructs an ApiResponse representing newly created resources."""
-        return ApiResponse(
+    ) -> CreatedResponse[Any]:
+        """Constructs a CreatedResponse representing newly created resources."""
+        meta_obj = None
+        if meta is not None:
+            if isinstance(meta, dict):
+                meta_obj = ResponseMeta(**meta)
+            else:
+                meta_obj = meta
+        return CreatedResponse(
             success=True,
             message=message,
             data=data,
-            request_id=cls._get_request_id(),
-            meta=meta
+            meta=meta_obj or ResponseMeta()
         )
 
     @classmethod
@@ -56,14 +74,19 @@ class ResponseBuilder:
         data: Any = None,
         message: str = "Resource updated successfully",
         meta: Any = None
-    ) -> ApiResponse[Any]:
-        """Constructs an ApiResponse representing modified resources."""
-        return ApiResponse(
+    ) -> UpdatedResponse[Any]:
+        """Constructs an UpdatedResponse representing modified resources."""
+        meta_obj = None
+        if meta is not None:
+            if isinstance(meta, dict):
+                meta_obj = ResponseMeta(**meta)
+            else:
+                meta_obj = meta
+        return UpdatedResponse(
             success=True,
             message=message,
             data=data,
-            request_id=cls._get_request_id(),
-            meta=meta
+            meta=meta_obj or ResponseMeta()
         )
 
     @classmethod
@@ -71,14 +94,19 @@ class ResponseBuilder:
         cls,
         message: str = "Resource deleted successfully",
         meta: Any = None
-    ) -> ApiResponse[Any]:
-        """Constructs an ApiResponse indicating a successful deletion operation."""
-        return ApiResponse(
+    ) -> DeletedResponse:
+        """Constructs a DeletedResponse indicating a successful deletion operation."""
+        meta_obj = None
+        if meta is not None:
+            if isinstance(meta, dict):
+                meta_obj = ResponseMeta(**meta)
+            else:
+                meta_obj = meta
+        return DeletedResponse(
             success=True,
             message=message,
             data=None,
-            request_id=cls._get_request_id(),
-            meta=meta
+            meta=meta_obj or ResponseMeta()
         )
 
     @classmethod
@@ -93,7 +121,7 @@ class ResponseBuilder:
     @classmethod
     def pagination(
         cls,
-        items: list[Any],
+        items: List[Any],
         page: int,
         size: int,
         total: int,
@@ -105,7 +133,6 @@ class ResponseBuilder:
             success=True,
             message=message,
             data=items,
-            request_id=cls._get_request_id(),
             meta=PaginationMeta(
                 page=page,
                 size=size,
