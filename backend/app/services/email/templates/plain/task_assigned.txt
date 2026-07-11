@@ -1,0 +1,12 @@
+Task Assigned
+
+Hello {{ employee_name }},
+
+You have been assigned to a new task on {{ company_name }}:
+- Task Title: {{ task_title }}
+- Assigned By: {{ actor_name }}
+- Priority: {{ priority }}
+- Due Date: {{ due_date or 'N/A' }}
+
+Best regards,
+{{ company_name }} Operations Team

@@ -48,3 +48,29 @@ def client(db):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def mock_smtp_client():
+    from unittest.mock import patch
+    with patch("app.services.email.smtp_client.SMTPClient.send", return_value="SMTP delivery successful") as mock:
+        yield mock
+
+
+@pytest.fixture(autouse=True)
+def mock_redis_client(request):
+    # Skip global mocking for cache and cache manager unit test suites
+    if "test_cache" in request.module.__name__:
+        yield None
+        return
+
+    from unittest.mock import patch, MagicMock, PropertyMock
+    mock_client = MagicMock()
+    mock_client.get.return_value = None
+    mock_client.set.return_value = True
+    mock_client.setex.return_value = True
+    mock_client.ping.return_value = True
+    
+    with patch("app.cache.redis_client.RedisClient.client", new_callable=PropertyMock) as mock_prop:
+        mock_prop.return_value = mock_client
+        yield mock_client

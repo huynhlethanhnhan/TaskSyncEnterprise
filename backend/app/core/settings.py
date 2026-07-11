@@ -1,7 +1,7 @@
 # 📂 FILE: app/core/settings.py
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 from pydantic import Field, SecretStr, PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.core.paths import resolve_path
@@ -514,6 +514,134 @@ class Settings(BaseSettings):
             "Production Recommendation: Set to specific domains or IP addresses mapping application endpoints.\n"
             "Security Consideration: Restricting host headers prevents server side cache poisoning and redirects hijacking."
         )
+    )
+
+    # =========================================================================
+    # ✉️ 6. SMTP & EMAIL SERVICE SETTINGS
+    # =========================================================================
+    EMAIL_PROVIDER: str = Field(
+        default="SMTP",
+        description="Active email provider strategy (e.g. SMTP, GMAIL, OUTLOOK, AWS_SES, SENDGRID, MAILGUN)."
+    )
+
+    SMTP_HOST: str = Field(
+        default="localhost",
+        description="SMTP server host address."
+    )
+
+    SMTP_PORT: int = Field(
+        default=587,
+        description="SMTP server port."
+    )
+
+    SMTP_USERNAME: Optional[str] = Field(
+        default=None,
+        description="SMTP credentials username."
+    )
+
+    SMTP_PASSWORD: Optional[SecretStr] = Field(
+        default=None,
+        description="SMTP credentials password."
+    )
+
+    SMTP_USE_TLS: bool = Field(
+        default=True,
+        description="Enable TLS for SMTP connection."
+    )
+
+    SMTP_USE_SSL: bool = Field(
+        default=False,
+        description="Enable SSL for SMTP connection."
+    )
+
+    SMTP_TIMEOUT: int = Field(
+        default=10,
+        description="Timeout for SMTP operations in seconds."
+    )
+
+    EMAIL_SENDER_NAME: str = Field(
+        default="TaskSync Enterprise",
+        description="Default sender display name."
+    )
+
+    EMAIL_SENDER_ADDRESS: str = Field(
+        default="noreply@tasksync.enterprise",
+        description="Default sender email address."
+    )
+
+    # =========================================================================
+    # 🔄 7. REDIS CACHE SETTINGS
+    # =========================================================================
+    
+    REDIS_HOST: str = Field(
+        default="localhost",
+        description="Redis host address."
+    )
+    
+    REDIS_PORT: int = Field(
+        default=6379,
+        description="Redis port."
+    )
+    
+    REDIS_DB: int = Field(
+        default=0,
+        description="Redis database index."
+    )
+    
+    REDIS_PASSWORD: Optional[SecretStr] = Field(
+        default=None,
+        description="Redis connection password."
+    )
+    
+    REDIS_URL: Optional[str] = Field(
+        default=None,
+        description="Redis connection URL (overrides host, port, db, password)."
+    )
+    
+    REDIS_MAX_CONNECTIONS: int = Field(
+        default=50,
+        description="Maximum connections in Redis pool."
+    )
+    
+    REDIS_TIMEOUT: int = Field(
+        default=5,
+        description="Redis connection and socket timeout in seconds."
+    )
+    
+    REDIS_RETRY_ATTEMPTS: int = Field(
+        default=3,
+        description="Redis operation retry attempts."
+    )
+
+    # TTL Settings
+    CACHE_TTL_DEFAULT: int = Field(
+        default=3600,
+        description="Default Cache TTL in seconds."
+    )
+    
+    CACHE_TTL_DEPARTMENT: int = Field(
+        default=3600,
+        description="Cache TTL for department detail queries."
+    )
+    
+    CACHE_TTL_EMPLOYEE: int = Field(
+        default=3600,
+        description="Cache TTL for employee profile queries."
+    )
+    
+    CACHE_TTL_DASHBOARD: int = Field(
+        default=600,
+        description="Cache TTL for dashboard aggregate counts."
+    )
+    
+    CACHE_TTL_PROJECT: int = Field(
+        default=1800,
+        description="Cache TTL for project list responses."
+    )
+    
+    CACHE_TTL_TASK: int = Field(
+        default=1800,
+        description="Cache TTL for task list responses."
     )
 
     @property

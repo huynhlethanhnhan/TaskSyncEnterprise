@@ -1,0 +1,23 @@
+{% extends 'base/layout.html' %}
+{% block content %}
+<h2>Vacation Request Rejected</h2>
+<p>Hello {{ employee_name }},</p>
+<p>Your vacation request from {{ start_date }} to {{ end_date }} has been rejected.</p>
+<div class="card">
+    <table class="meta-table">
+        <tr>
+            <th>Start Date:</th>
+            <td>{{ start_date }}</td>
+        </tr>
+        <tr>
+            <th>End Date:</th>
+            <td>{{ end_date }}</td>
+        </tr>
+        <tr>
+            <th>Status:</th>
+            <td><span class="badge" style="background-color: #fee2e2; color: #991b1b;">Rejected</span></td>
+        </tr>
+    </table>
+</div>
+<p>Please connect with your manager if you have any questions or to submit a revised request.</p>
+{% endblock %}

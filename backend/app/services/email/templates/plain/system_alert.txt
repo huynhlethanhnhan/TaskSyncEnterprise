@@ -1,0 +1,9 @@
+{{ subject }}
+
+Hello {{ employee_name or 'User' }},
+
+You have received a system alert:
+{{ body }}
+
+Best regards,
+{{ company_name }} Operations Team

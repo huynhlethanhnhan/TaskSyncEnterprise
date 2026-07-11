@@ -3,7 +3,7 @@ import time
 import platform
 from datetime import datetime, timezone
 from app.config import settings
-from app.health.checks import DatabaseCheck, StorageCheck, ConfigurationCheck
+from app.health.checks import DatabaseCheck, StorageCheck, ConfigurationCheck, RedisCheck
 
 # Record startup timestamp
 STARTUP_TIMESTAMP = time.time()
@@ -53,15 +53,17 @@ class HealthService:
         db_ok, db_msg = DatabaseCheck.run()
         storage_ok, storage_msg = StorageCheck.run()
         config_ok, config_msg = ConfigurationCheck.run()
+        redis_ok, redis_msg = RedisCheck.run()
 
-        overall_ok = db_ok and storage_ok and config_ok
+        overall_ok = db_ok and storage_ok and config_ok and redis_ok
 
         report = {
             "status": "UP" if overall_ok else "DOWN",
             "checks": {
                 "database": {"status": "UP" if db_ok else "DOWN", "message": db_msg},
                 "storage": {"status": "UP" if storage_ok else "DOWN", "message": storage_msg},
-                "configuration": {"status": "UP" if config_ok else "DOWN", "message": config_msg}
+                "configuration": {"status": "UP" if config_ok else "DOWN", "message": config_msg},
+                "redis": {"status": "UP" if redis_ok else "DOWN", "message": redis_msg}
             }
         }
         return overall_ok, report
@@ -103,6 +105,10 @@ class HealthService:
             "configuration": {
                 "status": readiness["checks"]["configuration"]["status"],
                 "message": readiness["checks"]["configuration"]["message"]
+            },
+            "redis": {
+                "status": readiness["checks"]["redis"]["status"],
+                "message": readiness["checks"]["redis"]["message"]
             },
             "environment": {
                 "name": settings.ENVIRONMENT,

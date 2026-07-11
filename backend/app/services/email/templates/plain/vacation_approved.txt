@@ -1,0 +1,11 @@
+Vacation Request Approved
+
+Hello {{ employee_name }},
+
+Your vacation request has been approved:
+- Start Date: {{ start_date }}
+- End Date: {{ end_date }}
+- Status: Approved
+
+Enjoy your time off!
+{{ company_name }} Operations Team

@@ -11,6 +11,8 @@ from app.schemas.project import (
     ProjectResponse
 )
 from app.crud import project as crud_project
+from app.cache import cache_manager
+from app.cache.cache_keys import get_project_key, get_project_list_key
 
 # Bổ sung kiểm soát quyền riêng lẻ ở từng route
 router = APIRouter(
@@ -29,10 +31,12 @@ def get_projects(
         limit: int = settings.DEFAULT_PAGE_SIZE,
         db: Session = Depends(get_db)
 ):
-    return crud_project.get_all(
-        db,
-        skip,
-        limit
+    key = get_project_list_key(skip, limit)
+    return cache_manager.cache_collection(
+        key=key,
+        creator_fn=lambda: crud_project.get_all(db, skip, limit),
+        ttl=settings.CACHE_TTL_PROJECT,
+        response_model=list[ProjectResponse]
     )
 
 
@@ -45,9 +49,12 @@ def get_project(
         project_id: int,
         db: Session = Depends(get_db)
 ):
-    obj = crud_project.get_by_id(
-        db,
-        project_id
+    key = get_project_key(project_id)
+    obj = cache_manager.cache_model(
+        key=key,
+        creator_fn=lambda: crud_project.get_by_id(db, project_id),
+        ttl=settings.CACHE_TTL_PROJECT,
+        response_model=ProjectResponse
     )
 
     if obj is None:

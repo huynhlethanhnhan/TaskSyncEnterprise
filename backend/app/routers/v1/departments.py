@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from app.config import settings
 from app.database import get_db
 from app.schemas.department import DepartmentCreate, DepartmentUpdate, DepartmentResponse
 from app.crud import department as crud_department
 from app.core.deps import get_current_user, RequireAdmin
+from app.cache import cache_manager
+from app.cache.cache_keys import get_department_key, get_department_list_key
 
 router = APIRouter(
     prefix="/departments",
@@ -18,11 +21,23 @@ def get_departments(
     search: str | None = Query(None, description="Tìm kiếm theo tên hoặc mã phòng ban"),
     db: Session = Depends(get_db)
 ):
-    return crud_department.get_all(db, skip=skip, limit=limit, search=search)
+    key = get_department_list_key(skip, limit, search)
+    return cache_manager.cache_collection(
+        key=key,
+        creator_fn=lambda: crud_department.get_all(db, skip=skip, limit=limit, search=search),
+        ttl=settings.CACHE_TTL_DEPARTMENT,
+        response_model=list[DepartmentResponse]
+    )
 
 @router.get("/{department_id}", response_model=DepartmentResponse)
 def get_department(department_id: int, db: Session = Depends(get_db)):
-    obj = crud_department.get_by_id(db, department_id)
+    key = get_department_key(department_id)
+    obj = cache_manager.cache_model(
+        key=key,
+        creator_fn=lambda: crud_department.get_by_id(db, department_id),
+        ttl=settings.CACHE_TTL_DEPARTMENT,
+        response_model=DepartmentResponse
+    )
     if not obj:
         raise HTTPException(status_code=404, detail="Department not found or inactive")
     return obj

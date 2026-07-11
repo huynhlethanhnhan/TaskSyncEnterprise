@@ -1,0 +1,10 @@
+Welcome to {{ company_name }}
+
+Hello {{ employee_name }},
+
+Your account has been set up successfully. We are excited to welcome you!
+Use the following URL to log in and get started:
+{{ login_url or 'N/A' }}
+
+Best regards,
+{{ company_name }} Operations Team

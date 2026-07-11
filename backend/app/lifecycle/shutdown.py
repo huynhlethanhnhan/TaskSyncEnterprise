@@ -18,6 +18,15 @@ def run_shutdown() -> None:
     except Exception as e:
         app_logger.error(f"Error disposing database engine pool: {e}", exc_info=True)
         
+    # Dispose Redis connection pool
+    try:
+        from app.cache import RedisClient
+        app_logger.info("Closing Redis connection pool...")
+        RedisClient().close()
+        app_logger.info("Redis connection pool successfully closed.")
+    except Exception as e:
+        app_logger.error(f"Error closing Redis connection pool: {e}", exc_info=True)
+        
     app_logger.info("Flushing enterprise loggers. Shutdown completed.")
     
     # Shut down the logging handlers

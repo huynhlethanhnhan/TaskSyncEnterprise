@@ -1,0 +1,14 @@
+{% extends 'base/layout.html' %}
+{% block content %}
+<h2>Task Overdue Alert</h2>
+<p>Hello {{ employee_name }},</p>
+<p>The task <strong>{{ task_title }}</strong> is overdue! It was due on {{ due_date or 'N/A' }}.</p>
+<div class="card" style="border-left: 4px solid #ef4444; background-color: #fee2e2;">
+    <p style="margin: 0; color: #991b1b; font-weight: 600;">
+        Action Required: Please complete the task or request a due date extension.
+    </p>
+</div>
+<div style="text-align: center; margin-top: 24px;">
+    <a href="#" class="btn btn-primary" style="background-color: #dc2626;">View Overdue Task</a>
+</div>
+{% endblock %}

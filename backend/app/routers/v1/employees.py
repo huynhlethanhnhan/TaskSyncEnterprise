@@ -15,6 +15,8 @@ from app.schemas.employee import (
     EmployeeResponse
 )
 from app.crud import employee as crud_employee
+from app.cache import cache_manager
+from app.cache.cache_keys import get_employee_key, get_employee_list_key, get_employee_search_key
 
 # 🟢 KHỞI TẠO ROUTER: Gỡ bỏ khóa tổng dependencies để giải cứu API /avatar cá nhân
 router = APIRouter(
@@ -36,10 +38,12 @@ def get_employees(
         limit: int = settings.DEFAULT_PAGE_SIZE,
         db: Session = Depends(get_db)
 ):
-    return crud_employee.get_all(
-        db,
-        skip,
-        limit
+    key = get_employee_list_key(skip, limit)
+    return cache_manager.cache_collection(
+        key=key,
+        creator_fn=lambda: crud_employee.get_all(db, skip, limit),
+        ttl=settings.CACHE_TTL_EMPLOYEE,
+        response_model=list[EmployeeResponse]
     )
 
 
@@ -52,9 +56,12 @@ def search_employee(
         keyword: str,
         db: Session = Depends(get_db)
 ):
-    return crud_employee.search(
-        db,
-        keyword
+    key = get_employee_search_key(keyword)
+    return cache_manager.cache_collection(
+        key=key,
+        creator_fn=lambda: crud_employee.search(db, keyword),
+        ttl=settings.CACHE_TTL_EMPLOYEE,
+        response_model=list[EmployeeResponse]
     )
 
 
@@ -67,9 +74,12 @@ def get_employee(
         employee_id: int,
         db: Session = Depends(get_db)
 ):
-    obj = crud_employee.get_by_id(
-        db,
-        employee_id
+    key = get_employee_key(employee_id)
+    obj = cache_manager.cache_model(
+        key=key,
+        creator_fn=lambda: crud_employee.get_by_id(db, employee_id),
+        ttl=settings.CACHE_TTL_EMPLOYEE,
+        response_model=EmployeeResponse
     )
 
     if obj is None:

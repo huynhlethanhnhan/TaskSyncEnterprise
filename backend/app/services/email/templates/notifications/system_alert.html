@@ -1,0 +1,14 @@
+{% extends 'base/layout.html' %}
+{% block content %}
+<h2>{{ subject }}</h2>
+<p>Hello {{ employee_name or 'User' }},</p>
+<p>You have received a system alert from TaskSync Enterprise:</p>
+
+<div class="card" style="border-left: 4px solid #ef4444;">
+    <p style="margin: 0; color: #0f172a; font-weight: 500;">
+        {{ body }}
+    </p>
+</div>
+
+<p>If you believe this alert was sent in error, please contact our support team.</p>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends 'base/layout.html' %}
+{% block content %}
+<h2>Task Completed</h2>
+<p>Hello {{ employee_name }},</p>
+<p>The task <strong>{{ task_title }}</strong> has been marked as completed by {{ actor_name }}.</p>
+<div style="text-align: center; margin-top: 24px;">
+    <a href="#" class="btn btn-primary">View Completed Task</a>
+</div>
+{% endblock %}

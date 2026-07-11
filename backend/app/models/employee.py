@@ -99,3 +99,15 @@ class Employee(Base):
         "Employee",
         remote_side=[id]
     )
+
+    notifications: Mapped[list["Notification"]] = relationship(
+        "Notification",
+        back_populates="employee",
+        cascade="all, delete-orphan"
+    )
+
+    notification_preferences: Mapped[list["NotificationPreference"]] = relationship(
+        "NotificationPreference",
+        back_populates="employee",
+        cascade="all, delete-orphan"
+    )

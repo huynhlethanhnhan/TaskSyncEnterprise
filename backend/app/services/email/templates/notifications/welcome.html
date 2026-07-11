@@ -1,0 +1,11 @@
+{% extends 'base/layout.html' %}
+{% block content %}
+<h2>Welcome to TaskSync Enterprise!</h2>
+<p>Hello {{ employee_name }},</p>
+<p>Your enterprise account has been successfully set up. We are thrilled to welcome you to the platform!</p>
+<p>Get started by accessing your centralized team workspace and dashboard below:</p>
+<div style="text-align: center; margin: 32px 0;">
+    <a href="{{ login_url or '#' }}" class="btn btn-primary">Go to Dashboard</a>
+</div>
+<p>Best regards,<br>The {{ company_name }} Operations Team</p>
+{% endblock %}

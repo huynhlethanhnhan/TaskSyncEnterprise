@@ -1,0 +1,21 @@
+{% extends 'base/layout.html' %}
+{% block content %}
+<h2>Security Alert</h2>
+<p>Hello {{ employee_name }},</p>
+<p>A new sign-in was detected for your account on TaskSync Enterprise.</p>
+<div class="card" style="border-left: 4px solid #f59e0b;">
+    <table class="meta-table">
+        <tr>
+            <th>Time:</th>
+            <td>{{ login_time or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <th>IP Address:</th>
+            <td>{{ ip_address or 'N/A' }}</td>
+        </tr>
+    </table>
+</div>
+<p style="font-size: 13px; color: #64748b;">
+    If this was you, no action is needed. If you do not recognize this activity, please change your password immediately to secure your account.
+</p>
+{% endblock %}

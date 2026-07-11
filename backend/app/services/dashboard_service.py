@@ -7,6 +7,9 @@ from app.models.department import Department
 from app.models.project import Project
 from app.models.task import Task
 from app.models.vacation import Vacation
+from app.config import settings
+from app.cache import cache_manager
+from app.cache.cache_keys import get_dashboard_summary_key, get_dashboard_analytics_key
 
 
 class DashboardService:
@@ -14,9 +17,18 @@ class DashboardService:
 
     def get_overview(self, db: Session) -> dict:
         """
-        Retrieves general widget overview metrics in a single database query.
-        Uses subqueries to avoid N+1 query loops.
+        Retrieves general widget overview metrics.
+        Uses CacheManager read-through caching.
         """
+        key = get_dashboard_summary_key()
+        return cache_manager.get_or_set(
+            key=key,
+            creator_fn=lambda: self._get_overview_db(db),
+            ttl=settings.CACHE_TTL_DASHBOARD
+        )
+
+    def _get_overview_db(self, db: Session) -> dict:
+        """Retrieves general widget overview metrics directly from the database."""
         # Determine database dialect for timezone-safe current time check
         if db.bind and db.bind.dialect.name == "mssql":
             now_val = func.sysutcdatetime()
@@ -71,9 +83,18 @@ class DashboardService:
 
     def get_detailed_analytics(self, db: Session) -> dict:
         """
-        Retrieves all overview summaries and status breakdown metrics.
-        Uses aggregate queries grouped by categorizations to keep database reads optimal.
+        Retrieves full widget overview counts along with breakdowns.
+        Uses CacheManager read-through caching.
         """
+        key = get_dashboard_analytics_key()
+        return cache_manager.get_or_set(
+            key=key,
+            creator_fn=lambda: self._get_detailed_analytics_db(db),
+            ttl=settings.CACHE_TTL_DASHBOARD
+        )
+
+    def _get_detailed_analytics_db(self, db: Session) -> dict:
+        """Retrieves breakdown metrics directly from the database."""
         overview = self.get_overview(db)
 
         # 1. Fetch Task counts grouped by Status

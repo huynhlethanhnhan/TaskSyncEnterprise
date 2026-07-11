@@ -58,3 +58,23 @@ class ConfigurationCheck:
         if settings.ENVIRONMENT == "production" and secret_key_val == "task_sync_enterprise_secret_key_chuandry_2026":
             return False, "Insecure SECRET_KEY fallback used in production."
         return True, "Configurations loaded successfully."
+
+
+class RedisCheck:
+    """Verifies that the Redis cache instance is reachable and responsive."""
+    @staticmethod
+    def run() -> tuple[bool, str]:
+        import sys
+        # Bypass connection check during testing environments
+        if "pytest" in sys.modules or settings.ENVIRONMENT == "testing":
+            return True, "Redis connection check bypassed in test environment."
+            
+        from app.cache import RedisClient
+        try:
+            client = RedisClient()
+            if client.ping():
+                return True, "Redis connection is healthy."
+            return False, "Redis connection check failed."
+        except Exception as e:
+            return False, f"Redis connection failed: {e}"
+

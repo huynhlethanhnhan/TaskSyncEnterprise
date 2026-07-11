@@ -1,0 +1,37 @@
+{% extends 'base/layout.html' %}
+{% block content %}
+<h2>Task Assigned</h2>
+<p>Hello {{ employee_name }},</p>
+<p>You have been assigned to a new task on {{ company_name }}. Please review the details below:</p>
+
+<div class="card">
+    <table class="meta-table">
+        <tr>
+            <th>Task Title:</th>
+            <td>{{ task_title }}</td>
+        </tr>
+        <tr>
+            <th>Assigned By:</th>
+            <td>{{ actor_name }}</td>
+        </tr>
+        <tr>
+            <th>Priority:</th>
+            <td>
+                {% if priority == 'HIGH' or priority == 'High' %}
+                <span class="badge badge-high">High</span>
+                {% else %}
+                <span class="badge badge-normal">Normal</span>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Due Date:</th>
+            <td>{{ due_date or 'N/A' }}</td>
+        </tr>
+    </table>
+</div>
+
+<div style="text-align: center; margin-top: 24px;">
+    <a href="#" class="btn btn-primary">Go to Task Workspace</a>
+</div>
+{% endblock %}

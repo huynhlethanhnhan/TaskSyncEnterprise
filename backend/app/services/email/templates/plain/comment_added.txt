@@ -1,0 +1,7 @@
+New Comment on Task
+
+Hello {{ employee_name }},
+
+A new comment was added to the task "{{ task_title }}":
+- Commenter: {{ actor_name }}
+- Comment: "{{ comment_body }}"

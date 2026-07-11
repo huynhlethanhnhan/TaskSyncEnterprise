@@ -6,3 +6,5 @@ pydantic-settings
 alembic
 passlib[bcrypt]
 python-multipart
+jinja2
+redis>=5.0.0

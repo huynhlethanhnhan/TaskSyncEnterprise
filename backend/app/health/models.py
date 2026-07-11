@@ -39,6 +39,7 @@ class DetailedHealthResponse(BaseModel):
     database: Dict[str, Any] = Field(..., description="Database connection states")
     storage: Dict[str, Any] = Field(..., description="Storage paths states")
     configuration: Dict[str, Any] = Field(..., description="Configurations status")
+    redis: Optional[Dict[str, Any]] = Field(default=None, description="Redis connection state parameters")
     environment: Dict[str, Any] = Field(..., description="Execution environment context parameters")
     version: str = Field(..., description="Release version tag")
     build_info: Optional[Dict[str, Any]] = Field(default=None, description="Build details metadata")

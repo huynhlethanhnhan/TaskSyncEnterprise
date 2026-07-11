@@ -1,0 +1,12 @@
+Security Alert
+
+Hello {{ employee_name }},
+
+A new sign-in was detected on your account:
+- Time: {{ login_time or 'N/A' }}
+- IP: {{ ip_address or 'N/A' }}
+
+If this was you, no action is needed. Otherwise, change your password immediately.
+
+Best regards,
+{{ company_name }} Operations Team

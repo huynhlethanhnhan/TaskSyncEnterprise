@@ -17,5 +17,7 @@ from app.models.refresh_token import RefreshToken
 from app.models.token_blacklist import TokenBlacklist
 from app.models.user_session import UserSession
 from app.models.notification import Notification
+from app.models.notification_preference import NotificationPreference
+from app.models.notification_log import NotificationLog
 from app.models.audit import AuditLog
 from app.models.vacation import Vacation
