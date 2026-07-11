@@ -30,14 +30,20 @@ def get_team(team_id: int, db: Session = Depends(get_db)):
 
 @router.post("", response_model=TeamResponse, status_code=201, dependencies=[Depends(RequireAdmin)])
 def create_team(data: TeamCreate, db: Session = Depends(get_db)):
-    return crud_team.create(db, data)
+    res = crud_team.create(db, data)
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_employee()
+    return res
 
 @router.put("/{team_id}", response_model=TeamResponse, dependencies=[Depends(RequireAdmin)])
 def update_team(team_id: int, data: TeamUpdate, db: Session = Depends(get_db)):
     obj = crud_team.get_by_id(db, team_id)
     if not obj:
         raise HTTPException(status_code=404, detail="Team not found")
-    return crud_team.update(db, obj, data)
+    res = crud_team.update(db, obj, data)
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_employee()
+    return res
 
 @router.delete("/{team_id}", dependencies=[Depends(RequireAdmin)])
 def delete_team(team_id: int, db: Session = Depends(get_db)):
@@ -45,4 +51,6 @@ def delete_team(team_id: int, db: Session = Depends(get_db)):
     if not obj:
         raise HTTPException(status_code=404, detail="Team not found")
     crud_team.delete(db, obj)
-    return {"message": "Soft deleted successfully"}
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_employee()
+    return {"message": "Soft deleted successfully"}

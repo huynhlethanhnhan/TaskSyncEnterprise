@@ -110,10 +110,13 @@ def create_employee(
         data: EmployeeCreate,
         db: Session = Depends(get_db)
 ):
-    return crud_employee.create(
+    res = crud_employee.create(
         db,
         data
     )
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_employee(res.id)
+    return res
 
 
 @router.put(
@@ -140,6 +143,7 @@ def update_employee(
     if current_user.role_id != ROLE_ADMIN and current_user.id != employee_id:
         raise HTTPException(status_code=403, detail="Bạn không có quyền cập nhật tài khoản này.")
 
+    from app.cache import CacheInvalidator
     if current_user.role_id != ROLE_ADMIN:
         values = data.model_dump(exclude_unset=True)
         restricted = {k: v for k, v in values.items() if k in {"full_name", "email", "phone", "gender", "address", "date_of_birth"}}
@@ -149,13 +153,16 @@ def update_employee(
             setattr(obj, key, value)
         db.commit()
         db.refresh(obj)
+        CacheInvalidator.invalidate_employee(obj.id)
         return obj
 
-    return crud_employee.update(
+    res = crud_employee.update(
         db,
         obj,
         data
     )
+    CacheInvalidator.invalidate_employee(res.id)
+    return res
 
 
 @router.delete(
@@ -182,6 +189,9 @@ def delete_employee(
         obj
     )
 
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_employee(employee_id)
+
     return {
         "message": "Deleted"
     }
@@ -206,6 +216,9 @@ def upload_my_avatar(
     )
     db.execute(stmt)
     db.commit()
+
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_employee(current_user.id)
     
     return {
         "success": True,

@@ -44,14 +44,20 @@ def get_department(department_id: int, db: Session = Depends(get_db)):
 
 @router.post("", response_model=DepartmentResponse, status_code=201, dependencies=[Depends(RequireAdmin)])
 def create_department(data: DepartmentCreate, db: Session = Depends(get_db)):
-    return crud_department.create(db, data)
+    res = crud_department.create(db, data)
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_department(res.id)
+    return res
 
 @router.put("/{department_id}", response_model=DepartmentResponse, dependencies=[Depends(RequireAdmin)])
 def update_department(department_id: int, data: DepartmentUpdate, db: Session = Depends(get_db)):
     obj = crud_department.get_by_id(db, department_id)
     if not obj:
         raise HTTPException(status_code=404, detail="Department not found")
-    return crud_department.update(db, obj, data)
+    res = crud_department.update(db, obj, data)
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_department(res.id)
+    return res
 
 @router.delete("/{department_id}", dependencies=[Depends(RequireAdmin)])
 def delete_department(department_id: int, db: Session = Depends(get_db)):
@@ -59,4 +65,6 @@ def delete_department(department_id: int, db: Session = Depends(get_db)):
     if not obj:
         raise HTTPException(status_code=404, detail="Department not found")
     crud_department.delete(db, obj)
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_department(department_id)
     return {"message": "Soft deleted successfully"}

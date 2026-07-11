@@ -46,8 +46,26 @@ class TaskEmployeeUpdate(BaseModel):
     response_model=list[TaskResponse],
     dependencies=[Depends(RequireEmployee)] # <-- Cho phép Employee xem danh sách công việc
 )
-def get_tasks(db: Session = Depends(get_db)):
-    return crud_task.get_all(db)
+def get_tasks(
+    skip: int = 0,
+    limit: int = 20,
+    project_id: int | None = None,
+    status: str | None = None,
+    db: Session = Depends(get_db)
+):
+    from app.cache import cache_manager
+    from app.cache.cache_keys import get_task_list_key
+    from app.config import settings
+
+    key = get_task_list_key(skip=skip, limit=limit, project_id=project_id, status=status)
+    return cache_manager.cache_collection(
+        key=key,
+        creator_fn=lambda: crud_task.get_all(
+            db, skip=skip, limit=limit, project_id=project_id, status=status
+        ),
+        ttl=settings.CACHE_TTL_TASK,
+        response_model=list[TaskResponse]
+    )
 
 
 @router.get(
@@ -56,10 +74,21 @@ def get_tasks(db: Session = Depends(get_db)):
     dependencies=[Depends(RequireEmployee)] # <-- Cho phép Employee xem chi tiết công việc bất kỳ
 )
 def get_task(task_id: int, db: Session = Depends(get_db)):
-    obj = crud_task.get_by_id(db, task_id)
+    from app.cache import cache_manager
+    from app.cache.cache_keys import get_task_key
+    from app.config import settings
+
+    key = get_task_key(task_id)
+    obj = cache_manager.cache_model(
+        key=key,
+        creator_fn=lambda: crud_task.get_by_id(db, task_id),
+        ttl=settings.CACHE_TTL_TASK,
+        response_model=TaskResponse
+    )
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return obj
+
 
 
 @router.post(
@@ -70,6 +99,10 @@ def get_task(task_id: int, db: Session = Depends(get_db)):
 def create_task(data: TaskCreate, db: Session = Depends(get_db)):
     task = crud_task.create(db, data)
     db.refresh(task)
+
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_task(task.id, project_id=task.project_id, employee_id=task.employee_id)
+
     from app.crud.notification import create_notification
     if task.employee_id:
         try:
@@ -93,8 +126,20 @@ def update_task(task_id: int, data: TaskUpdate, db: Session = Depends(get_db)):
     obj = crud_task.get_by_id(db, task_id)
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    old_project_id = obj.project_id
+    old_employee_id = obj.employee_id
+
     task = crud_task.update(db, obj, data)
     db.refresh(task)
+
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_task(task.id, project_id=task.project_id, employee_id=task.employee_id)
+    if old_project_id != task.project_id:
+        CacheInvalidator.invalidate_project(old_project_id)
+    if old_employee_id != task.employee_id:
+        CacheInvalidator.invalidate_employee(old_employee_id)
+
     from app.crud.notification import create_notification
     if task.employee_id:
         try:
@@ -140,7 +185,20 @@ def patch_task(
                 detail="You are not assigned to this task"
             )
             
-    return crud_task.update(db, obj, data)
+    old_project_id = obj.project_id
+    old_employee_id = obj.employee_id
+
+    task = crud_task.update(db, obj, data)
+    db.refresh(task)
+
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_task(task.id, project_id=task.project_id, employee_id=task.employee_id)
+    if old_project_id != task.project_id:
+        CacheInvalidator.invalidate_project(old_project_id)
+    if old_employee_id != task.employee_id:
+        CacheInvalidator.invalidate_employee(old_employee_id)
+
+    return task
 
 
 @router.delete(
@@ -152,7 +210,14 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
     
+    project_id = obj.project_id
+    employee_id = obj.employee_id
+
     crud_task.delete(db, obj)
+
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_task(task_id, project_id=project_id, employee_id=employee_id)
+
     return {"message": "Deleted"}
 
 
@@ -209,6 +274,9 @@ def update_my_task(
     
     db.commit()
     db.refresh(task)
+
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_task(task.id, project_id=task.project_id, employee_id=current_user.id)
     
     if old_status != data.status:
         from app.crud import notification as notification_crud
@@ -275,6 +343,9 @@ def upload_task_attachment(
     db.add(db_attachment)
     db.commit()
     db.refresh(db_attachment)
+
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_task(task_id, project_id=task.project_id, employee_id=task.employee_id)
     
     return {
         "success": True,
@@ -332,5 +403,12 @@ def delete_task_attachment(
                 
     db.delete(attachment)
     db.commit()
+
+    task = db.get(Task, task_id)
+    from app.cache import CacheInvalidator
+    if task:
+        CacheInvalidator.invalidate_task(task_id, project_id=task.project_id, employee_id=task.employee_id)
+    else:
+        CacheInvalidator.invalidate_task(task_id)
     
     return {"success": True, "message": "Xóa tài liệu đính kèm thành công!"}

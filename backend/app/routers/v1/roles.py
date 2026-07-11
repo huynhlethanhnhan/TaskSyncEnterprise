@@ -51,7 +51,10 @@ def create_role(
         data: RoleCreate,
         db: Session = Depends(get_db)
 ):
-    return crud_role.create(db, data)
+    res = crud_role.create(db, data)
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_role(res.id)
+    return res
 
 @router.put("/{role_id}", response_model=RoleResponse)
 def update_role(
@@ -62,7 +65,10 @@ def update_role(
     obj = crud_role.get_by_id(db, role_id)
     if not obj:
         raise HTTPException(404, "Role not found")
-    return crud_role.update(db, obj, data)
+    res = crud_role.update(db, obj, data)
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_role(res.id)
+    return res
 
 @router.delete("/{role_id}")
 def delete_role(
@@ -73,4 +79,6 @@ def delete_role(
     if not obj:
         raise HTTPException(404, "Role not found")
     crud_role.delete(db, obj)
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_role(role_id)
     return {"message": "Deleted"}

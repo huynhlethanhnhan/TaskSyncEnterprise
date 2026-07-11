@@ -5,15 +5,24 @@ from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskUpdate
 
 
-def get_all(db: Session):
+def get_all(
+    db: Session,
+    skip: int = 0,
+    limit: int = 20,
+    project_id: int | None = None,
+    status: str | None = None
+):
 
-    stmt = (
-        select(Task)
-        .where(Task.is_deleted == False)
-        .order_by(Task.id.desc())
-    )
+    stmt = select(Task).where(Task.is_deleted == False)
+    if project_id is not None:
+        stmt = stmt.where(Task.project_id == project_id)
+    if status is not None:
+        stmt = stmt.where(Task.status == status)
+
+    stmt = stmt.order_by(Task.id.desc()).offset(skip).limit(limit)
 
     return db.scalars(stmt).all()
+
 
 
 def get_by_id(db: Session, task_id: int):

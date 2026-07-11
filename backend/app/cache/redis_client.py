@@ -32,7 +32,7 @@ class RedisClient:
         self._initialized = True
         self._pool: Optional[redis.ConnectionPool] = None
         self._client: Optional[redis.Redis] = None
-        self._setup_connection()
+
 
     def _setup_connection(self) -> None:
         """Sets up the Redis connection pool and client."""

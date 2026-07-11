@@ -5,6 +5,27 @@ from app.core.validation import validate_startup
 from app.startup.production_check import run_production_readiness_check
 
 
+def verify_redis_connection() -> None:
+    """Verifies that the Redis cache server is reachable on startup, failing silently on error."""
+    import sys
+    from app.config import settings
+    
+    if "pytest" in sys.modules or settings.ENVIRONMENT == "testing":
+        app_logger.info("Redis startup connectivity check bypassed in testing environment.")
+        return
+
+    from app.cache import RedisClient
+    try:
+        app_logger.info("Verifying Redis connection...")
+        client = RedisClient()
+        if client.ping():
+            app_logger.info("Redis connectivity verification: PASSED")
+        else:
+            app_logger.warning("Redis connectivity verification: FAILED (ping returned False)")
+    except Exception as e:
+        app_logger.warning(f"Redis connectivity verification: FAILED (exception: {e})")
+
+
 def run_startup() -> None:
     """
     Initializes application dependencies and performs boot validations.
@@ -21,4 +42,8 @@ def run_startup() -> None:
     # 3. Run production readiness audit check
     run_production_readiness_check()
     
+    # 4. Verify Redis connectivity
+    verify_redis_connection()
+    
     app_logger.info("TaskSyncEnterprise startup validation sequence completed successfully.")
+

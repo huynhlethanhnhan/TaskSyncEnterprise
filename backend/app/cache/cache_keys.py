@@ -64,3 +64,34 @@ def get_task_list_key(skip: int = 0, limit: int = 20, project_id: int | None = N
     proj_part = f":p_{project_id}" if project_id else ""
     status_part = f":s_{status}" if status else ""
     return f"task:list:{skip}:{limit}{proj_part}{status_part}"
+
+
+def get_task_key(task_id: int) -> str:
+    """Generates the cache key for a specific task."""
+    return f"task:{task_id}"
+
+
+def get_department_list_pattern() -> str:
+    """Generates pattern for department list cache keys."""
+    return "department:list:*"
+
+
+def get_employee_list_pattern() -> str:
+    """Generates pattern for employee list cache keys."""
+    return "employee:list:*"
+
+
+def get_employee_search_pattern() -> str:
+    """Generates pattern for employee search cache keys."""
+    return "employee:search:*"
+
+
+def get_project_list_pattern() -> str:
+    """Generates pattern for project list cache keys."""
+    return "project:list:*"
+
+
+def get_task_list_pattern() -> str:
+    """Generates pattern for task list cache keys."""
+    return "task:list:*"
+

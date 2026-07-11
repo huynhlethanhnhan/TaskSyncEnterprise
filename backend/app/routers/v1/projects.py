@@ -75,10 +75,13 @@ def create_project(
         data: ProjectCreate,
         db: Session = Depends(get_db)
 ):
-    return crud_project.create(
+    res = crud_project.create(
         db,
         data
     )
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_project(res.id)
+    return res
 
 
 @router.put(
@@ -102,11 +105,14 @@ def update_project(
             "Project not found"
         )
 
-    return crud_project.update(
+    res = crud_project.update(
         db,
         obj,
         data
     )
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_project(res.id)
+    return res
 
 
 @router.delete(
@@ -133,6 +139,9 @@ def delete_project(
         obj
     )
 
+    from app.cache import CacheInvalidator
+    CacheInvalidator.invalidate_project(project_id)
+
     return {
         "message": "Deleted"
-    }
+    }
