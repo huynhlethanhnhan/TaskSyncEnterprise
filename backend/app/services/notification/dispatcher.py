@@ -28,6 +28,7 @@ class NotificationDispatcher:
                 for channel in enabled_channels:
                     notification_record = None
                     try:
+                        db_channel = "IN_APP" if channel == NotificationChannel.SYSTEM else channel.value
                         # 5. Persist record to notifications table in database (Status: PROCESSING)
                         notification_record = notification_repo.create_notification(
                             db=db,
@@ -37,7 +38,7 @@ class NotificationDispatcher:
                             message=message,
                             priority=event.priority.value,
                             status=NotificationStatus.PROCESSING.value,
-                            channel=channel.value,
+                            channel=db_channel,
                             event_id=event.event_id,
                             context_json=json.dumps(event.payload)
                         )

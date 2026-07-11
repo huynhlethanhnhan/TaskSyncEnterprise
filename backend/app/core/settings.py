@@ -644,6 +644,34 @@ class Settings(BaseSettings):
         description="Cache TTL for task list responses."
     )
 
+    # =========================================================================
+    # 🏛️ 8. API GOVERNANCE SETTINGS
+    # =========================================================================
+    SUPPORTED_API_VERSIONS: list[str] = Field(
+        default_factory=lambda: ["v1"],
+        description="List of supported API version prefixes."
+    )
+
+    RATE_LIMIT_ENABLED: bool = Field(
+        default=True,
+        description="Toggle rate limiting middleware functionality."
+    )
+
+    RATE_LIMIT_DEFAULT_LIMIT: int = Field(
+        default=100,
+        description="Default number of allowed requests in window."
+    )
+
+    RATE_LIMIT_DEFAULT_WINDOW: int = Field(
+        default=60,
+        description="Default time window size in seconds."
+    )
+
+    IDEMPOTENCY_TTL_SECONDS: int = Field(
+        default=86400,
+        description="Default TTL expiration for idempotency response cache."
+    )
+
     @property
     def LOG_DIR_PATH(self) -> Path:
         """Resolves the absolute Path to the logs folder."""

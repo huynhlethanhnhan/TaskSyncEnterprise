@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.9.0] - 2026-07-11
+
+### Added
+* **Multi-Stage Docker Packaging**: Production-grade multi-stage Dockerfile and docker-compose.yml to containerize the FastAPI app, Redis, and SQL Server.
+* **Requirements Consolidation**: Consolidated python dependencies by declaring missing python-jose requirements.
+
+### Hardened
+* **Structured Logging**: Hardened application logs by replacing all raw print statements with structured app_logger telemetries.
+* **Logout Endpoint Auth**: Secured the logout route by validating access tokens before blacklisting.
+
+## [3.6.0] - 2026-07-11
+
+### Added
+* **API Versioning validation middleware**: Prevents requests to unsupported api versions (e.g. `/api/v9/`) by returning structured 404 responses.
+* **Enterprise Idempotency middleware**: Supports `Idempotency-Key` headers on mutative requests (`POST`, `PUT`, `PATCH`) with atomic lock acquisition, response caching in Redis, and concurrency collision safety.
+* **API Deprecation framework**: Reusable `@deprecate_endpoint` decorator and `APIDeprecationMiddleware` automatically injecting `Deprecation`, `Sunset`, and `Link` headers into HTTP responses.
+* **Redis sliding window Rate Limiter**: High-performance middleware using Redis ZSET logs to enforce rolling request limit quotas on API paths per user/IP.
+
+## [3.4.0] - 2026-07-11
+
+### Added
+* **Multiple Channel Notification delivery (Strategy Pattern)**: Refactored delivery logic to isolate channels (`EMAIL`, `IN_APP`, `WEBSOCKET`, `PUSH`, `SYSTEM`) using Strategy Pattern strategies with zero dispatcher if/else branches.
+* **Enterprise WebSocket Notifications Gateway**: Real-time push server mounted at root `/ws/notifications`. Supports JWT authentication, query-string validation, private multi-tab recipient queues, heartbeat, and disconnect cleans.
+* **Background Email Retry Poller**: Database-backed daemon poller thread retrying failed emails up to a threshold of 5 attempts.
+
 ## [3.3.0] - 2026-07-10
 
 ### Added

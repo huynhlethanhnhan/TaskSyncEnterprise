@@ -67,6 +67,7 @@ def update_vacation_status(db: Session, vacation_id: int, status: str, current_u
             employee_id=vacation.requested_by
         )
     except Exception as e:
-        print(f"Error creating vacation notification: {e}")
+        from app.core.logger import app_logger
+        app_logger.error(f"Error creating vacation notification: {e}")
         
     return vacation

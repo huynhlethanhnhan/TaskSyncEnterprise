@@ -51,4 +51,5 @@ class NotificationChannel(str, Enum):
     PUSH = "PUSH"
     SMS = "SMS"
     SLACK = "SLACK"
-    TEAMS = "TEAMS"
+    TEAMS = "TEAMS"
+    SYSTEM = "SYSTEM"

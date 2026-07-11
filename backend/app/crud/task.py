@@ -58,7 +58,8 @@ def create(db: Session, data: TaskCreate):
                 employee_id=assigned_to
             )
         except Exception as e:
-            print(f"Error creating notification: {e}")
+            from app.core.logger import app_logger
+            app_logger.error(f"Error creating notification: {e}")
 
         db.refresh(obj)
 
@@ -103,7 +104,8 @@ def update(db: Session,
                         employee_id=assigned_to
                     )
                 except Exception as e:
-                    print(f"Error creating notification: {e}")
+                    from app.core.logger import app_logger
+                    app_logger.error(f"Error creating notification: {e}")
         else:
             db.commit()
 
@@ -119,7 +121,8 @@ def update(db: Session,
                 employee_id=obj.assigned_to
             )
         except Exception as e:
-            print(f"Error creating status notification: {e}")
+            from app.core.logger import app_logger
+            app_logger.error(f"Error creating status notification: {e}")
 
     db.refresh(obj)
     return obj

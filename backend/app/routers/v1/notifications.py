@@ -251,3 +251,49 @@ def update_my_preference(
         data=pref,
         message="Notification preference updated successfully."
     )
+
+
+# =========================================================================
+# WebSocket Notifications Route
+# =========================================================================
+from fastapi import WebSocket, WebSocketDisconnect
+from app.services.notification.websocket_manager import websocket_manager, get_websocket_user
+
+ws_router = APIRouter(tags=["WebSocket Notification"])
+
+
+@ws_router.websocket("/ws/notifications")
+async def websocket_notifications(
+    websocket: WebSocket,
+    token: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Authenticated WebSocket server push gateway endpoint.
+    Expects JWT token in the query params: /ws/notifications?token=<jwt_token>
+    """
+    if not token:
+        await websocket.accept()
+        await websocket.close(code=4008)  # Policy Violation / Unauthorized
+        return
+
+    user = get_websocket_user(token, db)
+    if not user:
+        await websocket.accept()
+        await websocket.close(code=4008)  # Policy Violation
+        return
+
+    # Connection accepted and registered inside recipient's private pool
+    await websocket_manager.connect(websocket, user.id)
+
+    try:
+        while True:
+            # Heartbeat ping/pong and receive processing
+            data = await websocket.receive_text()
+            if data in ("ping", "heartbeat"):
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        pass
+    finally:
+        # Cleanup upon disconnect
+        websocket_manager.disconnect(websocket, user.id)

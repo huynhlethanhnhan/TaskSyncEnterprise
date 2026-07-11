@@ -1,235 +1,103 @@
-# TaskSync Enterprise V2
+# Hướng Dẫn Vận Hành Hệ Thống TaskSyncEnterprise (Master README)
 
-[![CI/CD Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![FastAPI Version](https://img.shields.io/badge/FastAPI-0.110.0-blue.svg)]()
-[![Pydantic Version](https://img.shields.io/badge/Pydantic-v2-blueviolet.svg)]()
-[![SQLAlchemy Version](https://img.shields.io/badge/SQLAlchemy-2.0-red.svg)]()
-[![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)]()
-[![License](https://img.shields.io/badge/license-proprietary-lightgrey.svg)]()
-
-TaskSync Enterprise V2 is a production-ready, enterprise-grade full-stack platform integrating **Human Resource Management (HRM)** and **Project Management** workspaces. Built using a robust, decoupled micro-architecture, it incorporates strict security policies, real-time logging correlation, global exception handlers, automated monitoring probes, and modern type-safe schemas.
+Hệ thống quản lý công việc và quy trình nghiệp vụ cấp doanh nghiệp (Enterprise Task & Process Management System).
 
 ---
 
-## 🏛️ Architecture Overview
+## 🏛️ 1. Kiến Trúc Tổng Quan (System Architecture)
 
-The system implements a strict **Layered Architectural Design**, decoupling responsibilities across specialized execution layers to ensure high maintainability, SOLID compliance, and clear boundaries:
+Dự án áp dụng mô hình phân rã dịch vụ sạch **Clean Architecture** tách biệt hoàn toàn giữa tầng giao tiếp client (HTTP/WS API), tầng logic nghiệp vụ chuyên biệt (Services) và tầng lưu trữ dữ liệu (Repositories/Database).
 
-```
-                  [ Client Tier: React SPA ]
-                              │
-                              ▼ (HTTP/HTTPS)
-                    [ API Gateway / Proxy ]
-                              │
-                              ▼
-                [ FastAPI Presentation Layer ]
-             (APIRouters ──► Schemas Serialization)
-                              │
-                              ▼
-                   [ Service Logic Layer ]
-                (Business Rules & Validations)
-                              │
-                              ▼
-                 [ CRUD Data Abstraction ]
-               (Repositories ──► SQL Queries)
-                              │
-                              ▼
-                  [ Relational ORM Models ]
-                  (SQLAlchemy 2.0 ──► dbo)
-                              │
-                              ▼
-              [ Database Tier: MS SQL Server ]
+```mermaid
+graph TD
+    Client[Client App / Web Browser] -->|HTTP / WebSocket| Gateway[FastAPI Layer]
+    
+    subgraph FastAPI App Gateway
+        Gateway -->|1. Trích xuất context| Log[LoggingMiddleware]
+        Log -->|2. Rà soát phiên bản| Ver[APIVersionMiddleware]
+        Ver -->|3. Giới hạn tần suất| Rate[RateLimitMiddleware]
+        Rate -->|4. Chống trùng lặp| Idem[IdempotencyMiddleware]
+    end
+
+    Gateway -->|Thực thi nghiệp vụ| Services[Service Layer]
+    Services -->|Đẩy tin| WS[WebSocket Manager]
+    Services -->|Quét retry| Poll[Email Retry Poller]
+    Services -->|Truy vấn DB| Repo[Repository Layer]
+    Repo -->|ORM Mapping| SQL[(MS SQL Server)]
+    Services -->|Cache lookups| Redis[(Redis Cache)]
 ```
 
 ---
 
-## 🛠️ Technology Stack
+## 🛠️ 2. Công Nghệ Sử Dụng (Tech Stack)
 
-### Backend
-*   **FastAPI:** High-performance, async-native ASGI web framework.
-*   **Pydantic V2:** Type-safe input/output payload validation and settings parsing.
-*   **Uvicorn:** Production-grade asynchronous ASGI server.
-*   **SQLAlchemy 2.0:** Modern type-annotated mapping declarative ORM.
-*   **Alembic:** Database schema migrations version control.
-
-### Frontend
-*   **React 19:** Client application framework.
-*   **Vite:** High-speed bundler and development tooling.
-*   **TailwindCSS v4:** Utility-first CSS layout engine.
-*   **TanStack React Query:** Server-side state caching and synchronization.
-
-### Database & Authentication
-*   **MS SQL Server:** Primary transactional database engine (Express/Developer).
-*   **JWT Bearer Tokens:** Access and refresh token authorization model.
-*   **HTTP-Only Cookies:** Secure token caching preventing XSS exploits.
+* **Ngôn ngữ**: Python 3.12
+* **Khung ứng dụng**: FastAPI (Tích hợp Asyncio & Pydantic V2)
+* **Cơ sở dữ liệu**: MS SQL Server (ORM: SQLAlchemy 2.0 & Di trú: Alembic)
+* **Bộ nhớ đệm & Khóa**: Redis (Sliding window rate limit, lock idempotency, caching)
+* **Giao tiếp thời gian thực**: WebSockets (Private recipient channels, Heartbeats)
+* **Bảo mật**: JWT (Access/Refresh Tokens), bcrypt password hashing, Token Blacklist
+* **Đóng gói**: Docker (Multi-stage builds) & Docker Compose
 
 ---
 
-## ⚙️ Backend Core Infrastructure Features
+## 📂 3. Cấu Trúc Thư Mục Ảo (Project Directory Tree)
 
-*   **Modular Configuration Facade:** Immutable Settings models powered by `pydantic-settings` split into Settings, Constants, and Paths blocks.
-*   **Global Exception Filter:** A centralized exception pipeline translating system errors into standard internal error codes while preventing raw SQL schema leaks.
-*   **Enveloped Responses:** Generic wrappers (`ApiResponse[T]`, `PagedResponse[T]`) ensuring consistent schema serialization and precise Swagger definitions.
-*   **Observability & Logging:** File rotating handlers stamped with ContextVar-based request correlation IDs (`X-Request-ID`).
-*   **SRE Health Probes:** Independent `/health/live` (process checks) and `/health/ready` (connectivity tests) HTTP checks.
-*   **SQL Performance Timing:** SQLAlchemy listeners capturing slow queries (>500ms) and database connection pool statuses.
-
----
-
-## 📂 Folder Structure
-
-```text
+```
 TaskSyncEnterprise/
-├── .vscode/                   # VS Code workspace settings & debug configurations
-├── backend/                   # FastAPI backend application
-│   ├── alembic/               # Alembic database migrations history
-│   ├── app/                   # Application package root
-│   │   ├── core/              # Facades, settings, paths, and constants
-│   │   ├── database/          # Connection setups and SQL query monitors
-│   │   ├── handlers/          # Central global exception middleware handlers
-│   │   ├── health/            # Probes logic, checking services, and models
-│   │   ├── lifecycle/         # Startup and shutdown boot tasks
-│   │   ├── logging/           # Custom formatters, rotating loggers, and context
-│   │   ├── middleware/        # Correlation ID request context managers
-│   │   ├── monitoring/        # Metrics counters, performance validators, and checkups
-│   │   ├── routers/           # API routes definitions and version facades
-│   │   ├── schemas/           # Pydantic payloads validation models
-│   │   └── utils/             # Helpers (pagination adapters, builders)
-│   ├── logs/                  # Application output logs (app.log, error.log, audit.log)
-│   └── tests/                 # Pytest integration tests suites
-├── frontend/                  # React client application
-└── docs/                      # Technical reports, roadmaps, and indexes
+├── Dockerfile                      # Đóng gói Docker Backend đa tầng
+├── docker-compose.yml              # Điều phối Backend, Redis, SQL Server
+├── CHANGELOG.md                    # Nhật ký cập nhật phiên bản
+├── README.md                       # Tài liệu Master
+├── docs/                           # Tài liệu Hướng dẫn Vận hành
+│   ├── INDEX.md                    # Mục lục tài liệu Master
+│   ├── api/GUIDE.md                # Phiên bản, chống trùng lặp, khấu hao API
+│   ├── architecture/GUIDE.md       # Cấu trúc Clean Architecture, Soft Delete, Logs
+│   ├── deployment/GUIDE.md         # Hướng dẫn đóng gói, checklist sản xuất
+│   └── notification/GUIDE.md       # WebSocket gateway, Strategy channels, Retry
+├── reports/                        # Báo cáo kỹ thuật chi tiết
+│   ├── README.md                   # Mục lục các báo cáo
+│   ├── security/                   # An ninh bảo mật, audit IDOR
+│   ├── performance/                # Tái sử dụng session, Redis caching
+│   ├── audit/                      # Mức độ sẵn sàng sản xuất (Readiness score), Code Quality
+│   └── testing/                    # Kết quả pytest tự động
+├── roadmap/                        # Lộ trình phát triển sản phẩm
+│   └── README.md                   # Gantt chart lộ trình và Milestone M3 progress
+└── backend/                        # Thư mục chứa mã nguồn python
 ```
 
 ---
 
-## 🚦 Getting Started & Installation
+## 🚀 4. Khởi Động Nhanh Hệ Thống (Quick Start Guide)
 
-### Prerequisites
-*   Python 3.12+
-*   Node.js 18+
-*   MS SQL Server (configured on default port 1433)
+### Khởi động bằng Docker Compose (Khuyên dùng cho DevOps/Production)
+```bash
+# 1. Build ảnh và khởi động hệ thống ngầm
+docker-compose up -d --build
 
-### 1. Repository Setup
-Clone the repository and enter the workspace:
-```bash
-git clone https://github.com/huynhlethanhnhan/TaskSyncEnterprise.git
-cd TaskSyncEnterprise
-```
+# 2. Đồng bộ các bảng di trú cơ sở dữ liệu
+docker exec tasksync-backend alembic upgrade head
 
-### 2. Backend Setup
-Create and activate virtual environment inside `backend/`:
-```bash
-cd backend
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# Unix/macOS:
-source .venv/bin/activate
-```
-Install required dependencies:
-```bash
-pip install -r requirements.txt
-```
-Configure your environment parameters by creating `backend/.env`:
-```env
-MSSQL_USER=sa
-MSSQL_PASSWORD=YourSecurePassword
-MSSQL_HOST=127.0.0.1
-MSSQL_PORT=1433
-SECRET_KEY=task_sync_enterprise_secret_key_chuandry_2026
-ENVIRONMENT=development
-```
-Execute database migrations and seed default records:
-```bash
-alembic upgrade head
-python seed_v2.py
+# 3. Tạo lập tài khoản dữ liệu mẫu
+docker exec tasksync-backend python seed_v2.py
 ```
 
-### 3. Frontend Setup
-Navigate to the frontend directory:
-```bash
-cd ../frontend
-npm install
-```
-Configure your environment parameters by creating `frontend/.env.development`:
-```env
-VITE_API_URL=http://127.0.0.1:8000/api/v1
-```
+### Khởi động local (Dành cho Lập trình viên)
+1. Cài đặt môi trường ảo Python 3.12:
+   ```bash
+   cd backend
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+2. Điền thông tin biến môi trường vào tệp `.env` (tham chiếu biến tại `app/config.py`).
+3. Khởi chạy ứng dụng:
+   ```bash
+   uvicorn app.main:app --reload --port 8000
+   ```
+4. Truy cập giao diện tương tác Swagger UI tài liệu API tại: `http://localhost:8000/docs`.
 
 ---
 
-## 💻 Running the Application
-
-### Running Backend
-Start the FastAPI server via Uvicorn:
-```bash
-cd backend
-uvicorn app.main:app --reload --port 8000
-```
-*   **Interactive API Docs:** Navigate to `http://127.0.0.1:8000/docs` (Swagger UI) or `http://127.0.0.1:8000/redoc`.
-
-### Running Frontend
-Start the Vite development server:
-```bash
-cd frontend
-npm run dev
-```
-Navigate to the default client address: `http://localhost:5173`.
-
----
-
-## 🧪 Testing and Verification
-
-To execute the automated backend test suite, run:
-```bash
-cd backend
-python -m pytest
-```
-
----
-
-## 📊 Observability & Telemetry Endpoints
-
-The backend exposes SRE-compliant diagnostics probes:
-*   **Liveness Check (`GET /health/live`):** Verifies the process is alive.
-*   **Readiness Check (`GET /health/ready`):** Validates database, storage, and settings loading.
-*   **Detailed Diagnostics (`GET /health/details`):** Aggregates connection pool metrics (active/overflow limits) and request latency telemetry.
-
-### Logging Outputs
-Logs are written to the `backend/logs/` directory:
-*   `app.log`: General application events and database traces.
-*   `error.log`: Warnings and critical failure stack traces.
-*   `audit.log`: Isolated compliance logs mapping security audits.
-
----
-
-## 🗺️ Project Roadmap & Completed Phases
-
-*   **[x] Phase 1: REST API Routing** - Endpoint declarations and basic schemas.
-*   **[x] Phase 2: Database Harmonization** - Type-annotated mapping migrations to SQLAlchemy 2.0 and UTC standards.
-*   **[x] Phase 3.1: Enterprise Infrastructure** - Pydantic settings parsing, security hardening, and logging.
-*   **[x] Phase 3.2: Observability & Standards** - Custom formatting, slow SQL query intercepts, error wrappers, and final readiness audits.
-*   **[x] Phase 3.3: Enterprise Core Infrastructure & Business Orchestration** - Standardized response envelopes, global exception filters, dynamic query pagination and search engines, subquery-backed dashboard analytics, background tasks executor, and in-app Notification Center.
-*   **[ ] Phase 4: Production Deployment & Scale** - [NEXT PHASE] Distributed caching, asynchronous email gateways, CI/CD pipeline deployment.
-
----
-
-## 📘 Learning Resources & Documentation Index
-
-For developers and students, we maintain localized Vietnamese learning modules under the [docs/](file:///e:/TaskSyncEnterprise/docs/README.md) directory:
-*   **[Tài Liệu Học Tập Tiếng Việt (Vietnamese Index)](file:///e:/TaskSyncEnterprise/docs/learning/README.md):** Complete study modules from database design to observability.
-*   **[Master Documentation Index](file:///e:/TaskSyncEnterprise/docs/README.md):** Access entry point for all architectural blueprints, backlogs, and phase reports.
-
----
-
-## 📸 Screenshots
-*(Screenshots showing Dashboard, Employees management, and Tasks tracking will be placed here)*
-
----
-
-## 📄 License
-Proprietary and Confidential. Copyright (c) 2026 TaskSync Enterprise. All rights reserved.
-
-## 👤 Author
-Developed and maintained by **Huynh Le Thanh Nhan** and the TaskSync Enterprise core engineering team.
+## 📚 5. Mục Lục Tài Liệu (Documentation Links)
+Để xem hướng dẫn chi tiết theo vai trò phát triển, vui lòng truy cập **[Master Documentation Index (docs/INDEX.md)](file:///e:/TaskSyncEnterprise/docs/INDEX.md)**.

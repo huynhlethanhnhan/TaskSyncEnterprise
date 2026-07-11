@@ -6,6 +6,7 @@ from app.services.notification.channels.in_app import InAppChannel
 from app.services.notification.channels.email import EmailChannel
 from app.services.notification.channels.websocket import WebSocketChannel
 from app.services.notification.channels.push import PushChannel
+from app.services.notification.channels.system import SystemChannel
 
 
 class ChannelRegistry:
@@ -18,6 +19,7 @@ class ChannelRegistry:
         self.register(EmailChannel())
         self.register(WebSocketChannel())
         self.register(PushChannel())
+        self.register(SystemChannel())
 
     def register(self, channel: BaseChannel) -> None:
         """Adds a new channel adapter strategy to the registry."""

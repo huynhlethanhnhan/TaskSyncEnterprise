@@ -40,8 +40,16 @@ async def lifespan(app: FastAPI):
     app_logger.info(f"OS Platform: {platform.platform()}")
     app_logger.info(f"Database Provider: {db_provider}")
     app_logger.info("Application startup validation check: Passed")
+    
+    # Start the background email retry poller
+    from app.services.notification.poller import start_email_retry_poller, stop_email_retry_poller
+    start_email_retry_poller()
+    
     app_logger.info("TaskSyncEnterprise successfully started and ready to handle requests.")
     yield
+    
+    # Stop the background email retry poller
+    stop_email_retry_poller()
     
     # Graceful shutdown event handling
     from app.lifecycle.shutdown import run_shutdown
@@ -50,7 +58,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 
+# Import governance middlewares
+from app.middleware.api_version import APIVersionMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.idempotency import IdempotencyMiddleware
+from app.middleware.deprecation import APIDeprecationMiddleware
+
 # 🧱 CẤU HÌNH MIDDLEWARES
+app.add_middleware(APIDeprecationMiddleware)
+app.add_middleware(IdempotencyMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(APIVersionMiddleware)
 app.add_middleware(LoggingMiddleware)
 
 # Trusted Host checking to prevent Host Header spoofing
@@ -83,6 +101,10 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Mount health checks at root level for SRE platform visibility (Kubernetes/AWS probes)
 app.include_router(health.router)
+
+# Mount WebSockets at root level
+from app.routers.v1.notifications import ws_router
+app.include_router(ws_router)
 
 @app.get("/")
 def read_root(request: Request):

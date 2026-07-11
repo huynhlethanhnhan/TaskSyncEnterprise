@@ -113,7 +113,8 @@ def create_task(data: TaskCreate, db: Session = Depends(get_db)):
                 message=f"Bạn đã được gán vào task: {task.title}"
             )
         except Exception as e:
-            print(f"Error creating notification: {e}")
+            from app.core.logger import app_logger
+            app_logger.error(f"Error creating notification: {e}")
     return task
 
 
@@ -150,7 +151,8 @@ def update_task(task_id: int, data: TaskUpdate, db: Session = Depends(get_db)):
                 message=f"Bạn đã được gán vào task: {task.title}"
             )
         except Exception as e:
-            print(f"Error creating notification: {e}")
+            from app.core.logger import app_logger
+            app_logger.error(f"Error creating notification: {e}")
     return task
 
 
@@ -288,7 +290,8 @@ def update_my_task(
                 employee_id=current_user.id
             )
         except Exception as e:
-            print(f"Error creating status notification: {e}")
+            from app.core.logger import app_logger
+            app_logger.error(f"Error creating status notification: {e}")
             
     return task
 
@@ -399,7 +402,8 @@ def delete_task_attachment(
             try:
                 os.remove(local_path)
             except Exception as e:
-                print(f"Lỗi xóa file vật lý: {e}")
+                from app.core.logger import app_logger
+                app_logger.error(f"Lỗi xóa file vật lý: {e}")
                 
     db.delete(attachment)
     db.commit()

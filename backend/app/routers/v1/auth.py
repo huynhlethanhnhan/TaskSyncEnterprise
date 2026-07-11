@@ -164,7 +164,11 @@ def refresh_access_token(req_data: RefreshRequest, db: Session = Depends(get_db)
 
 
 @router.post("/logout")
-def logout_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def logout_user(
+    current_user: Employee = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
     db.add(TokenBlacklist(token=token, token_type="access", expired_at=datetime.now(timezone.utc)))
     session_obj = db.execute(select(UserSession).where(UserSession.access_token == token)).scalar_one_or_none()
     if session_obj:
@@ -173,7 +177,7 @@ def logout_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_d
         if employee:
             employee.last_logout = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "Ðang xu?t thành công"}
+    return {"message": "Đăng xuất thành công"}
 
 
 class ChangePasswordRequest(BaseModel):

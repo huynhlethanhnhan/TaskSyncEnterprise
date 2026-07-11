@@ -52,7 +52,8 @@ def get_current_user(
 def require_roles(allowed_roles: list[int | str]):
     def checker(current_user: Employee = Depends(get_current_user)):
         roles = allowed_roles
-        print(f"Current User Role: {current_user.role_id} - Allowed Roles: {roles}")
+        from app.core.logger import app_logger
+        app_logger.debug(f"Current User Role: {current_user.role_id} - Allowed Roles: {roles}")
         
         user_role_id = current_user.role_id
         user_role_name = ROLE_MAP.get(user_role_id, "").lower()
