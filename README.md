@@ -47,7 +47,7 @@ graph TD
 TaskSyncEnterprise/
 ├── Dockerfile                      # Đóng gói Docker Backend đa tầng
 ├── docker-compose.yml              # Điều phối Backend, Redis, SQL Server
-├── CHANGELOG.md                    # Nhật ký cập nhật phiên bản
+├── docs/reports/CHANGELOG.md       # Nhật ký cập nhật phiên bản
 ├── README.md                       # Tài liệu Master
 ├── docs/                           # Tài liệu Hướng dẫn Vận hành
 │   ├── INDEX.md                    # Mục lục tài liệu Master
