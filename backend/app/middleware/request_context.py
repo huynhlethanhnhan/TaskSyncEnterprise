@@ -1,11 +1,25 @@
 # 📂 FILE: app/middleware/request_context.py
+"""
+Request Context Middleware for TaskSyncEnterprise.
+
+Responsibilities:
+  1. Generate or reuse X-Request-ID for the incoming request.
+  2. Generate or reuse X-Correlation-ID for the incoming request.
+  3. Populate the request-context dict with all observability fields.
+  4. Measure request duration and write X-Process-Time to response headers.
+  5. Emit the structured access log line via the access logger.
+  6. Record Prometheus request metrics.
+
+This middleware runs FIRST in the middleware stack (added last in main.py),
+so all subsequent middlewares and route handlers see a fully populated context.
+"""
 import time
 import uuid
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.core.request_context import _request_context, request_id_ctx
+from app.core.request_context import _request_context, request_id_ctx, correlation_id_ctx
 from app.logging.logger import app_logger, access_logger
 from app.config import settings
 from app.monitoring.metrics import metrics
@@ -13,57 +27,62 @@ from app.monitoring.metrics import metrics
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
     """
-    HTTP Middleware that establishes the request context,
-    tracks correlation IDs, and measures request-response duration.
+    HTTP Middleware that establishes the full request-scoped observability
+    context for every incoming request.
     """
+
     async def dispatch(self, request: Request, call_next) -> Response:
         start_time = time.time()
 
-        # 1. Resolve Correlation ID
-        request_id = request.headers.get("X-Request-ID")
-        if not request_id:
-            request_id = str(uuid.uuid4())
+        # ── 1. Resolve Request ID ──────────────────────────────────────────
+        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
 
-        # 2. Extract user ID from Authorization header safely (if present)
+        # ── 2. Resolve Correlation ID ──────────────────────────────────────
+        correlation_id = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
+
+        # ── 3. Extract user_id from Bearer token (best-effort, no error) ───
         user_id = "-"
-        auth_header = request.headers.get("authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            bearer_token = auth_header.split(" ")[1]
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
             try:
                 from jose import jwt
+                bearer_token = auth_header.split(" ", 1)[1]
                 payload = jwt.decode(
                     bearer_token,
                     settings.SECRET_KEY.get_secret_value(),
-                    algorithms=[settings.ALGORITHM]
+                    algorithms=[settings.ALGORITHM],
                 )
                 user_id = payload.get("sub", "-")
             except Exception:
                 pass
 
-        # 3. Create context dictionary
+        # ── 4. Build context dictionary ────────────────────────────────────
         method = request.method
         path = request.url.path
-        client_ip = request.client.host if request.client else "Unknown"
+        client_ip = request.client.host if request.client else "unknown"
         user_agent = request.headers.get("user-agent", "-")
 
-        ctx_data = {
+        ctx_data: dict = {
             "request_id": request_id,
+            "correlation_id": correlation_id,
             "method": method,
             "path": path,
             "client_ip": client_ip,
             "user_agent": user_agent,
             "user_id": user_id,
             "start_time": start_time,
-            "duration": 0.0
+            "duration": 0.0,
+            "duration_ms": 0.0,
         }
 
-        # 4. Bind context variables to contextvars
+        # ── 5. Bind context variables ──────────────────────────────────────
         token_ctx = _request_context.set(ctx_data)
         token_rid = request_id_ctx.set(request_id)
+        token_cid = correlation_id_ctx.set(correlation_id)
 
         try:
             response = await call_next(request)
-            
+
             # Increment request counter metric
             try:
                 from app.services.health_service import metrics_registry
@@ -72,29 +91,29 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                 pass
 
             return response
+
         finally:
-            # 5. Measure duration
+            # ── 6. Measure duration ────────────────────────────────────────
             duration = time.time() - start_time
-            duration_ms = duration * 1000
+            duration_ms = duration * 1000.0
             ctx_data["duration"] = duration
             ctx_data["duration_ms"] = duration_ms
 
-            # 6. Add X-Request-ID and X-Process-Time headers
-            if 'response' in locals():
-                response.headers["X-Request-ID"] = request_id
+            # ── 7. Attach observability headers to response ────────────────
+            if "response" in locals() and response is not None:
+                response.headers.setdefault("X-Request-ID", request_id)
+                response.headers.setdefault("X-Correlation-ID", correlation_id)
                 response.headers["X-Process-Time"] = f"{duration:.6f}"
                 status_code = response.status_code
             else:
                 status_code = 500
 
-            # 7. Record metrics report
+            # ── 8. Prometheus request metric ───────────────────────────────
             is_error = status_code >= 500
             metrics.record_request(duration, is_error=is_error)
 
-            # 8. Retrieve error_code from context dictionary if populated
+            # ── 9. Access log (text format for backward compat assertions) ──
             error_code = ctx_data.get("error_code", "-")
-
-            # 9. Write structured access log message and extra fields for ELK/APM
             log_msg = (
                 f"HTTP Request Completed: method={method} path={path} status={status_code} "
                 f"duration={duration:.4f}s ip={client_ip} user_id={user_id} "
@@ -107,10 +126,12 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                     "duration_ms": duration_ms,
                     "status_code": status_code,
                     "error_code": error_code,
-                    "user_agent": user_agent
-                }
+                    "user_agent": user_agent,
+                    "correlation_id": correlation_id,
+                },
             )
 
-            # 10. Reset context variables
+            # ── 10. Reset context variables ────────────────────────────────
             _request_context.reset(token_ctx)
             request_id_ctx.reset(token_rid)
+            correlation_id_ctx.reset(token_cid)
