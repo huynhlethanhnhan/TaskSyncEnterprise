@@ -683,6 +683,75 @@ class Settings(BaseSettings):
         description="Default TTL expiration for idempotency response cache."
     )
 
+    # =========================================================================
+    # 🔭 9. OPENTELEMETRY TRACING SETTINGS  (Phase 3.7.4)
+    # =========================================================================
+
+    ENABLE_TRACING: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Toggle OpenTelemetry distributed tracing.\n"
+            "Default: True\n"
+            "Production Recommendation: True.\n"
+            "Development Recommendation: True (use console exporter).\n"
+            "Security Consideration: Trace data may contain request metadata."
+        )
+    )
+
+    OTEL_SERVICE_NAME: str = Field(
+        default="TaskSyncEnterprise",
+        description="OTel service name reported in all spans and the Resource block."
+    )
+
+    OTEL_ENVIRONMENT: str = Field(
+        default="development",
+        description="Deployment environment tag attached to every span as a Resource attribute."
+    )
+
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = Field(
+        default="http://localhost:4317",
+        description="OTLP receiver endpoint URL for the gRPC or HTTP exporter."
+    )
+
+    OTEL_EXPORTER_TYPE: Literal["otlp_grpc", "otlp_http", "console", "none"] = Field(
+        default="console",
+        description=(
+            "Selects the OTel span exporter backend.\n"
+            "  'console'   -> prints spans to stdout (development/CI).\n"
+            "  'otlp_grpc' -> ships spans to OTLP gRPC collector (Jaeger, Tempo).\n"
+            "  'otlp_http' -> ships spans to OTLP HTTP collector.\n"
+            "  'none'      -> discards all spans (testing)."
+        )
+    )
+
+    OTEL_SAMPLING_RATE: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of requests to sample (0.0=none, 1.0=all). Default: 1.0."
+    )
+
+    OTEL_EXCLUDED_PATHS: list[str] = Field(
+        default_factory=lambda: [
+            "/metrics",
+            "/health",
+            "/health/live",
+            "/health/ready",
+            "/health/details",
+            "/health/detailed",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/favicon.ico",
+        ],
+        description="URL paths excluded from automatic FastAPI span creation."
+    )
+
+    OTEL_MAX_ATTRIBUTE_LENGTH: int = Field(
+        default=256,
+        description="Maximum character length for span attribute values."
+    )
+
     @property
     def LOG_DIR_PATH(self) -> Path:
         """Resolves the absolute Path to the logs folder."""
@@ -702,6 +771,30 @@ class Settings(BaseSettings):
     def ATTACHMENT_DIR_PATH(self) -> Path:
         """Resolves the absolute Path to the attachments subfolder."""
         return self.UPLOAD_DIR_PATH / self.STORAGE_ATTACHMENT_SUBDIR
+
+
+# Compatibility shims for the tracing test suite and older import patterns.
+# These class attributes allow patch.object(settings.__class__, "ENABLE_TRACING", new=False)
+# to work even though the values are defined as Pydantic fields on the model.
+Settings.ENABLE_TRACING = True
+Settings.OTEL_SERVICE_NAME = "TaskSyncEnterprise"
+Settings.OTEL_ENVIRONMENT = "development"
+Settings.OTEL_EXPORTER_OTLP_ENDPOINT = "http://localhost:4317"
+Settings.OTEL_EXPORTER_TYPE = "console"
+Settings.OTEL_SAMPLING_RATE = 1.0
+Settings.OTEL_EXCLUDED_PATHS = [
+    "/metrics",
+    "/health",
+    "/health/live",
+    "/health/ready",
+    "/health/details",
+    "/health/detailed",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+    "/favicon.ico",
+]
+Settings.OTEL_MAX_ATTRIBUTE_LENGTH = 256
 
 
 @lru_cache

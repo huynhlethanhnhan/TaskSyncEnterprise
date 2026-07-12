@@ -19,9 +19,16 @@ from app.core.middleware import LoggingMiddleware, SecurityHeadersMiddleware
 from app.handlers.exception_handler import register_exception_handlers
 
 from app.lifecycle.startup import run_startup
+from app.tracing import instrument_app, setup_tracing
 
 # Run startup bootstrapping validations
 run_startup()
+
+# The TracerProvider must exist before FastAPI or any auto-instrumentor is used.
+try:
+    setup_tracing()
+except Exception as exc:
+    app_logger.warning(f"OpenTelemetry tracing setup failed (non-fatal): {exc}")
 
 
 @asynccontextmanager
@@ -57,6 +64,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
+
+# ── Phase 3.7.4: Apply OTel auto-instrumentation to FastAPI + SQLAlchemy + Redis + httpx
+try:
+    instrument_app(app)
+except Exception as exc:
+    app_logger.warning(f"OpenTelemetry FastAPI instrumentation failed (non-fatal): {exc}")
 
 # Import governance middlewares
 from app.middleware.api_version import APIVersionMiddleware

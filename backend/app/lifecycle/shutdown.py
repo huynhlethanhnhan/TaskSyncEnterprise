@@ -8,6 +8,13 @@ def run_shutdown() -> None:
     Releases connection pools, flushes logging channels, and cleanly exits resources.
     """
     app_logger.info("Initiating TaskSyncEnterprise shutdown procedure...")
+
+    try:
+        from app.tracing.config import shutdown_tracing
+        shutdown_tracing()
+        app_logger.info("OpenTelemetry spans flushed and tracer provider shut down.")
+    except Exception as exc:
+        app_logger.warning(f"OpenTelemetry tracing shutdown failed (non-fatal): {exc}")
     
     # Dispose SQLAlchemy database engine pool
     try:
