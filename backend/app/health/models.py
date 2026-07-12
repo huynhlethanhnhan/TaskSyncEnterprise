@@ -3,21 +3,21 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
 
+class HealthResponse(BaseModel):
+    """Schema representing simple health check state."""
+    status: str = Field(default="healthy", description="Application health status (always 'healthy')")
+
+
 class LivenessResponse(BaseModel):
-    """Schema representing application liveness state."""
-    status: str = Field(..., description="Application status (e.g. UP)")
-    uptime: str = Field(..., description="Uptime string representation")
-    version: str = Field(..., description="Application release version")
-    timestamp: str = Field(..., description="Timestamp in ISO UTC format")
-    # Legacy fields to preserve backward compatibility
-    checks: Dict[str, str] = Field(
-        default_factory=lambda: {
-            "process": "UP",
-            "configuration": "UP",
-            "logging": "UP"
-        },
-        description="Legacy checkpoints list dictionary"
-    )
+    """Schema representing liveness check state."""
+    status: str = Field(default="alive", description="Application liveness status (always 'alive')")
+
+
+class ReadinessResponse(BaseModel):
+    """Schema representing application readiness and dependency connectivity checklist."""
+    status: str = Field(..., description="Readiness status ('ready' or 'unavailable')")
+    database: str = Field(..., description="Database connection status ('connected' or 'failed')")
+    redis: str = Field(..., description="Redis connection status ('connected' or 'failed')")
 
 
 class DependencyStatus(BaseModel):
@@ -26,8 +26,8 @@ class DependencyStatus(BaseModel):
     message: str = Field(..., description="Descriptive status message details")
 
 
-class ReadinessResponse(BaseModel):
-    """Schema representing application readiness and dependency checklist."""
+class LegacyReadinessResponse(BaseModel):
+    """Legacy readiness schema representing application readiness and dependency checklist."""
     status: str = Field(..., description="Readiness status (UP or DOWN)")
     checks: Dict[str, DependencyStatus] = Field(..., description="Dictionary containing dependency check details")
 

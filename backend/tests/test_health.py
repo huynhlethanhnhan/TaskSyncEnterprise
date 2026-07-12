@@ -1,40 +1,70 @@
 # 📂 FILE: backend/tests/test_health.py
-from fastapi.testclient import TestClient
-from app.main import app
-
-client = TestClient(app)
+from unittest.mock import patch
 
 
-def test_health_live():
-    response = client.get("/health/live")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "UP"
-    assert data["checks"]["process"] == "UP"
-    assert data["checks"]["configuration"] == "UP"
-
-
-def test_health_ready():
-    response = client.get("/health/ready")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "UP"
-    assert "database" in data["checks"]
-    assert "storage" in data["checks"]
-
-
-def test_health_detailed():
+def test_health_simple(client):
+    """Verify GET /health returns standard healthy response."""
     response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "UP"
-    assert data["application_name"] == "TaskSyncEnterprise"
-    assert "server_uptime" in data
-    assert "metrics" in data
-    assert "diagnostics" in data
+    assert data["status"] == "healthy"
 
 
-def test_security_headers():
+def test_health_live(client):
+    """Verify GET /health/live returns standard liveness response."""
+    response = client.get("/health/live")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "alive"
+
+
+def test_health_ready_success(client):
+    """Verify GET /health/ready returns readiness success response when dependencies are healthy."""
+    response = client.get("/health/ready")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ready"
+    assert data["database"] == "connected"
+    assert data["redis"] == "connected"
+
+
+def test_health_ready_database_failure(client):
+    """Verify GET /health/ready returns HTTP 503 and failed database key when database connection check fails."""
+    with patch("app.health.service.HealthService.check_database", return_value=(False, "failed")):
+        response = client.get("/health/ready")
+        assert response.status_code == 503
+        data = response.json()
+        assert data["status"] == "unavailable"
+        assert data["database"] == "failed"
+        assert data["redis"] == "connected"
+
+
+def test_health_ready_redis_failure(client):
+    """Verify GET /health/ready returns HTTP 503 and failed redis key when Redis connection check fails."""
+    with patch("app.health.service.HealthService.check_redis", return_value=(False, "failed")):
+        response = client.get("/health/ready")
+        assert response.status_code == 503
+        data = response.json()
+        assert data["status"] == "unavailable"
+        assert data["database"] == "connected"
+        assert data["redis"] == "failed"
+
+
+def test_health_detailed(client):
+    """Verify backward compatibility of GET /health/details."""
+    response = client.get("/health/details")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] in ("UP", "DOWN")
+    assert "application" in data
+    assert "database" in data
+    assert "redis" in data
+    assert "environment" in data
+    assert "version" in data
+
+
+def test_security_headers(client):
+    """Verify standard OWASP security headers exist on health responses."""
     response = client.get("/health")
     assert response.headers["X-Frame-Options"] == "DENY"
     assert response.headers["X-Content-Type-Options"] == "nosniff"
@@ -42,9 +72,9 @@ def test_security_headers():
     assert response.headers["X-XSS-Protection"] == "1; mode=block"
 
 
-def test_api_cache_control_headers():
+def test_api_cache_control_headers(client):
+    """Verify cache control headers prevent caching on sensitive API-prefixed paths."""
     response = client.get("/api/v1/health")
     assert response.status_code == 200
     assert response.headers["Cache-Control"] == "no-store, no-cache, must-revalidate, max-age=0"
     assert response.headers["Pragma"] == "no-cache"
-
