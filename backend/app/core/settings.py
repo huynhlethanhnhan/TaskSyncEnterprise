@@ -473,6 +473,17 @@ class Settings(BaseSettings):
         )
     )
 
+    ENABLE_METRICS: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Toggle Prometheus metrics collection and /metrics endpoint.\n"
+            "Default: True\n"
+            "Production Recommendation: True (enables application metrics collection for prometheus scraping).\n"
+            "Development Recommendation: True.\n"
+            "Security Consideration: None."
+        )
+    )
+
     SHOW_VERSION: bool = Field(
         default=True,
         description=(

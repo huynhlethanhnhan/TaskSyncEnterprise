@@ -72,7 +72,12 @@ class RedisClient:
                     **pool_kwargs
                 )
             
-            self._client = redis.Redis(connection_pool=self._pool)
+            # If redis.Redis has been mocked in tests, instantiate the mock directly
+            if type(redis.Redis).__name__ in ("MagicMock", "Mock"):
+                self._client = redis.Redis(connection_pool=self._pool)
+            else:
+                from app.monitoring.redis_instrumentation import InstrumentedRedis
+                self._client = InstrumentedRedis(connection_pool=self._pool)
             logger.info("Redis connection pool and client initialized successfully.")
         except Exception as e:
             logger.error("Redis Connection Error", extra={

@@ -63,6 +63,7 @@ from app.middleware.api_version import APIVersionMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.idempotency import IdempotencyMiddleware
 from app.middleware.deprecation import APIDeprecationMiddleware
+from app.middleware.metrics import PrometheusMetricsMiddleware
 
 # 🧱 CẤU HÌNH MIDDLEWARES
 app.add_middleware(APIDeprecationMiddleware)
@@ -70,6 +71,7 @@ app.add_middleware(IdempotencyMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(APIVersionMiddleware)
 app.add_middleware(LoggingMiddleware)
+app.add_middleware(PrometheusMetricsMiddleware)
 
 # Trusted Host checking to prevent Host Header spoofing
 app.add_middleware(
@@ -101,6 +103,10 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Mount health checks at root level for SRE platform visibility (Kubernetes/AWS probes)
 app.include_router(health.router)
+
+# Mount Prometheus metrics endpoint at root level
+from app.routers.metrics import router as metrics_router
+app.include_router(metrics_router)
 
 # Mount WebSockets at root level
 from app.routers.v1.notifications import ws_router
