@@ -9,3 +9,5 @@ python-multipart
 jinja2
 redis>=5.0.0
 python-jose
+prometheus-client
+psutil
