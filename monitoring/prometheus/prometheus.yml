@@ -1,0 +1,38 @@
+# TaskSyncEnterprise Prometheus server configuration.
+# Keep this file read-only inside the container; Prometheus persists runtime data
+# in its separate TSDB volume configured by docker-compose.monitoring.yml.
+
+global:
+  # Poll every target at a predictable cadence unless a job overrides it.
+  scrape_interval: 15s
+
+  # Evaluate recording and alerting rules on the same cadence as collection.
+  # No rule files are loaded yet; this establishes the default for future rules.
+  evaluation_interval: 15s
+
+  # Stop a scrape before the next one starts so slow targets cannot accumulate.
+  scrape_timeout: 10s
+
+scrape_configs:
+  # Collect the Prometheus-format metrics already exposed by the FastAPI service.
+  - job_name: tasksync-backend
+
+    # Metrics are served over plain HTTP on the Docker host in this deployment.
+    scheme: http
+
+    # Restrict collection to the application's dedicated metrics endpoint.
+    metrics_path: /metrics
+
+    static_configs:
+      # Docker Desktop resolves this hostname automatically. The Compose file
+      # supplies an equivalent host-gateway mapping on supported Linux engines.
+      - targets:
+          - host.docker.internal:8000
+
+        # Stable metadata makes queries and future dashboards easier to filter.
+        # Production deployment tooling should generate or override its own
+        # environment-specific label; Prometheus does not expand shell variables
+        # in this configuration file automatically.
+        labels:
+          service: tasksync-backend
+          environment: local

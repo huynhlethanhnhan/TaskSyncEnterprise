@@ -11,6 +11,8 @@ redis>=5.0.0
 python-jose
 prometheus-client
 psutil
+email-validator
+pydantic[email]
 # ── Phase 3.7.4: OpenTelemetry Distributed Tracing ──
 opentelemetry-api>=1.25.0
 opentelemetry-sdk>=1.25.0
