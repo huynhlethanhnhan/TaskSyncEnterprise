@@ -10,7 +10,7 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - SECRET_KEY=${SECRET_KEY:-task_sync_enterprise_secret_key_chuandry_2026}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - DATABASE_URL=${DATABASE_URL:-mssql+pymssql://sa:YourStrongPassword123!@sqlserver:1433/TaskSyncEnterprise}
+      - DATABASE_URL=${DATABASE_URL:-mssql+pymssql://sa:ThanhNhan1807!@sqlserver:1433/TaskSyncEnterprise}
     depends_on:
       redis:
         condition: service_healthy
@@ -39,11 +39,15 @@ services:
       - "1433:1433"
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:-YourStrongPassword123!}
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:-ThanhNhan1807!}
     volumes:
       - mssql_data:/var/opt/mssql
     healthcheck:
-      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${MSSQL_SA_PASSWORD:-YourStrongPassword123!}", "-C", "-Q", "SELECT 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q \"SELECT 1\" || exit 1"
+        ]
       interval: 15s
       timeout: 10s
       retries: 10

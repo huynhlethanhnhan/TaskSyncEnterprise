@@ -98,148 +98,182 @@ TaskSyncEnterprise/
 `-- README.md
 ```
 
-## Yêu cầu hệ thống
-
-- Windows 11 với Docker Desktop, hoặc Linux với Docker Engine.
-- Linux containers khi dùng Docker Desktop trên Windows.
-- Docker Compose v2 trở lên.
-- Git.
-- Python 3.12 cho local backend development.
-- Node.js/npm cho local frontend development.
-- SQL Server Management Studio là tùy chọn để inspect database.
-
-Xác minh Docker trước khi tiếp tục:
-
-```powershell
-docker version
-docker info
-docker compose version
-```
-
 ## Cấu hình môi trường
 
-Repository cung cấp [.env.example](.env.example) chỉ với placeholder an toàn.
-Tạo file local rồi thay toàn bộ placeholder:
+### A. Clone và tạo `.env`
+
+Tải repository và chuẩn bị file cấu hình môi trường:
 
 ```powershell
+git clone https://github.com/huynhlethanhnhan/TaskSyncEnterprise.git
+cd TaskSyncEnterprise
+git switch develop
 Copy-Item .env.example .env
 ```
 
-`.env` đã được ignore bởi Git. Không overwrite `.env` đang có và không commit
-file này.
+`.env` đã được ignore bởi Git. Không commit file này để đảm bảo an toàn bảo mật.
+
+Chỉnh sửa file `.env` local của bạn để khai báo thông tin đăng nhập phát triển:
+
+```env
+MSSQL_SA_PASSWORD=ThanhNhan1807!
+DATABASE_URL=mssql+pymssql://sa:ThanhNhan1807!@sqlserver:1433/TaskSyncEnterprise
+```
+
+> [!IMPORTANT]
+> Mật khẩu trong `DATABASE_URL` **phải khớp hoàn toàn** với giá trị của `MSSQL_SA_PASSWORD`. Không sử dụng mật khẩu mặc định/phát triển này cho môi trường staging hoặc production.
 
 | Key | Mục đích |
 |---|---|
-| `ENVIRONMENT` | `development`, `testing` hoặc `production`; production bật validation nghiêm ngặt hơn |
-| `SECRET_KEY` | Ký JWT; production phải dùng secret ngẫu nhiên, riêng biệt, tối thiểu 32 ký tự |
-| `MSSQL_SA_PASSWORD` | Password cho SQL Server Docker container |
-| `DATABASE_URL` | SQLAlchemy URL của backend; password phải khớp `MSSQL_SA_PASSWORD` trong local Docker stack |
-| `REDIS_URL` | Redis connection URL; Docker dùng hostname `redis` |
-| `PROMETHEUS_BIND_ADDRESS` | Host binding của Prometheus; mặc định an toàn là `127.0.0.1` |
+| `ENVIRONMENT` | `development`, `testing` hoặc `production` (production bật validation nghiêm ngặt hơn) |
+| `SECRET_KEY` | Ký mã hóa JWT; production phải dùng một chuỗi ngẫu nhiên tối thiểu 32 ký tự |
+| `MSSQL_SA_PASSWORD` | Mật khẩu tài khoản `sa` của SQL Server Docker container |
+| `DATABASE_URL` | SQLAlchemy URL kết nối cơ sở dữ liệu; mật khẩu phải khớp `MSSQL_SA_PASSWORD` |
+| `REDIS_URL` | Redis connection URL; Docker sử dụng hostname `redis` |
+| `PROMETHEUS_BIND_ADDRESS` | Địa chỉ binding của Prometheus Server; mặc định an toàn là `127.0.0.1` |
 
-Nếu password chứa ký tự có ý nghĩa đặc biệt trong URL, cần URL-encode phần
-password trong `DATABASE_URL`. Không dùng tài khoản `sa` cho production; hãy tạo
-application login có quyền tối thiểu và dùng secret manager của môi trường.
+---
 
-Docker Compose tự đọc `.env` tại repository root. Backend chạy local bằng Python
-đọc `.env` theo working directory; cách rõ ràng nhất là export biến trong
-PowerShell hoặc đặt một file `backend/.env` local đã được ignore.
+## Các luồng chạy ứng dụng local
 
-## Khởi động nhanh bằng Docker
+### Luồng A — Chạy toàn bộ bằng Docker (Khuyến nghị)
 
-Các lệnh dưới đây chạy từ repository root bằng Windows PowerShell.
+Trong chế độ này, toàn bộ ứng dụng (FastAPI Backend, SQL Server, Redis, Prometheus) chạy bên trong các container thuộc cùng một Docker network.
 
-### 1. Validate cấu hình
+*   `DATABASE_URL` host trỏ đến: `sqlserver`
+*   `REDIS_URL` host trỏ đến: `redis`
 
+#### 1. Validate cấu hình
 ```powershell
-docker compose -f docker-compose.yml config
+docker compose config --quiet
 docker compose -f docker-compose.monitoring.yml config
 ```
 
-Không tiếp tục nếu Compose báo lỗi cú pháp hoặc biến môi trường chưa hợp lệ.
-
-### 2. Start Redis và SQL Server
-
+#### 2. Khởi động toàn bộ container
 ```powershell
-docker compose -f docker-compose.yml up -d redis sqlserver
-docker compose -f docker-compose.yml ps
+docker compose up -d --build
+docker compose ps
 ```
 
-Chờ `tasksync-redis` và `tasksync-sqlserver` cùng chuyển sang `healthy`.
-
-### 3. Xác minh database
-
+#### 3. Kiểm tra trạng thái và validation
+Xác minh các endpoint hoạt động (sử dụng PowerShell):
 ```powershell
-docker exec tasksync-sqlserver `
-  /opt/mssql-tools18/bin/sqlcmd `
-  -S localhost `
-  -U sa `
-  -P "<your-local-development-password>" `
-  -C `
-  -Q "SELECT name FROM sys.databases"
+Invoke-RestMethod http://localhost:8000/health
+(Invoke-WebRequest http://localhost:8000/docs -TimeoutSec 10).StatusCode
+(Invoke-WebRequest http://localhost:8000/metrics -TimeoutSec 10).StatusCode
+```
+Hoặc dùng `curl`:
+```powershell
+curl.exe -I --max-time 10 http://localhost:8000/docs
+curl.exe -I --max-time 10 http://localhost:8000/metrics
 ```
 
-Chỉ khi `TaskSyncEnterprise` chưa tồn tại, tạo database rỗng bằng SQL Server;
-không tạo table thủ công:
+---
 
+### Luồng B — SQL Server/Redis trong Docker, Backend chạy local trên Windows
+
+Chế độ này tối ưu cho việc debug mã nguồn backend Python trực tiếp bằng debugger IDE trên máy host Windows.
+
+*   `DATABASE_URL` host trỏ đến: `127.0.0.1`
+*   `REDIS_URL` host trỏ đến: `127.0.0.1`
+
+> [!WARNING]
+> Không chạy backend Docker và backend local đồng thời trên port `8000` để tránh tranh chấp cổng.
+
+#### 1. Dừng container backend Docker (nếu đang chạy)
 ```powershell
-docker exec tasksync-sqlserver `
-  /opt/mssql-tools18/bin/sqlcmd `
-  -S localhost `
-  -U sa `
-  -P "<your-local-development-password>" `
-  -C `
-  -Q "IF DB_ID(N'TaskSyncEnterprise') IS NULL CREATE DATABASE [TaskSyncEnterprise]"
+docker compose stop backend
 ```
 
-### 4. Chạy migrations
-
+#### 2. Khởi động các cơ sở hạ tầng (SQL Server và Redis)
 ```powershell
-docker compose -f docker-compose.yml run --rm backend `
-  python -m alembic upgrade head
+docker compose up -d sqlserver redis
 ```
 
-### 5. Start backend
-
-```powershell
-docker compose -f docker-compose.yml up -d backend
-docker compose -f docker-compose.yml ps
-```
-
-### 6. Start Prometheus
-
-```powershell
-docker compose -f docker-compose.monitoring.yml up -d
-docker compose -f docker-compose.monitoring.yml ps
-```
-
-Dạng một dòng PowerShell tương đương:
-
-```powershell
-docker compose -f docker-compose.monitoring.yml up -d; docker compose -f docker-compose.monitoring.yml ps
-```
-
-Dấu `;` vẫn chạy lệnh thứ hai nếu lệnh thứ nhất fail. Khi troubleshooting, nên
-chạy hai lệnh riêng để thấy exit status rõ ràng.
-
-## Phát triển backend local
-
-SQL Server và Redis vẫn phải reachable từ máy host. Khi dùng containers cho hai
-dependency này, local backend kết nối qua `127.0.0.1`, không phải service names.
-
+#### 3. Chạy ứng dụng Python backend từ máy host
+Sử dụng các biến môi trường cấu hình trỏ về localhost (`127.0.0.1`):
 ```powershell
 cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 
 $env:ENVIRONMENT = "development"
-$env:SECRET_KEY = "<your-strong-local-development-secret>"
-$env:DATABASE_URL = "mssql+pymssql://sa:<your-url-encoded-password>@127.0.0.1:1433/TaskSyncEnterprise"
+$env:SECRET_KEY = "replace-with-a-strong-random-secret-at-least-32-characters"
+$env:DATABASE_URL = "mssql+pymssql://sa:ThanhNhan1807!@127.0.0.1:1433/TaskSyncEnterprise"
 $env:REDIS_URL = "redis://127.0.0.1:6379/0"
 
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+---
+
+## Khởi tạo và đồng bộ Database (Migrations)
+
+Nếu chạy lần đầu hoặc sau khi dọn sạch volume, bạn cần tạo cơ sở dữ liệu trống và chạy migration.
+
+#### 1. Khởi tạo Database trống trong SQL Server
+Chạy lệnh `sqlcmd` trực tiếp vào container:
+```powershell
+docker exec tasksync-sqlserver `
+  /opt/mssql-tools18/bin/sqlcmd `
+  -S localhost `
+  -U sa `
+  -P "ThanhNhan1807!" `
+  -C `
+  -Q "IF DB_ID('TaskSyncEnterprise') IS NULL CREATE DATABASE [TaskSyncEnterprise]"
+```
+
+#### 2. Chạy migrations bằng Alembic
+```powershell
+# Nếu dùng backend Docker:
+docker compose exec backend alembic upgrade head
+
+# Nếu dùng backend local:
+alembic upgrade head
+```
+
+---
+
+## Hướng dẫn Troubleshooting lỗi 18456 State 8
+
+Thông báo lỗi:
+```text
+Error: 18456, Severity: 14, State: 8
+Login failed for user 'sa'
+Reason: Password did not match that for the login provided.
+```
+
+**State 8** nghĩa là mật khẩu cung cấp để đăng nhập tài khoản `sa` không khớp với mật khẩu đang lưu trữ bên trong cơ sở dữ liệu SQL Server.
+
+### Các nguyên nhân phổ biến và cách sửa:
+
+1.  **Mật khẩu không khớp giữa các biến:** Mật khẩu trong biến `MSSQL_SA_PASSWORD` và phần mật khẩu trong `DATABASE_URL` (hoặc cấu hình local của Windows) bị lệch ký tự. Kiểm tra và đồng bộ lại.
+2.  **Container sử dụng cấu hình cũ:** Sau khi cập nhật `.env`, container backend không tự động cập nhật nếu không được dựng lại. Chạy lệnh tái tạo container:
+    ```powershell
+    docker compose up -d --build --force-recreate
+    ```
+3.  **Volume cũ lưu mật khẩu cũ:** SQL Server Docker container chỉ thiết lập mật khẩu `sa` vào volume ở **lần đầu tiên** khởi tạo dữ liệu. Thay đổi `MSSQL_SA_PASSWORD` sau đó sẽ không tự cập nhật mật khẩu lưu trong volume.
+    *   **Cách giải quyết:** Thực hiện reset volume local (Lưu ý: lệnh này sẽ xóa toàn bộ dữ liệu database hiện tại trong Docker):
+        ```powershell
+        docker compose down -v --remove-orphans
+        docker compose up -d sqlserver redis
+        ```
+4.  **Nhầm lẫn Host kết nối:** Backend chạy local trên Windows dùng `sqlserver` (hostname của Docker) thay vì `127.0.0.1`.
+5.  **Biến môi trường Windows bị đè:** Biến môi trường hệ thống Windows cũ đè lên file `.env` local.
+
+### Các lệnh kiểm tra cấu hình thực tế:
+Kiểm tra biến môi trường đã render vào container:
+```powershell
+docker inspect tasksync-sqlserver --format '{{range .Config.Env}}{{println .}}{{end}}'
+docker inspect tasksync-backend --format '{{range .Config.Env}}{{println .}}{{end}}'
+```
+
+Kiểm tra nhật ký lỗi đăng nhập:
+```powershell
+docker compose logs sqlserver --tail 100
+```
+
 
 ### Frontend local
 
