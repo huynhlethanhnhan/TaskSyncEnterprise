@@ -45,7 +45,13 @@ def try_parse_json(line: str) -> dict | None:
         return None
 
 
-def test_logging_e2e_compliance():
+def test_logging_e2e_compliance(db, request):
+    from app.database import get_db
+    def override_get_db():
+        yield db
+    app.dependency_overrides[get_db] = override_get_db
+    request.addfinalizer(lambda: app.dependency_overrides.clear())
+    client = TestClient(app, raise_server_exceptions=False)
     # 1. Force setup_logging to ensure our handlers are applied
     setup_logging()
 

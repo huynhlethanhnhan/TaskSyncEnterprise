@@ -52,10 +52,12 @@ def test_health_ready_redis_failure(client):
 
 def test_health_detailed(client):
     """Verify backward compatibility of GET /health/details."""
-    response = client.get("/health/details")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] in ("UP", "DOWN")
+    from tests.conftest import TestingSessionLocal
+    with patch("app.database.SessionLocal", TestingSessionLocal):
+        response = client.get("/health/details")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] in ("UP", "DOWN")
     assert "application" in data
     assert "database" in data
     assert "redis" in data
