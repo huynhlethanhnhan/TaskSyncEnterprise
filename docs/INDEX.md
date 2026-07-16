@@ -24,6 +24,10 @@ Chào mừng bạn đến với trung tâm tài liệu kỹ thuật của dự �
   * Cách ly các kênh thông báo (EMAIL, IN_APP, WEBSOCKET, PUSH) qua Strategy Pattern.
   * Thiết lập WebSocket gateway phục vụ đẩy tin real-time.
   * Hàng đợi chạy ngầm quét gửi lại email lỗi (Retry Poller thread daemon).
+* **[Hướng Dẫn Hệ Thống Quan Sát, Đo Lường & Giám Sát](file:///e:/TaskSyncEnterprise/docs/monitoring/prometheus_setup.md)**:
+  * Thiết lập và vận hành Prometheus Server thu thập metrics tự động.
+  * **[Hướng Dẫn Tích Hợp Grafana (docs/learning/phase-3.7.6-grafana-monitoring-guide-vi.md)](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.7.6-grafana-monitoring-guide-vi.md)**: Hướng dẫn kỹ thuật và lý thuyết trực quan hóa chỉ số giám sát bằng tiếng Việt.
+  * **[Kịch Bản Kiểm Thử Giám Sát (docs/monitoring/phase-3.7.6-manual-testing-guide-vi.md)](file:///e:/TaskSyncEnterprise/docs/monitoring/phase-3.7.6-manual-testing-guide-vi.md)**: Quy trình kiểm thử thủ công và checklist xác minh hoạt động của Grafana + Prometheus.
 
 ---
 

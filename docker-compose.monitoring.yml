@@ -48,10 +48,51 @@ services:
     # Recover automatically after host restarts and unexpected failures.
     restart: unless-stopped
 
+  grafana:
+    # Stable Grafana release.
+    image: grafana/grafana:11.1.0
+    container_name: tasksync-grafana
+
+    ports:
+      - "${GRAFANA_BIND_ADDRESS:-127.0.0.1}:3000:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+    volumes:
+      # Mount configurations and dashboards read-only
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      # Named volume for state persistence
+      - grafana_data:/var/lib/grafana
+
+    networks:
+      - observability
+
+    # Report readiness through Grafana's built-in api health endpoint
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+    # Reduce container privilege
+    security_opt:
+      - no-new-privileges:true
+
+    # Recover automatically after host restarts and unexpected failures
+    restart: unless-stopped
+
 volumes:
   # Docker manages this volume; remove it only when metric history may be lost.
   prometheus_data:
     name: tasksync-prometheus-data
+  # Persist Grafana database and configurations
+  grafana_data:
+    name: tasksync-grafana-data
 
 networks:
   # A stable bridge lets future Compose-managed observability services join this
