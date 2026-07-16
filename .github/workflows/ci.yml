@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - develop
+
   pull_request:
     branches:
       - develop
       - master
+
   workflow_dispatch:
 
 concurrency:
@@ -25,88 +27,132 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # Fetch all history so that we can check changed files
+          fetch-depth: 0
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: "pip"
-          cache-dependency-path: "backend/requirements-dev.txt"
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
 
-      - name: Install dependencies
+      - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
           pip install -r backend/requirements-dev.txt
 
       - name: Run Ruff check
+        working-directory: backend
         run: |
-          cd backend
           ruff check .
 
-      - name: Get changed files
+      - name: Get changed Python files
         id: changed-files
-        uses: tj-actions/changed-files@v44
+        uses: tj-actions/changed-files@v47
         with:
           files: |
             backend/**/*.py
-          json: true
+          json: "true"
+          escape_json: "false"
+          exclude_symlinks: "true"
 
       - name: Run Black check
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: |
-          python -c '
-          import json, subprocess, sys, os
-          files = json.loads(r"""${{ steps.changed-files.outputs.all_changed_files }}""")
-          existing_files = [f for f in files if os.path.exists(f)]
-          if existing_files:
-              cmd = ["black", "--check"] + existing_files
-              print(f"Running: {\" \".join(cmd)}")
-              res = subprocess.run(cmd)
-              sys.exit(res.returncode)
-          else:
-              print("No existing Python files changed.")
-          '
-
-      - name: Run Pytest
         env:
-          PYTHONPATH: backend
+          CHANGED_FILES_JSON: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          cd backend
-          pytest --cov=app --cov-report=xml --cov-report=term tests/
+          python <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
 
-      - name: Upload test coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
+          try:
+              files = json.loads(
+                  os.environ.get("CHANGED_FILES_JSON", "[]")
+              )
+          except json.JSONDecodeError as exc:
+              print(f"Invalid changed-files JSON: {exc}")
+              sys.exit(1)
+
+          existing_files = [
+              file
+              for file in files
+              if file.endswith(".py") and os.path.isfile(file)
+          ]
+
+          if not existing_files:
+              print("No existing Python files changed.")
+              sys.exit(0)
+
+          cmd = [
+              sys.executable,
+              "-m",
+              "black",
+              "--check",
+              *existing_files,
+          ]
+
+          print("Running:", " ".join(cmd))
+          subprocess.run(cmd, check=True)
+          PY
+
+      - name: Skip Black check
+        if: steps.changed-files.outputs.any_changed != 'true'
+        run: |
+          echo "No changed Python files found."
+
+      - name: Run Pytest with coverage
+        working-directory: backend
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest \
+            --cov=app \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term \
+            tests/
+
+      - name: Verify coverage report
+        run: |
+          test -f backend/coverage.xml
+          echo "Coverage report successfully generated."
+
+      - name: Upload backend coverage report
+        uses: actions/upload-artifact@v6
         with:
-          name: backend-coverage-report
+          name: backend-coverage
           path: backend/coverage.xml
           retention-days: 7
+          if-no-files-found: error
 
   frontend:
-    name: Frontend CI (Node 20)
+    name: Frontend CI (Node 22)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
-          cache-dependency-path: "frontend/package-lock.json"
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
+        working-directory: frontend
         run: |
-          cd frontend
           npm ci
 
-      - name: Verify production build
+      - name: Verify frontend production build
+        working-directory: frontend
         run: |
-          cd frontend
           npm run build
