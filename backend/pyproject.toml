@@ -54,3 +54,7 @@ exclude = '''
   )/
 )
 '''
+
+[tool.bandit]
+targets = ["app"]
+exclude_dirs = ["tests", ".venv", "alembic"]

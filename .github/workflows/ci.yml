@@ -130,6 +130,38 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+      - name: Run Bandit check
+        working-directory: backend
+        timeout-minutes: 5
+        run: |
+          bandit -c pyproject.toml -r . -f json -o bandit-report.json --exit-zero
+          bandit -c pyproject.toml -r . -lll
+
+      - name: Run pip-audit check
+        working-directory: backend
+        timeout-minutes: 5
+        run: |
+          pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325 -f json -o pip-audit-report.json
+
+      - name: Upload Bandit security report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-bandit-report
+          path: backend/bandit-report.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload pip-audit security report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-pip-audit-report
+          path: backend/pip-audit-report.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+
   frontend:
     name: Frontend CI (Node 22)
     runs-on: ubuntu-latest

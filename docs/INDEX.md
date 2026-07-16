@@ -24,6 +24,9 @@ Chào mừng bạn đến với trung tâm tài liệu kỹ thuật của dự �
   * Quy trình kiểm thử và kiểm tra chất lượng tự động qua GitHub Actions.
   * Hướng dẫn chạy Ruff, Black check và Pytest cục bộ.
   * Xử lý lỗi CI thường gặp và cấu hình bảo vệ nhánh (Branch Protection).
+* **[Hướng Dẫn Vận Hành Quét Bảo Mật (docs/deployment/SECURITY_SCAN_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/deployment/SECURITY_SCAN_GUIDE.md)**:
+  * Hướng dẫn chạy quét bảo mật Bandit và pip-audit cục bộ.
+  * Hướng dẫn cấu hình, xử lý false positive và cập nhật các vulnerabilities trong dependencies.
 * **[Hướng Dẫn Hạ Tầng Thông Báo (docs/notification/GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/notification/GUIDE.md)**:
   * Cách ly các kênh thông báo (EMAIL, IN_APP, WEBSOCKET, PUSH) qua Strategy Pattern.
   * Thiết lập WebSocket gateway phục vụ đẩy tin real-time.
