@@ -30,7 +30,10 @@ def test_health_ready_success(client):
 
 def test_health_ready_database_failure(client):
     """Verify GET /health/ready returns HTTP 503 and failed database key when database connection check fails."""
-    with patch("app.health.service.HealthService.check_database", return_value=(False, "failed")):
+    with patch(
+        "app.health.service.HealthService.check_database",
+        return_value=(False, "failed"),
+    ):
         response = client.get("/health/ready")
         assert response.status_code == 503
         data = response.json()
@@ -41,7 +44,9 @@ def test_health_ready_database_failure(client):
 
 def test_health_ready_redis_failure(client):
     """Verify GET /health/ready returns HTTP 503 and failed redis key when Redis connection check fails."""
-    with patch("app.health.service.HealthService.check_redis", return_value=(False, "failed")):
+    with patch(
+        "app.health.service.HealthService.check_redis", return_value=(False, "failed")
+    ):
         response = client.get("/health/ready")
         assert response.status_code == 503
         data = response.json()
@@ -53,6 +58,7 @@ def test_health_ready_redis_failure(client):
 def test_health_detailed(client):
     """Verify backward compatibility of GET /health/details."""
     from tests.conftest import TestingSessionLocal
+
     with patch("app.database.SessionLocal", TestingSessionLocal):
         response = client.get("/health/details")
         assert response.status_code == 200
@@ -78,5 +84,8 @@ def test_api_cache_control_headers(client):
     """Verify cache control headers prevent caching on sensitive API-prefixed paths."""
     response = client.get("/api/v1/health")
     assert response.status_code == 200
-    assert response.headers["Cache-Control"] == "no-store, no-cache, must-revalidate, max-age=0"
+    assert (
+        response.headers["Cache-Control"]
+        == "no-store, no-cache, must-revalidate, max-age=0"
+    )
     assert response.headers["Pragma"] == "no-cache"
