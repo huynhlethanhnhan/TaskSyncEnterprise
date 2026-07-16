@@ -20,6 +20,10 @@ Chào mừng bạn đến với trung tâm tài liệu kỹ thuật của dự �
   * Cấu hình docker-compose mạng nội bộ và vùng đĩa volumes.
   * Chốt chặn kiểm tra sức khỏe của container (SRE health check probes).
   * Danh sách kiểm tra triển khai sản xuất (Production Checklist).
+* **[Hướng Dẫn Vận Hành CI (docs/deployment/CI_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/deployment/CI_GUIDE.md)**:
+  * Quy trình kiểm thử và kiểm tra chất lượng tự động qua GitHub Actions.
+  * Hướng dẫn chạy Ruff, Black check và Pytest cục bộ.
+  * Xử lý lỗi CI thường gặp và cấu hình bảo vệ nhánh (Branch Protection).
 * **[Hướng Dẫn Hạ Tầng Thông Báo (docs/notification/GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/notification/GUIDE.md)**:
   * Cách ly các kênh thông báo (EMAIL, IN_APP, WEBSOCKET, PUSH) qua Strategy Pattern.
   * Thiết lập WebSocket gateway phục vụ đẩy tin real-time.

@@ -14,20 +14,22 @@
       }
     ]
   },
-  "description": "This dashboard monitors application cache behavior and does not expose Redis server internals.",
+  "description": "Infrastructure, process resource and runtime performance metrics for TaskSyncEnterprise",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
   "links": [
     {
-      "asDropdown": false,
+      "asDropdown": true,
       "icon": "dashboard",
       "includeVars": true,
       "keepTime": true,
-      "tags": ["tasksync"],
+      "tags": [
+        "tasksync"
+      ],
       "targetBlank": false,
-      "title": "TaskSyncEnterprise Dashboards",
+      "title": "TaskSync Navigation Menu",
       "type": "dashboards"
     }
   ],
@@ -42,15 +44,15 @@
         "y": 0
       },
       "id": 100,
-      "title": "Redis and Cache Summary",
+      "title": "Infrastructure Summary",
       "type": "row"
     },
     {
-      "title": "Cache Client Status",
+      "title": "Services UP",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 6,
+        "w": 3,
         "x": 0,
         "y": 1
       },
@@ -80,22 +82,7 @@
                 "value": 1
               }
             ]
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "1": {
-                  "text": "ONLINE",
-                  "color": "green"
-                },
-                "0": {
-                  "text": "OFFLINE",
-                  "color": "red"
-                }
-              }
-            }
-          ]
+          }
         }
       },
       "options": {
@@ -103,22 +90,15 @@
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value"
-      },
-      "links": [
-        {
-          "targetBlank": true,
-          "title": "Explore Client Status",
-          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22up%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
-        }
-      ]
+      }
     },
     {
-      "title": "Cache Failures Rate",
+      "title": "Services DOWN",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 6,
+        "w": 3,
+        "x": 3,
         "y": 1
       },
       "id": 2,
@@ -129,13 +109,12 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(redis_failures_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) or vector(0)",
+          "expr": "sum(up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"} == 0) or vector(0)",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "rps",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -145,33 +124,26 @@
               },
               {
                 "color": "red",
-                "value": 0.0001
+                "value": 1
               }
             ]
           }
         }
       },
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value"
-      },
-      "links": [
-        {
-          "targetBlank": true,
-          "title": "Explore Failures",
-          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22redis_failures_total%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
-        }
-      ]
+      }
     },
     {
-      "title": "Cache Operations Rate",
+      "title": "Scrape Targets",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 12,
+        "w": 3,
+        "x": 6,
         "y": 1
       },
       "id": 3,
@@ -182,13 +154,12 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(redis_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", command=~\"$redis_command\"}[$rate_interval]))",
+          "expr": "count(up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"})",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "rps",
           "color": {
             "mode": "palette-classic"
           }
@@ -196,25 +167,18 @@
       },
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value"
-      },
-      "links": [
-        {
-          "targetBlank": true,
-          "title": "Explore Call Rates",
-          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22redis_requests_total%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
-        }
-      ]
+      }
     },
     {
-      "title": "Avg Client Latency",
+      "title": "Success Ratio",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 18,
+        "w": 3,
+        "x": 9,
         "y": 1
       },
       "id": 4,
@@ -225,13 +189,99 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(redis_query_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", command=~\"$redis_command\"}[$rate_interval])) / sum(rate(redis_query_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", command=~\"$redis_command\"}[$rate_interval]))",
+          "expr": "(sum(up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}) / count(up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"})) * 100",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 95
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Process Uptime",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 5,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "time() - process_start_time_seconds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "System CPU Ratio",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 6,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "system_cpu_usage_ratio{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"} * 100",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -241,11 +291,11 @@
               },
               {
                 "color": "yellow",
-                "value": 0.005
+                "value": 70
               },
               {
                 "color": "red",
-                "value": 0.02
+                "value": 90
               }
             ]
           }
@@ -256,14 +306,43 @@
         "graphMode": "area",
         "justifyMode": "center",
         "textMode": "value"
+      }
+    },
+    {
+      "title": "System Memory",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
       },
-      "links": [
+      "id": 7,
+      "targets": [
         {
-          "targetBlank": true,
-          "title": "Explore Client Latency",
-          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22redis_query_duration_seconds_sum%7Bjob%3D~%5C%22%24job%5C%22%7D%20/%20redis_query_duration_seconds_count%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "system_memory_usage_bytes{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "refId": "A"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
     },
     {
       "collapsed": false,
@@ -274,12 +353,12 @@
         "y": 5
       },
       "id": 101,
-      "title": "Client Dependency Health",
+      "title": "Service Availability",
       "type": "row"
     },
     {
-      "title": "Target Availability Timeline",
-      "type": "state-timeline",
+      "title": "Target Status List",
+      "type": "table",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -287,6 +366,38 @@
         "y": 6
       },
       "id": 10,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Target Status",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22up%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
+    },
+    {
+      "title": "Availability over Time",
+      "type": "state-timeline",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 11,
       "targets": [
         {
           "datasource": {
@@ -306,86 +417,16 @@
               "type": "value",
               "options": {
                 "1": {
-                  "text": "Healthy",
+                  "text": "UP",
                   "color": "green"
                 },
                 "0": {
-                  "text": "Unhealthy",
+                  "text": "DOWN",
                   "color": "red"
                 }
               }
             }
           ]
-        }
-      }
-    },
-    {
-      "title": "Cache Operations Success Ratio",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      },
-      "id": 11,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "(sum(rate(redis_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) - (sum(rate(redis_failures_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) or vector(0))) / sum(rate(redis_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) * 100",
-          "legendFormat": "Success Ratio: {{instance}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
-          }
-        }
-      }
-    },
-    {
-      "title": "Cache Failures Trend",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 14
-      },
-      "id": 12,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(redis_failures_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (command, error_type) or vector(0)",
-          "legendFormat": "Failed {{command}} ({{error_type}})",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "rps",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
-          }
         }
       }
     },
@@ -398,11 +439,11 @@
         "y": 22
       },
       "id": 102,
-      "title": "Client Operations",
+      "title": "Process Resources",
       "type": "row"
     },
     {
-      "title": "Query Rate by Command",
+      "title": "Backend Process CPU Rate",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -418,14 +459,14 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(redis_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", command=~\"$redis_command\"}[$rate_interval])) by (command)",
-          "legendFormat": "{{command}}",
+          "expr": "rate(process_cpu_seconds_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]) * 100",
+          "legendFormat": "CPU (Cores equivalent %): {{instance}}",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "rps",
+          "unit": "percent",
           "color": {
             "mode": "palette-classic"
           },
@@ -434,10 +475,17 @@
             "lineInterpolation": "smooth"
           }
         }
-      }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore CPU Metrics",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22process_cpu_seconds_total%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
     },
     {
-      "title": "Avg Latency by Command",
+      "title": "Process Memory (Resident vs Virtual)",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -453,14 +501,24 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(redis_query_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", command=~\"$redis_command\"}[$rate_interval])) by (command) / sum(rate(redis_query_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", command=~\"$redis_command\"}[$rate_interval])) by (command)",
-          "legendFormat": "{{command}}",
+          "expr": "process_resident_memory_bytes{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "legendFormat": "Resident: {{instance}}",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "process_virtual_memory_bytes{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "legendFormat": "Virtual: {{instance}}",
+          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "bytes",
           "color": {
             "mode": "palette-classic"
           },
@@ -469,10 +527,17 @@
             "lineInterpolation": "smooth"
           }
         }
-      }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Memory Metrics",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22process_resident_memory_bytes%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
     },
     {
-      "title": "Client Latency Percentiles (p50, p95, p99)",
+      "title": "File Descriptors (Open vs Max)",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -488,8 +553,8 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.5, sum(rate(redis_query_duration_seconds_bucket{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", command=~\"$redis_command\"}[$rate_interval])) by (le))",
-          "legendFormat": "p50",
+          "expr": "process_open_fds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "legendFormat": "Open FDs: {{instance}}",
           "refId": "A"
         },
         {
@@ -498,24 +563,14 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(redis_query_duration_seconds_bucket{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", command=~\"$redis_command\"}[$rate_interval])) by (le))",
-          "legendFormat": "p95",
+          "expr": "process_max_fds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "legendFormat": "Max FDs: {{instance}}",
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(redis_query_duration_seconds_bucket{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", command=~\"$redis_command\"}[$rate_interval])) by (le))",
-          "legendFormat": "p99",
-          "refId": "C"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "short",
           "color": {
             "mode": "palette-classic"
           },
@@ -535,15 +590,15 @@
         "y": 31
       },
       "id": 103,
-      "title": "Correlation",
+      "title": "Python Runtime Health",
       "type": "row"
     },
     {
-      "title": "Cache vs HTTP Request Rate",
+      "title": "Python Garbage Collection Rate",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 32
       },
@@ -555,19 +610,9 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(redis_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
-          "legendFormat": "Cache Ops/sec",
+          "expr": "sum(rate(python_gc_collections_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (generation)",
+          "legendFormat": "Gen {{generation}} Runs",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
-          "legendFormat": "HTTP reqs/sec",
-          "refId": "B"
         }
       ],
       "fieldConfig": {
@@ -584,12 +629,12 @@
       }
     },
     {
-      "title": "Cache vs HTTP Latency",
+      "title": "Objects Collected Rate",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 8,
         "y": 32
       },
       "id": 31,
@@ -600,24 +645,49 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(redis_query_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) / sum(rate(redis_query_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
-          "legendFormat": "Avg Cache Latency",
+          "expr": "rate(python_gc_objects_collected_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])",
+          "legendFormat": "Objects/sec: {{instance}}",
           "refId": "A"
-        },
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Uncollectable Objects",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 32
+      },
+      "id": 32,
+      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_request_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) / sum(rate(http_request_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
-          "legendFormat": "Avg HTTP Latency",
-          "refId": "B"
+          "expr": "python_gc_objects_uncollectable_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "legendFormat": "Uncollectable: {{instance}}",
+          "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "short",
           "color": {
             "mode": "palette-classic"
           },
@@ -632,7 +702,11 @@
   "refresh": "10s",
   "schemaVersion": 39,
   "style": "dark",
-  "tags": ["tasksync", "observability", "redis", "cache"],
+  "tags": [
+    "tasksync",
+    "observability",
+    "infrastructure"
+  ],
   "templating": {
     "list": [
       {
@@ -659,53 +733,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(redis_requests_total, job)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Job",
-        "multi": true,
-        "name": "job",
-        "options": [],
-        "query": {
-          "query": "label_values(redis_requests_total, job)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "definition": "label_values(redis_requests_total{job=~\"$job\"}, instance)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Instance",
-        "multi": true,
-        "name": "instance",
-        "options": [],
-        "query": {
-          "query": "label_values(redis_requests_total{job=~\"$job\"}, instance)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "definition": "label_values(redis_requests_total{job=~\"$job\"}, environment)",
+        "definition": "label_values(up, environment)",
         "hide": 0,
         "includeAll": true,
         "label": "Environment",
@@ -713,7 +741,7 @@
         "name": "environment",
         "options": [],
         "query": {
-          "query": "label_values(redis_requests_total{job=~\"$job\"}, environment)",
+          "query": "label_values(up, environment)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -728,15 +756,38 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(redis_requests_total{job=~\"$job\"}, command)",
+        "definition": "label_values(up{environment=~\"$environment\"}, job)",
         "hide": 0,
         "includeAll": true,
-        "label": "Redis Command",
+        "label": "Job",
         "multi": true,
-        "name": "redis_command",
+        "name": "job",
         "options": [],
         "query": {
-          "query": "label_values(redis_requests_total{job=~\"$job\"}, command)",
+          "query": "label_values(up{environment=~\"$environment\"}, job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -758,15 +809,51 @@
         "label": "Interval",
         "name": "interval",
         "options": [
-          { "selected": false, "value": "10s", "text": "10s" },
-          { "selected": false, "value": "30s", "text": "30s" },
-          { "selected": false, "value": "1m", "text": "1m" },
-          { "selected": true, "value": "5m", "text": "5m" },
-          { "selected": false, "value": "15m", "text": "15m" },
-          { "selected": false, "value": "30m", "text": "30m" },
-          { "selected": false, "value": "1h", "text": "1h" },
-          { "selected": false, "value": "2h", "text": "2h" },
-          { "selected": false, "value": "1d", "text": "1d" }
+          {
+            "selected": false,
+            "value": "10s",
+            "text": "10s"
+          },
+          {
+            "selected": false,
+            "value": "30s",
+            "text": "30s"
+          },
+          {
+            "selected": false,
+            "value": "1m",
+            "text": "1m"
+          },
+          {
+            "selected": true,
+            "value": "5m",
+            "text": "5m"
+          },
+          {
+            "selected": false,
+            "value": "15m",
+            "text": "15m"
+          },
+          {
+            "selected": false,
+            "value": "30m",
+            "text": "30m"
+          },
+          {
+            "selected": false,
+            "value": "1h",
+            "text": "1h"
+          },
+          {
+            "selected": false,
+            "value": "2h",
+            "text": "2h"
+          },
+          {
+            "selected": false,
+            "value": "1d",
+            "text": "1d"
+          }
         ],
         "query": "10s,30s,1m,5m,15m,30m,1h,2h,1d",
         "refresh": 2,
@@ -786,10 +873,26 @@
         "label": "Rate Interval",
         "name": "rate_interval",
         "options": [
-          { "selected": false, "value": "1m", "text": "1m" },
-          { "selected": true, "value": "5m", "text": "5m" },
-          { "selected": false, "value": "10m", "text": "10m" },
-          { "selected": false, "value": "15m", "text": "15m" }
+          {
+            "selected": false,
+            "value": "1m",
+            "text": "1m"
+          },
+          {
+            "selected": true,
+            "value": "5m",
+            "text": "5m"
+          },
+          {
+            "selected": false,
+            "value": "10m",
+            "text": "10m"
+          },
+          {
+            "selected": false,
+            "value": "15m",
+            "text": "15m"
+          }
         ],
         "query": "1m,5m,10m,15m",
         "refresh": 2,
@@ -817,8 +920,8 @@
     ]
   },
   "timezone": "browser",
-  "title": "TaskSyncEnterprise Redis Overview",
-  "uid": "tasksync-redis-overview",
+  "title": "TaskSyncEnterprise Infrastructure Overview",
+  "uid": "tasksync-infrastructure-overview",
   "version": 1,
   "weekStart": ""
 }

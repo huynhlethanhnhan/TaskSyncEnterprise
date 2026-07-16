@@ -64,7 +64,6 @@ class RedisCheck:
     """Verifies that the Redis cache instance is reachable and responsive."""
     @staticmethod
     def run() -> tuple[bool, str]:
-        import sys
         # Bypass connection check during testing environments
         if "pytest" in sys.modules or settings.ENVIRONMENT == "testing":
             return True, "Redis connection check bypassed in test environment."

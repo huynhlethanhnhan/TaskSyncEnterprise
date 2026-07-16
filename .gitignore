@@ -49,3 +49,9 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+
+# Test Coverage
+.coverage
+htmlcov/
+coverage.xml
+*.xml

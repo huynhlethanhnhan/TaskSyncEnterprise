@@ -290,7 +290,7 @@ class TestLogRotationConfiguration:
         """RotatingFileHandler must be configured with the correct maxBytes."""
         from logging.handlers import RotatingFileHandler
         from app.logging.config import build_rotating_file_handler
-        import tempfile, os
+        import tempfile
         with tempfile.TemporaryDirectory() as tmp:
             handler = build_rotating_file_handler(
                 file_path=settings.LOG_DIR_PATH / "test_rotation.log",

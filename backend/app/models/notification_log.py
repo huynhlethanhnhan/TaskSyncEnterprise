@@ -1,8 +1,11 @@
 # 📂 FILE: app/models/notification_log.py
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from sqlalchemy import Integer, Unicode, DateTime, ForeignKey, text, CheckConstraint, UnicodeText
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.notification import Notification
 
 from app.database import Base
 

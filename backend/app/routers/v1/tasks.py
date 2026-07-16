@@ -18,6 +18,7 @@ from app.crud import task as crud_task
 # --- Bổ sung hạ tầng lưu trữ cho Batch 9 ---
 from app.services.storage_service import StorageService
 from app.models.task_attachment import TaskAttachment
+from app.models.task import Task
 
 router = APIRouter(
     prefix="/tasks",

@@ -86,6 +86,25 @@ services:
     # Recover automatically after host restarts and unexpected failures
     restart: unless-stopped
 
+  cadvisor:
+    # Stable cAdvisor release for container-level resource statistics
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: tasksync-cadvisor
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "${CADVISOR_BIND_ADDRESS:-127.0.0.1}:8080:8080"
+    networks:
+      - observability
+    restart: unless-stopped
+
 volumes:
   # Docker manages this volume; remove it only when metric history may be lost.
   prometheus_data:

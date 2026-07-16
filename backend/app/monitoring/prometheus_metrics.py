@@ -121,14 +121,36 @@ class PrometheusMetrics:
             "System memory usage in bytes"
         )
 
+        # 7. Application Error & Exception Metrics
+        self.app_exceptions_total = Counter(
+            "app_exceptions_total",
+            "Total number of application exceptions",
+            ["exception_type", "path"]
+        )
+        self.validation_errors_total = Counter(
+            "validation_errors_total",
+            "Total number of request validation errors",
+            ["path"]
+        )
+        self.auth_errors_total = Counter(
+            "auth_errors_total",
+            "Total number of authentication/authorization errors",
+            ["error_type", "path"]
+        )
+        self.timeout_errors_total = Counter(
+            "timeout_errors_total",
+            "Total number of timeout errors",
+            ["error_type", "path"]
+        )
+
+
     def update_system_metrics(self) -> None:
         """Collects operating system CPU and memory metrics."""
         try:
             import psutil
-            process = psutil.Process(os.getpid())
             # CPU and Memory
             self.system_cpu_usage.set(psutil.cpu_percent(interval=None) / 100.0)
-            self.system_memory_usage.set(process.memory_info().rss)
+            self.system_memory_usage.set(psutil.virtual_memory().used)
         except Exception:
             pass
 

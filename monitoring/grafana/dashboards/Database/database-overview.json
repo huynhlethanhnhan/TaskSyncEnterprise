@@ -14,20 +14,22 @@
       }
     ]
   },
-  "description": "This dashboard monitors Docker Compose service processes and Prometheus targets but does not expose container runtime internals.",
+  "description": "This dashboard monitors application-to-database behavior and does not expose SQL Server engine internals.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
   "links": [
     {
-      "asDropdown": false,
+      "asDropdown": true,
       "icon": "dashboard",
       "includeVars": true,
       "keepTime": true,
-      "tags": ["tasksync"],
+      "tags": [
+        "tasksync"
+      ],
       "targetBlank": false,
-      "title": "TaskSyncEnterprise Dashboards",
+      "title": "TaskSync Navigation Menu",
       "type": "dashboards"
     }
   ],
@@ -42,15 +44,15 @@
         "y": 0
       },
       "id": 100,
-      "title": "Docker Stack Summary",
+      "title": "Database Summary",
       "type": "row"
     },
     {
-      "title": "Monitored Services UP",
+      "title": "Database Status",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 6,
         "x": 0,
         "y": 1
       },
@@ -80,7 +82,22 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "ONLINE",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "OFFLINE",
+                  "color": "red"
+                }
+              }
+            }
+          ]
         }
       },
       "options": {
@@ -92,18 +109,18 @@
       "links": [
         {
           "targetBlank": true,
-          "title": "Explore Service Status",
+          "title": "Explore Health Status",
           "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22up%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
         }
       ]
     },
     {
-      "title": "Monitored Services DOWN",
+      "title": "Database Error Rate",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
+        "w": 6,
+        "x": 6,
         "y": 1
       },
       "id": 2,
@@ -114,12 +131,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"} == 0) or vector(0)",
+          "expr": "sum(rate(db_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) - sum(rate(db_queries_successful_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
+          "unit": "rps",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -129,26 +147,33 @@
               },
               {
                 "color": "red",
-                "value": 1
+                "value": 0.0001
               }
             ]
           }
         }
       },
       "options": {
-        "colorMode": "background",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value"
-      }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Database Errors",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22db_requests_total%7Bjob%3D~%5C%22%24job%5C%22%7D%20-%20db_queries_successful_total%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
     },
     {
-      "title": "Total Targets",
+      "title": "Database Query Rate",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 8,
+        "w": 6,
+        "x": 12,
         "y": 1
       },
       "id": 3,
@@ -159,12 +184,13 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "count(up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"})",
+          "expr": "sum(rate(db_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", statement_type=~\"$statement_type\"}[$rate_interval]))",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
+          "unit": "rps",
           "color": {
             "mode": "palette-classic"
           }
@@ -172,18 +198,25 @@
       },
       "options": {
         "colorMode": "value",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "center",
         "textMode": "value"
-      }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Query counts",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22db_requests_total%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
     },
     {
-      "title": "Average Scrape Success",
+      "title": "Avg Query Latency",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 12,
+        "w": 6,
+        "x": 18,
         "y": 1
       },
       "id": 4,
@@ -194,27 +227,27 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "(sum(up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}) / count(up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"})) * 100",
+          "expr": "sum(rate(db_query_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", statement_type=~\"$statement_type\"}[$rate_interval])) / sum(rate(db_query_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", statement_type=~\"$statement_type\"}[$rate_interval]))",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
+          "unit": "s",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "green",
                 "value": null
               },
               {
                 "color": "yellow",
-                "value": 95
+                "value": 0.05
               },
               {
-                "color": "green",
-                "value": 100
+                "color": "red",
+                "value": 0.2
               }
             ]
           }
@@ -222,42 +255,6 @@
       },
       "options": {
         "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "value"
-      }
-    },
-    {
-      "title": "Service Process CPU Cores",
-      "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 16,
-        "y": 1
-      },
-      "id": 5,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(rate(process_cpu_seconds_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "palette-classic"
-          }
-        }
-      },
-      "options": {
-        "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "center",
         "textMode": "value"
@@ -265,51 +262,8 @@
       "links": [
         {
           "targetBlank": true,
-          "title": "Explore CPU Cores",
-          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22process_cpu_seconds_total%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
-        }
-      ]
-    },
-    {
-      "title": "Service Process Memory",
-      "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 20,
-        "y": 1
-      },
-      "id": 6,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(process_resident_memory_bytes{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"})",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "color": {
-            "mode": "palette-classic"
-          }
-        }
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "center",
-        "textMode": "value"
-      },
-      "links": [
-        {
-          "targetBlank": true,
-          "title": "Explore Memory RSS",
-          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22process_resident_memory_bytes%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+          "title": "Explore Query Latency",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22db_query_duration_seconds_sum%7Bjob%3D~%5C%22%24job%5C%22%7D%20/%20db_query_duration_seconds_count%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
         }
       ]
     },
@@ -322,12 +276,12 @@
         "y": 5
       },
       "id": 101,
-      "title": "Service Availability",
+      "title": "Dependency Health",
       "type": "row"
     },
     {
-      "title": "Prometheus Target Status",
-      "type": "table",
+      "title": "Database Availability over Time",
+      "type": "state-timeline",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -335,31 +289,6 @@
         "y": 6
       },
       "id": 10,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "showHeader": true
-      }
-    },
-    {
-      "title": "Service Availability Timeline",
-      "type": "state-timeline",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      },
-      "id": 11,
       "targets": [
         {
           "datasource": {
@@ -379,11 +308,11 @@
               "type": "value",
               "options": {
                 "1": {
-                  "text": "UP",
+                  "text": "Healthy",
                   "color": "green"
                 },
                 "0": {
-                  "text": "DOWN",
+                  "text": "Unhealthy",
                   "color": "red"
                 }
               }
@@ -393,7 +322,42 @@
       }
     },
     {
-      "title": "Service Scrape Duration",
+      "title": "Query Success Ratio",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 11,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(db_queries_successful_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) / sum(rate(db_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) * 100",
+          "legendFormat": "Success Ratio: {{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Database Error Rate Trend",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -409,8 +373,90 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "scrape_duration_seconds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
-          "legendFormat": "{{instance}} ({{job}})",
+          "expr": "sum(rate(db_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) - sum(rate(db_queries_successful_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
+          "legendFormat": "Errors: {{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 102,
+      "title": "Query and Operation Performance",
+      "type": "row"
+    },
+    {
+      "title": "Query Rate by Statement Type",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 23
+      },
+      "id": 20,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(db_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", statement_type=~\"$statement_type\"}[$rate_interval])) by (statement_type)",
+          "legendFormat": "{{statement_type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Avg Latency by Statement Type",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 23
+      },
+      "id": 21,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(db_query_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", statement_type=~\"$statement_type\"}[$rate_interval])) by (statement_type) / sum(rate(db_query_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", statement_type=~\"$statement_type\"}[$rate_interval])) by (statement_type)",
+          "legendFormat": "{{statement_type}}",
           "refId": "A"
         }
       ],
@@ -425,37 +471,18 @@
             "lineInterpolation": "smooth"
           }
         }
-      },
-      "links": [
-        {
-          "targetBlank": true,
-          "title": "Explore Scrape Duration",
-          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22scrape_duration_seconds%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
-        }
-      ]
+      }
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 22
-      },
-      "id": 102,
-      "title": "Service Process CPU",
-      "type": "row"
-    },
-    {
-      "title": "Service Process CPU Cores Consumed",
+      "title": "Latency Percentiles (p50, p95, p99)",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
-        "w": 24,
-        "x": 0,
+        "w": 8,
+        "x": 16,
         "y": 23
       },
-      "id": 20,
+      "id": 22,
       "targets": [
         {
           "datasource": {
@@ -463,14 +490,34 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(process_cpu_seconds_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])",
-          "legendFormat": "CPU (Cores): {{instance}} ({{job}})",
+          "expr": "histogram_quantile(0.5, sum(rate(db_query_duration_seconds_bucket{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", statement_type=~\"$statement_type\"}[$rate_interval])) by (le))",
+          "legendFormat": "p50",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", statement_type=~\"$statement_type\"}[$rate_interval])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum(rate(db_query_duration_seconds_bucket{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\", statement_type=~\"$statement_type\"}[$rate_interval])) by (le))",
+          "legendFormat": "p99",
+          "refId": "C"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "s",
           "color": {
             "mode": "palette-classic"
           },
@@ -490,11 +537,11 @@
         "y": 31
       },
       "id": 103,
-      "title": "Service Process Memory",
+      "title": "Correlation",
       "type": "row"
     },
     {
-      "title": "Service Process Resident RAM",
+      "title": "Database vs HTTP Request Rate",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -510,14 +557,24 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "process_resident_memory_bytes{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
-          "legendFormat": "Resident Memory: {{instance}}",
+          "expr": "sum(rate(db_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
+          "legendFormat": "DB Ops/sec",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
+          "legendFormat": "HTTP reqs/sec",
+          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes",
+          "unit": "rps",
           "color": {
             "mode": "palette-classic"
           },
@@ -529,7 +586,7 @@
       }
     },
     {
-      "title": "Service Process Virtual RAM",
+      "title": "Database vs HTTP Latency",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -545,56 +602,19 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "process_virtual_memory_bytes{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
-          "legendFormat": "Virtual Memory: {{instance}}",
+          "expr": "sum(rate(db_query_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) / sum(rate(db_query_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
+          "legendFormat": "Avg DB Latency",
           "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
-          }
-        }
-      }
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 40
-      },
-      "id": 104,
-      "title": "Lifecycle and Stability",
-      "type": "row"
-    },
-    {
-      "title": "Service Process Uptime",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 41
-      },
-      "id": 40,
-      "targets": [
+        },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "time() - process_start_time_seconds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
-          "legendFormat": "Uptime: {{instance}}",
-          "refId": "A"
+          "expr": "sum(rate(http_request_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) / sum(rate(http_request_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
+          "legendFormat": "Avg HTTP Latency",
+          "refId": "B"
         }
       ],
       "fieldConfig": {
@@ -609,139 +629,16 @@
           }
         }
       }
-    },
-    {
-      "title": "Open File Descriptors Limit Utilization",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 41
-      },
-      "id": 41,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "process_open_fds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
-          "legendFormat": "Open: {{instance}}",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "process_max_fds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
-          "legendFormat": "Limit: {{instance}}",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
-          }
-        }
-      }
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 49
-      },
-      "id": 105,
-      "title": "Monitoring Stack Health",
-      "type": "row"
-    },
-    {
-      "title": "Prometheus Ingested Samples",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 50
-      },
-      "id": 50,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "scrape_samples_scraped{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
-          "legendFormat": "Scraped: {{instance}} ({{job}})",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
-          }
-        }
-      }
-    },
-    {
-      "title": "Prometheus Ingested Series Added",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 50
-      },
-      "id": 51,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "scrape_series_added{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
-          "legendFormat": "Series Added: {{instance}} ({{job}})",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
-          }
-        }
-      }
     }
   ],
   "refresh": "10s",
   "schemaVersion": 39,
   "style": "dark",
-  "tags": ["tasksync", "observability", "docker"],
+  "tags": [
+    "tasksync",
+    "observability",
+    "database"
+  ],
   "templating": {
     "list": [
       {
@@ -768,53 +665,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(up, job)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Job",
-        "multi": true,
-        "name": "job",
-        "options": [],
-        "query": {
-          "query": "label_values(up, job)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "definition": "label_values(up{job=~\"$job\"}, instance)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Instance",
-        "multi": true,
-        "name": "instance",
-        "options": [],
-        "query": {
-          "query": "label_values(up{job=~\"$job\"}, instance)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "definition": "label_values(up{job=~\"$job\"}, environment)",
+        "definition": "label_values(up, environment)",
         "hide": 0,
         "includeAll": true,
         "label": "Environment",
@@ -822,7 +673,53 @@
         "name": "environment",
         "options": [],
         "query": {
-          "query": "label_values(up{job=~\"$job\"}, environment)",
+          "query": "label_values(up, environment)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\"}, job)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Job",
+        "multi": true,
+        "name": "job",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\"}, job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -844,15 +741,51 @@
         "label": "Interval",
         "name": "interval",
         "options": [
-          { "selected": false, "value": "10s", "text": "10s" },
-          { "selected": false, "value": "30s", "text": "30s" },
-          { "selected": false, "value": "1m", "text": "1m" },
-          { "selected": true, "value": "5m", "text": "5m" },
-          { "selected": false, "value": "15m", "text": "15m" },
-          { "selected": false, "value": "30m", "text": "30m" },
-          { "selected": false, "value": "1h", "text": "1h" },
-          { "selected": false, "value": "2h", "text": "2h" },
-          { "selected": false, "value": "1d", "text": "1d" }
+          {
+            "selected": false,
+            "value": "10s",
+            "text": "10s"
+          },
+          {
+            "selected": false,
+            "value": "30s",
+            "text": "30s"
+          },
+          {
+            "selected": false,
+            "value": "1m",
+            "text": "1m"
+          },
+          {
+            "selected": true,
+            "value": "5m",
+            "text": "5m"
+          },
+          {
+            "selected": false,
+            "value": "15m",
+            "text": "15m"
+          },
+          {
+            "selected": false,
+            "value": "30m",
+            "text": "30m"
+          },
+          {
+            "selected": false,
+            "value": "1h",
+            "text": "1h"
+          },
+          {
+            "selected": false,
+            "value": "2h",
+            "text": "2h"
+          },
+          {
+            "selected": false,
+            "value": "1d",
+            "text": "1d"
+          }
         ],
         "query": "10s,30s,1m,5m,15m,30m,1h,2h,1d",
         "refresh": 2,
@@ -872,15 +805,54 @@
         "label": "Rate Interval",
         "name": "rate_interval",
         "options": [
-          { "selected": false, "value": "1m", "text": "1m" },
-          { "selected": true, "value": "5m", "text": "5m" },
-          { "selected": false, "value": "10m", "text": "10m" },
-          { "selected": false, "value": "15m", "text": "15m" }
+          {
+            "selected": false,
+            "value": "1m",
+            "text": "1m"
+          },
+          {
+            "selected": true,
+            "value": "5m",
+            "text": "5m"
+          },
+          {
+            "selected": false,
+            "value": "10m",
+            "text": "10m"
+          },
+          {
+            "selected": false,
+            "value": "15m",
+            "text": "15m"
+          }
         ],
         "query": "1m,5m,10m,15m",
         "refresh": 2,
         "skipUrlSync": false,
         "type": "interval"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(db_requests_total{job=~\"$job\"}, statement_type)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Statement Type",
+        "multi": true,
+        "name": "statement_type",
+        "options": [],
+        "query": {
+          "query": "label_values(db_requests_total{job=~\"$job\"}, statement_type)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
       }
     ]
   },
@@ -903,8 +875,8 @@
     ]
   },
   "timezone": "browser",
-  "title": "TaskSyncEnterprise Docker Overview",
-  "uid": "tasksync-docker-overview",
+  "title": "TaskSyncEnterprise Database Overview",
+  "uid": "tasksync-database-overview",
   "version": 1,
   "weekStart": ""
 }

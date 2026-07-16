@@ -20,7 +20,7 @@
   "id": null,
   "links": [
     {
-      "asDropdown": false,
+      "asDropdown": true,
       "icon": "dashboard",
       "includeVars": true,
       "keepTime": true,
@@ -28,7 +28,7 @@
         "tasksync"
       ],
       "targetBlank": false,
-      "title": "TaskSyncEnterprise Dashboards",
+      "title": "TaskSync Navigation Menu",
       "type": "dashboards"
     }
   ],
@@ -972,53 +972,7 @@
           "type": "prometheus",
           "uid": "${datasource}"
         },
-        "definition": "label_values(up, job)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Job",
-        "multi": true,
-        "name": "job",
-        "options": [],
-        "query": {
-          "query": "label_values(up, job)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "definition": "label_values(up{job=~\"$job\"}, instance)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Instance",
-        "multi": true,
-        "name": "instance",
-        "options": [],
-        "query": {
-          "query": "label_values(up{job=~\"$job\"}, instance)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "definition": "label_values(up{job=~\"$job\"}, environment)",
+        "definition": "label_values(up, environment)",
         "hide": 0,
         "includeAll": true,
         "label": "Environment",
@@ -1026,7 +980,53 @@
         "name": "environment",
         "options": [],
         "query": {
-          "query": "label_values(up{job=~\"$job\"}, environment)",
+          "query": "label_values(up, environment)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\"}, job)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Job",
+        "multi": true,
+        "name": "job",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\"}, job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

@@ -1,4 +1,9 @@
 from datetime import date, datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.notification import Notification
+    from app.models.notification_preference import NotificationPreference
 
 from sqlalchemy import (
     String,

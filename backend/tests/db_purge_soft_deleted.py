@@ -71,8 +71,8 @@ def main():
     print(f"\n{'='*50}")
     if dry_run:
         print(f"DRY RUN COMPLETE: {total_to_purge} rows would be purged.")
-        print(f"Run with --execute to apply changes:")
-        print(f"  .venv\\Scripts\\python.exe tests\\db_purge_soft_deleted.py --execute")
+        print("Run with --execute to apply changes:")
+        print("  .venv\\Scripts\\python.exe tests\\db_purge_soft_deleted.py --execute")
     else:
         print(f"CLEANUP COMPLETE: {total_to_purge} soft-deleted rows purged.")
 

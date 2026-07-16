@@ -2,7 +2,10 @@
 from datetime import date, datetime
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.employee import Employee
 
 from app.database import Base
 

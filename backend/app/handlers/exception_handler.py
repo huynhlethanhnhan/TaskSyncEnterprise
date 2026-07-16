@@ -31,6 +31,37 @@ async def unified_exception_handler(request: Request, exc: Exception) -> JSONRes
     """
     request_id = request_id_ctx.get()
     
+    # ── Phase 3.7.7: Increment exception metrics ──
+    try:
+        from app.monitoring.prometheus_metrics import prometheus_metrics
+        import asyncio
+
+        path = request.url.path
+        excluded_paths = ["/metrics", "/docs", "/redoc", "/openapi.json"]
+        if not (any(path.startswith(ex) for ex in excluded_paths) or path == "/"):
+            exc_name = exc.__class__.__name__
+
+            # Increment total exceptions
+            prometheus_metrics.app_exceptions_total.labels(
+                exception_type=exc_name,
+                path=path
+            ).inc()
+
+            # Check for timeout error
+            is_timeout = False
+            if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
+                is_timeout = True
+            elif "timeout" in str(exc).lower():
+                is_timeout = True
+
+            if is_timeout:
+                prometheus_metrics.timeout_errors_total.labels(
+                    error_type=exc_name,
+                    path=path
+                ).inc()
+    except Exception:
+        pass
+
     # 1. Map incoming exception to BaseAppException
     mapped_exc: BaseAppException
     
@@ -82,6 +113,21 @@ async def unified_exception_handler(request: Request, exc: Exception) -> JSONRes
             message="Hệ thống gặp sự cố nội bộ.",
             details=str(exc)
         )
+
+    # ── Increment specific validation and auth metrics ──
+    try:
+        from app.monitoring.prometheus_metrics import prometheus_metrics
+        path = request.url.path
+        excluded_paths = ["/metrics", "/docs", "/redoc", "/openapi.json"]
+        if not (any(path.startswith(ex) for ex in excluded_paths) or path == "/"):
+            if isinstance(mapped_exc, ValidationException):
+                prometheus_metrics.validation_errors_total.labels(path=path).inc()
+            elif isinstance(mapped_exc, AuthenticationException):
+                prometheus_metrics.auth_errors_total.labels(error_type="authentication", path=path).inc()
+            elif isinstance(mapped_exc, AuthorizationException):
+                prometheus_metrics.auth_errors_total.labels(error_type="authorization", path=path).inc()
+    except Exception:
+        pass
 
     ctx_data = {}
     try:

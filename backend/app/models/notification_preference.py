@@ -1,6 +1,10 @@
 # 📂 FILE: app/models/notification_preference.py
+from typing import TYPE_CHECKING
 from sqlalchemy import Integer, Unicode, Boolean, ForeignKey, text, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.employee import Employee
 
 from app.database import Base
 

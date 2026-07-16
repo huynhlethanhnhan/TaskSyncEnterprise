@@ -36,3 +36,15 @@ scrape_configs:
         labels:
           service: tasksync-backend
           environment: local
+
+  # Collect container metrics from cAdvisor exporter
+  - job_name: tasksync-cadvisor
+    scheme: http
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - tasksync-cadvisor:8080
+        labels:
+          service: tasksync-cadvisor
+          environment: local
+

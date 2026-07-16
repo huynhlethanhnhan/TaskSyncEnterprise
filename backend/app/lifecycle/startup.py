@@ -7,7 +7,6 @@ from app.startup.production_check import run_production_readiness_check
 
 def verify_redis_connection() -> None:
     """Verifies that the Redis cache server is reachable on startup, failing silently on error."""
-    import sys
     from app.config import settings
     
     if "pytest" in sys.modules or settings.ENVIRONMENT == "testing":
