@@ -38,7 +38,7 @@ Pipeline gồm hai job chạy song song nhằm tối ưu thời gian phản hồ
 
 ### 2. Job: `Frontend CI` (Chạy trên `ubuntu-latest`)
 *   **Checkout repository:** Tải mã nguồn.
-*   **Setup Node.js:** Thiết lập môi trường Node.js `20` và cache thư mục `npm`.
+*   **Setup Node.js:** Thiết lập môi trường Node.js `22` (LTS) và cache thư mục `npm`.
 *   **Install dependencies:** Cài đặt package qua `npm ci` (clean install bảo mật và nhất quán).
 *   **Verify production build:** Thực thi `npm run build` để kiểm tra khả năng biên dịch sản phẩm đầu ra thành công.
 
@@ -108,5 +108,5 @@ npm run build
 1.  **Require a pull request before merging:** Yêu cầu tất cả code vào `develop` phải đi qua Pull Request.
 2.  **Require status checks to pass before merging:** Tích hợp bắt buộc các status checks sau phải thành công:
     *   `Backend CI (Python 3.12)`
-    *   `Frontend CI (Node 20)`
+    *   `Frontend CI (Node 22)`
 3.  **Require conversation resolution before merging:** Yêu cầu toàn bộ các nhận xét và thảo luận trên PR phải được giải quyết (resolved) trước khi merge.
