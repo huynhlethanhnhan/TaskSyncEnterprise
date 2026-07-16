@@ -18,7 +18,20 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "tasksync"
+      ],
+      "targetBlank": false,
+      "title": "TaskSyncEnterprise Dashboards",
+      "type": "dashboards"
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -47,10 +60,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "up{job=\"tasksync-backend\"}",
+          "expr": "up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "refId": "A"
         }
       ],
@@ -91,7 +104,14 @@
         "graphMode": "none",
         "justifyMode": "center",
         "textMode": "value"
-      }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Target Status",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22up%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
     },
     {
       "title": "Uptime",
@@ -107,10 +127,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "app_uptime_seconds{job=\"tasksync-backend\"}",
+          "expr": "app_uptime_seconds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "refId": "A"
         }
       ],
@@ -143,10 +163,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "scrape_samples_scraped{job=\"tasksync-backend\"}",
+          "expr": "scrape_samples_scraped{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "refId": "A"
         }
       ],
@@ -179,10 +199,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "tasks_created_total{job=\"tasksync-backend\"}",
+          "expr": "tasks_created_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "refId": "A"
         }
       ],
@@ -215,10 +235,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "projects_created_total{job=\"tasksync-backend\"}",
+          "expr": "projects_created_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "refId": "A"
         }
       ],
@@ -251,10 +271,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "active_users_total{job=\"tasksync-backend\"}",
+          "expr": "active_users_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "refId": "A"
         }
       ],
@@ -299,10 +319,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_requests_total{job=\"tasksync-backend\"}[5m]))",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
           "legendFormat": "Requests Rate",
           "refId": "A"
         }
@@ -334,10 +354,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_requests_total{job=\"tasksync-backend\"}[5m])) by (status_code)",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (status_code)",
           "legendFormat": "{{status_code}}",
           "refId": "A"
         }
@@ -369,10 +389,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_requests_total{job=\"tasksync-backend\"}[5m])) by (method)",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (method)",
           "legendFormat": "{{method}}",
           "refId": "A"
         }
@@ -404,10 +424,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(increase(http_requests_total{job=\"tasksync-backend\"}[5m])) by (path)",
+          "expr": "sum(increase(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (path)",
           "legendFormat": "{{path}}",
           "refId": "A"
         }
@@ -423,7 +443,9 @@
       "options": {
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         }
@@ -455,10 +477,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_request_duration_seconds_sum{job=\"tasksync-backend\"}[5m])) / sum(rate(http_request_duration_seconds_count{job=\"tasksync-backend\"}[5m]))",
+          "expr": "sum(rate(http_request_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) / sum(rate(http_request_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
           "legendFormat": "Avg Latency",
           "refId": "A"
         }
@@ -474,7 +496,14 @@
             "lineInterpolation": "smooth"
           }
         }
-      }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Latency Metrics",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22http_request_duration_seconds_bucket%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
     },
     {
       "title": "P95 and P99 Latencies",
@@ -490,20 +519,20 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"tasksync-backend\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (le))",
           "legendFormat": "P95 Latency",
           "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"tasksync-backend\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (le))",
           "legendFormat": "P99 Latency",
           "refId": "B"
         }
@@ -535,10 +564,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_request_duration_seconds_sum{job=\"tasksync-backend\"}[5m])) by (path) / sum(rate(http_request_duration_seconds_count{job=\"tasksync-backend\"}[5m])) by (path)",
+          "expr": "sum(rate(http_request_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (path) / sum(rate(http_request_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (path)",
           "legendFormat": "{{path}}",
           "refId": "A"
         }
@@ -571,7 +600,9 @@
       "options": {
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         }
@@ -603,20 +634,20 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_requests_total{job=\"tasksync-backend\",status_code=~\"[45]..\"}[5m]))",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\",status_code=~\"[45]..\"}[$rate_interval]))",
           "legendFormat": "HTTP Errors Rate",
           "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "(sum(rate(http_requests_total{job=\"tasksync-backend\",status_code=~\"[45]..\"}[5m])) / sum(rate(http_requests_total{job=\"tasksync-backend\"}[5m]))) * 100",
+          "expr": "(sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\",status_code=~\"[45]..\"}[$rate_interval])) / sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))) * 100",
           "legendFormat": "HTTP Error Percentage",
           "refId": "B"
         }
@@ -631,7 +662,14 @@
             "lineInterpolation": "smooth"
           }
         }
-      }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Error Metrics",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22http_requests_total%7Bjob%3D~%5C%22%24job%5C%22,status_code%3D~%5C%22%5B45%5D..%5C%22%7D%22%7D%5D"
+        }
+      ]
     },
     {
       "title": "Error Breakdown by Path & Status (4xx/5xx)",
@@ -647,10 +685,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_requests_total{job=\"tasksync-backend\",status_code=~\"[45]..\"}[5m])) by (path, status_code)",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\",status_code=~\"[45]..\"}[$rate_interval])) by (path, status_code)",
           "legendFormat": "{{path}} ({{status_code}})",
           "refId": "A"
         }
@@ -694,20 +732,20 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(process_cpu_seconds_total{job=\"tasksync-backend\"}[5m]) * 100",
+          "expr": "rate(process_cpu_seconds_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]) * 100",
           "legendFormat": "Backend Process CPU Usage",
           "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "system_cpu_usage_ratio{job=\"tasksync-backend\"} * 100",
+          "expr": "system_cpu_usage_ratio{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"} * 100",
           "legendFormat": "System CPU Usage Ratio",
           "refId": "B"
         }
@@ -723,7 +761,14 @@
             "lineInterpolation": "smooth"
           }
         }
-      }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore CPU Metrics",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22process_cpu_seconds_total%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
     },
     {
       "title": "Resident Memory Usage",
@@ -739,20 +784,20 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "process_resident_memory_bytes{job=\"tasksync-backend\"}",
+          "expr": "process_resident_memory_bytes{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "legendFormat": "Resident Memory",
           "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "system_memory_usage_bytes{job=\"tasksync-backend\"}",
+          "expr": "system_memory_usage_bytes{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "legendFormat": "System Memory Usage",
           "refId": "B"
         }
@@ -768,7 +813,14 @@
             "lineInterpolation": "smooth"
           }
         }
-      }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Memory Metrics",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22process_resident_memory_bytes%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
     },
     {
       "title": "Open File Descriptors",
@@ -784,20 +836,20 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "process_open_fds{job=\"tasksync-backend\"}",
+          "expr": "process_open_fds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "legendFormat": "Open FDs",
           "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "process_max_fds{job=\"tasksync-backend\"}",
+          "expr": "process_max_fds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
           "legendFormat": "Max FDs",
           "refId": "B"
         }
@@ -829,10 +881,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(db_requests_total{job=\"tasksync-backend\"}[5m])) by (statement_type)",
+          "expr": "sum(rate(db_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (statement_type)",
           "legendFormat": "{{statement_type}}",
           "refId": "A"
         }
@@ -864,10 +916,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(redis_requests_total{job=\"tasksync-backend\"}[5m])) by (command)",
+          "expr": "sum(rate(redis_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (command)",
           "legendFormat": "{{command}}",
           "refId": "A"
         }
@@ -889,9 +941,204 @@
   "refresh": "10s",
   "schemaVersion": 39,
   "style": "dark",
-  "tags": ["tasksync", "backend", "monitoring"],
+  "tags": [
+    "tasksync",
+    "observability",
+    "backend"
+  ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "value": "prometheus",
+          "text": "prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up, job)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Job",
+        "multi": true,
+        "name": "job",
+        "options": [],
+        "query": {
+          "query": "label_values(up, job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{job=~\"$job\"}, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=~\"$job\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{job=~\"$job\"}, environment)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Environment",
+        "multi": true,
+        "name": "environment",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=~\"$job\"}, environment)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": true,
+          "value": "5m",
+          "text": "5m"
+        },
+        "hide": 0,
+        "label": "Interval",
+        "name": "interval",
+        "options": [
+          {
+            "selected": false,
+            "value": "10s",
+            "text": "10s"
+          },
+          {
+            "selected": false,
+            "value": "30s",
+            "text": "30s"
+          },
+          {
+            "selected": false,
+            "value": "1m",
+            "text": "1m"
+          },
+          {
+            "selected": true,
+            "value": "5m",
+            "text": "5m"
+          },
+          {
+            "selected": false,
+            "value": "15m",
+            "text": "15m"
+          },
+          {
+            "selected": false,
+            "value": "30m",
+            "text": "30m"
+          },
+          {
+            "selected": false,
+            "value": "1h",
+            "text": "1h"
+          },
+          {
+            "selected": false,
+            "value": "2h",
+            "text": "2h"
+          },
+          {
+            "selected": false,
+            "value": "1d",
+            "text": "1d"
+          }
+        ],
+        "query": "10s,30s,1m,5m,15m,30m,1h,2h,1d",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": true,
+          "value": "5m",
+          "text": "5m"
+        },
+        "hide": 0,
+        "label": "Rate Interval",
+        "name": "rate_interval",
+        "options": [
+          {
+            "selected": false,
+            "value": "1m",
+            "text": "1m"
+          },
+          {
+            "selected": true,
+            "value": "5m",
+            "text": "5m"
+          },
+          {
+            "selected": false,
+            "value": "10m",
+            "text": "10m"
+          },
+          {
+            "selected": false,
+            "value": "15m",
+            "text": "15m"
+          }
+        ],
+        "query": "1m,5m,10m,15m",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      }
+    ]
   },
   "time": {
     "from": "now-1h",
