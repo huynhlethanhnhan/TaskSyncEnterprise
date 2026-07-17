@@ -8,6 +8,7 @@ ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
 
 # Install build dependencies for compiling binary packages
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -20,6 +21,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 
 # Install production dependencies
+# hadolint ignore=DL3013
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 

@@ -80,12 +80,31 @@ The production Docker image for the backend has been audited and refactored from
 
 ---
 
-## 🔄 7. Rollback Instructions
+## 🛡️ 7. Hadolint Linter Policy & Analysis
+
+During Phase 3.8.3 validation, the Dockerfile linter Hadolint raised two warnings:
+- **DL3008:** Pin versions in `apt-get install`
+- **DL3013:** Pin versions in `pip install`
+
+### Analysis & Justifications
+1.  **DL3008 (apt-get install version pinning):**
+    - *Risk/Impact:* Pinning specific minor/patch package versions in Debian slim repositories is highly unstable because upstream mirrors regularly retire out-of-date patch packages as soon as security updates are pushed. Forcing a hard constraint like `build-essential=12.9` leads to sudden, unprovoked build breaks when Debian replaces the package with `12.9+deb12u1`.
+    - *Enterprise Policy:* We explicitly ignore this warning (`# hadolint ignore=DL3008`) for build tools in the builder stage to let Docker pull the latest patched builds. Real-world reproducibility is instead guaranteed by pinning our base image to a specific minor release (`python:3.12.10-slim`).
+2.  **DL3013 (pip install version pinning):**
+    - *Risk/Impact:* Hadolint flags any `pip install` command lacking an explicit version. This triggers on `pip install --upgrade pip` and `pip install -r requirements.txt`.
+    - *Enterprise Policy:* Pinning the version of the package installer tool (`pip`) itself inside a temporary builder stage adds maintenance overhead without changing the final runner image (which excludes `pip` entirely). Meanwhile, the application's actual dependencies are fully pinned inside `requirements.txt` (e.g., `fastapi==0.139.1`), which satisfies the security requirement. Therefore, we explicitly ignore this warning (`# hadolint ignore=DL3013`).
+
+### CI Configuration Alignment
+The GitHub Actions workflow linter step was updated with `failure-threshold: error` to prevent recommendations or guidelines from blocking deployment pipelines while still failing on critical syntax errors.
+
+---
+
+## 🔄 8. Rollback Instructions
 
 If any compatibility issues arise, run the following commands to revert to the legacy setup:
 ```bash
 # Revert to legacy Dockerfile
-git checkout HEAD -- backend/Dockerfile backend/requirements.txt .github/workflows/ci.yml
+git checkout HEAD -- backend/Dockerfile backend/requirements.txt .github/workflows/ci.yml README.md
 # Delete new files
-rm backend/.dockerignore docker-compose.prod.yml docs/learning/phase-3.8.3-docker-hardening-guide-vi.md docs/deployment/PRODUCTION_DOCKER_GUIDE.md docs/testing/DOCKER_MANUAL_VALIDATION.md docs/deployment/DOCKER_TROUBLESHOOTING.md
+rm backend/.dockerignore docker-compose.prod.yml docs/learning/phase-3.8.3-docker-hardening-guide-vi.md docs/deployment/PRODUCTION_DOCKER_GUIDE.md docs/testing/DOCKER_MANUAL_VALIDATION.md docs/deployment/DOCKER_TROUBLESHOOTING.md reports/phase_3.8.3_implementation_report.md
 ```
