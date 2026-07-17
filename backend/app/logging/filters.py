@@ -9,10 +9,10 @@ and other secrets from appearing in any log output – regardless of log level.
 The filter operates at the logging.Filter level so it is applied before any
 handler writes the record to disk or a remote sink.
 """
+
 import logging
 import re
 from typing import ClassVar
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Masking configuration
@@ -40,8 +40,8 @@ _SENSITIVE_PATTERNS: list[tuple[re.Pattern, str]] = [
     (
         re.compile(
             r'((?:["\'\\]*)*(?:password|passwd|pwd|secret|token|api_key|apikey|access_token|'
-            r'refresh_token|client_secret|private_key|auth_token|authorization|'
-            r'db_password|database_password|connection_string|db_url|database_url|'
+            r"refresh_token|client_secret|private_key|auth_token|authorization|"
+            r"db_password|database_password|connection_string|db_url|database_url|"
             r'redis_password|smtp_password|secret_key)(?:["\'\\]*)*\s*[:=]\s*(?:["\'\\]*)*)[^"\'\\,\s&\}]{3,}',
             re.IGNORECASE,
         ),
@@ -137,7 +137,12 @@ class SensitiveDataFilter(logging.Filter):
         for field in vars(record):
             val = getattr(record, field, None)
             if isinstance(val, str) and field not in (
-                "levelname", "name", "filename", "funcName", "thread", "threadName",
+                "levelname",
+                "name",
+                "filename",
+                "funcName",
+                "thread",
+                "threadName",
             ):
                 setattr(record, field, mask_sensitive(val))
 

@@ -24,7 +24,7 @@ def check_directory_writable(path: Path) -> bool:
     try:
         # Atomic recursive creation prevents race conditions
         path.mkdir(parents=True, exist_ok=True)
-        
+
         # Test write permission with unique temporary file
         temp_file = path / f".write_test_{uuid.uuid4().hex}"
         try:
@@ -34,7 +34,9 @@ def check_directory_writable(path: Path) -> bool:
             temp_file.unlink()
             return True
         except (IOError, OSError) as e:
-            logger.error(f"Failed to perform write operation inside directory '{path}': {e}")
+            logger.error(
+                f"Failed to perform write operation inside directory '{path}': {e}"
+            )
             return False
         finally:
             # Reentrant cleanup to handle unexpected unlink errors
@@ -79,7 +81,15 @@ def validate_security_settings(settings=settings) -> None:
             )
 
         # 3. Reject insecure placeholders
-        placeholders = ["changeme", "secret", "password", "your-secret-key", "example", "default", "temporary_validation"]
+        placeholders = [
+            "changeme",
+            "secret",
+            "password",
+            "your-secret-key",
+            "example",
+            "default",
+            "temporary_validation",
+        ]
         secret_key_lower = secret_key_val.lower()
         for ph in placeholders:
             if ph in secret_key_lower:
@@ -111,6 +121,7 @@ def validate_security_settings(settings=settings) -> None:
 
         # 7. Reject localhost as database or Redis host
         from urllib.parse import urlparse
+
         # Database host validation
         db_uri = settings.SQLALCHEMY_DATABASE_URI
         if db_uri:
@@ -155,12 +166,13 @@ def validate_database_settings(settings=settings) -> None:
 
     if not is_testing:
         from sqlalchemy import create_engine
+
         logger.info("Verifying database connectivity...")
         # Create a temporary engine with short timeouts to prevent hanging the ASGI process
         val_engine = create_engine(
             settings.SQLALCHEMY_DATABASE_URI,
             connect_args={"login_timeout": 3, "timeout": 3},
-            pool_pre_ping=False
+            pool_pre_ping=False,
         )
         try:
             with val_engine.connect() as conn:
@@ -187,7 +199,9 @@ def validate_startup(settings=settings) -> None:
     global _validation_run
     with _validation_lock:
         if _validation_run:
-            logger.debug("Startup validations already executed. Skipping redundant run.")
+            logger.debug(
+                "Startup validations already executed. Skipping redundant run."
+            )
             return
 
         try:
@@ -200,8 +214,9 @@ def validate_startup(settings=settings) -> None:
             _validation_run = True
         except Exception as e:
             from app.core.logger import error_logger
+
             error_logger.critical(
-                f"TaskSyncEnterprise startup validation failed! Error: {e}", 
-                exc_info=True
+                f"TaskSyncEnterprise startup validation failed! Error: {e}",
+                exc_info=True,
             )
             raise e

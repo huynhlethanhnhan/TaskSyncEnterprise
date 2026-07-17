@@ -7,14 +7,25 @@ from app.core.settings import Settings
 from app.core.validation import validate_security_settings
 from app.logging.filters import mask_sensitive
 
+
 class MockSettings:
     """Mock configuration class that implements properties checked by validate_security_settings."""
+
     def __init__(self, **kwargs):
         self.ENVIRONMENT = kwargs.get("ENVIRONMENT", "production")
-        self.SECRET_KEY = SecretStr(kwargs.get("SECRET_KEY", "a_very_long_and_extremely_secure_key_12345"))
-        self.BACKEND_CORS_ORIGINS = kwargs.get("BACKEND_CORS_ORIGINS", ["http://127.0.0.1:8080"])
-        self.ALLOWED_HOSTS = kwargs.get("ALLOWED_HOSTS", ["127.0.0.1", "localhost", "backend"])
-        self.SQLALCHEMY_DATABASE_URI = kwargs.get("SQLALCHEMY_DATABASE_URI", "mssql+pymssql://sa:password@sqlserver:1433/TaskSyncEnterprise")
+        self.SECRET_KEY = SecretStr(
+            kwargs.get("SECRET_KEY", "a_very_long_and_extremely_secure_key_12345")
+        )
+        self.BACKEND_CORS_ORIGINS = kwargs.get(
+            "BACKEND_CORS_ORIGINS", ["http://127.0.0.1:8080"]
+        )
+        self.ALLOWED_HOSTS = kwargs.get(
+            "ALLOWED_HOSTS", ["127.0.0.1", "localhost", "backend"]
+        )
+        self.SQLALCHEMY_DATABASE_URI = kwargs.get(
+            "SQLALCHEMY_DATABASE_URI",
+            "mssql+pymssql://sa:password@sqlserver:1433/TaskSyncEnterprise",
+        )
         self.REDIS_URL = kwargs.get("REDIS_URL", "redis://redis:6379/0")
         self.DEFAULT_PAGE_SIZE = 10
         self.MAX_PAGE_SIZE = 100
@@ -74,9 +85,13 @@ def test_validation_rejects_wildcard_allowed_hosts():
 
 
 def test_validation_rejects_localhost_database():
-    settings = MockSettings(SQLALCHEMY_DATABASE_URI="mssql+pymssql://sa:password@localhost:1433/TaskSyncEnterprise")
+    settings = MockSettings(
+        SQLALCHEMY_DATABASE_URI="mssql+pymssql://sa:password@localhost:1433/TaskSyncEnterprise"
+    )
     with patch.dict(os.environ, {"DEBUG": "false"}):
-        with pytest.raises(ValueError, match="Database host is configured as 'localhost'"):
+        with pytest.raises(
+            ValueError, match="Database host is configured as 'localhost'"
+        ):
             validate_security_settings(settings=settings)
 
 
