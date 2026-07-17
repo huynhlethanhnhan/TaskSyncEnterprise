@@ -195,9 +195,15 @@ Quay lại thư mục gốc và chạy lệnh phát triển:
 ```powershell
 docker compose up -d --build backend
 ```
-Hoặc khởi chạy môi trường sản xuất (hardened):
+Hoặc khởi chạy môi trường sản xuất (hardened) tích hợp toàn bộ stack (Frontend, Backend, DB, Redis và Giám sát):
 ```powershell
-docker compose -f docker-compose.prod.yml up -d --build
+# 1. Tạo file cấu hình môi trường từ file mẫu
+copy .env.production.example .env
+
+# 2. Chỉnh sửa file .env để cấu hình các password và secret khóa an toàn bắt buộc
+
+# 3. Khởi chạy toàn bộ hệ thống
+docker compose -f docker-compose.production.yml up -d --build
 ```
 
 #### Cách B: Chạy local (Dành cho Debug mã nguồn trực tiếp)
@@ -227,26 +233,25 @@ Trình duyệt sẽ tự động mở trang [http://localhost:5173](http://local
 ---
 
 ### Bước 6: Khởi chạy hạ tầng giám sát Monitoring (Prometheus & Grafana)
-Triển khai hạ tầng giám sát độc lập thông qua file Compose phụ:
+- **Môi trường phát triển (Local Development):** Khởi chạy hạ tầng giám sát độc lập quan sát backend local qua:
 ```powershell
 docker compose -f docker-compose.monitoring.yml up -d
 ```
+- **Môi trường sản xuất (Production):** Đã được tích hợp sẵn với cấu hình bảo mật và mạng cô lập trong `docker-compose.production.yml`. Không cần chạy lệnh riêng biệt.
 
 ---
 
 ## 🔗 6. Danh Sách Địa Chỉ Dịch Vụ (Service Endpoints)
-
 Khi toàn bộ stack đã được khởi động thành công, các dịch vụ sẽ hoạt động tại các địa chỉ sau:
-
-| Dịch vụ | Địa chỉ truy cập | Tài khoản mặc định | Mô tả |
-|---|---|---|---|
-| **Frontend SPA** | [http://localhost:5173](http://localhost:5173) | `admin@gmail.com` / `123456` | Giao diện Kanban Board & HRM |
-| **API Root** | [http://localhost:8000/api/v1](http://localhost:8000/api/v1) | - | Điểm truy cập các nghiệp vụ |
-| **Swagger UI** | [http://localhost:8000/docs](http://localhost:8000/docs) | - | Tài liệu tương tác API |
-| **Health Details**| [http://localhost:8000/health/details](http://localhost:8000/health/details) | - | Trạng thái ổ đĩa, DB, Redis |
-| **Prometheus UI** | [http://127.0.0.1:9090](http://127.0.0.1:9090) | Không yêu cầu | Tra cứu chỉ số dạng PromQL |
-| **Grafana UI** | [http://127.0.0.1:3000](http://127.0.0.1:3000) | `admin` / `admin` | Đồ thị trực quan hóa metrics |
-| **cAdvisor UI** | [http://127.0.0.1:8080](http://127.0.0.1:8080) | Không yêu cầu | Chỉ số tài nguyên các container |
+| Dịch vụ | Môi trường phát triển (Dev) | Môi trường sản xuất (Prod) | Tài khoản mặc định | Mô tả |
+|---|---|---|---|---|
+| **Frontend SPA** | [http://localhost:5173](http://localhost:5173) | [http://localhost:8080](http://localhost:8080) | `admin@gmail.com` / `123456` | Giao diện Kanban Board & HRM |
+| **API Root** | [http://localhost:8000/api/v1](http://localhost:8000/api/v1) | [http://127.0.0.1:8000/api/v1](http://127.0.0.1:8000/api/v1) | - | Điểm truy cập các nghiệp vụ |
+| **Swagger UI** | [http://localhost:8000/docs](http://localhost:8000/docs) | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) | - | Tài liệu tương tác API |
+| **Health Details**| [http://localhost:8000/health/details](http://localhost:8000/health/details) | [http://127.0.0.1:8000/health/details](http://127.0.0.1:8000/health/details) | - | Trạng thái ổ đĩa, DB, Redis |
+| **Prometheus UI** | [http://127.0.0.1:9090](http://127.0.0.1:9090) | [http://127.0.0.1:9090](http://127.0.0.1:9090) | Không yêu cầu | Tra cứu chỉ số dạng PromQL |
+| **Grafana UI** | [http://127.0.0.1:3000](http://127.0.0.1:3000) | [http://127.0.0.1:3000](http://127.0.0.1:3000) | `admin` / `${GRAFANA_ADMIN_PASSWORD}` | Đồ thị trực quan hóa metrics |
+| **cAdvisor UI** | [http://127.0.0.1:8080](http://127.0.0.1:8080) | [http://127.0.0.1:8080](http://127.0.0.1:8080) | Không yêu cầu | Chỉ số tài nguyên các container |
 
 ---
 

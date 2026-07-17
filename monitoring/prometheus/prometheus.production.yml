@@ -1,0 +1,30 @@
+# TaskSyncEnterprise production-specific Prometheus scraping rules.
+# Resolves metrics directly through Docker internal DNS hosts instead of local loopback.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+scrape_configs:
+  # Collect metrics exposed by FastAPI backend container
+  - job_name: tasksync-backend
+    scheme: http
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - tasksync-backend-prod:8000
+        labels:
+          service: tasksync-backend
+          environment: production
+
+  # Collect host container metrics from cAdvisor exporter container
+  - job_name: tasksync-cadvisor
+    scheme: http
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - tasksync-cadvisor-prod:8080
+        labels:
+          service: tasksync-cadvisor
+          environment: production

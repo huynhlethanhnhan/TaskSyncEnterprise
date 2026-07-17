@@ -55,3 +55,5 @@ Thumbs.db
 htmlcov/
 coverage.xml
 
+
+.env.production
