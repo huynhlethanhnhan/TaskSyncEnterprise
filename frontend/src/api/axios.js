@@ -2,7 +2,7 @@ import axios from "axios";
 import { tokenService } from "../services/tokenService";
 
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8001/api/v1",
+  baseURL: "http://127.0.0.1:8000/api/v1",
 });
 
 api.interceptors.request.use((config) => {
@@ -21,7 +21,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const res = await axios.post("http://127.0.0.1:8001/api/v1/auth/refresh", {
+        const res = await axios.post("http://127.0.0.1:8000/api/v1/auth/refresh", {
           refresh_token: tokenService.getRefreshToken()
         });
         tokenService.setTokens(res.data.access_token, res.data.refresh_token);

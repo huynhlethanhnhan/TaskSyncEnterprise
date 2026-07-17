@@ -178,12 +178,39 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install frontend dependencies
+       - name: Install frontend dependencies
         working-directory: frontend
         run: |
           npm ci
-
-      - name: Verify frontend production build
+ 
+       - name: Verify frontend production build
         working-directory: frontend
         run: |
           npm run build
+
+  docker:
+    name: Docker Production Hardening Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run Hadolint Dockerfile Linter
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: backend/Dockerfile
+          failure-threshold: warning
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: tasksync-backend:prod
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

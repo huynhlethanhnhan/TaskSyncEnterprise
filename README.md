@@ -17,9 +17,9 @@ Hiện tại hệ thống đã hoàn thành **Phase 3.8.2** với toàn bộ h�
 |---|---|---|---|
 | **Phase 3.7.5** | Prometheus Metrics & OpenTelemetry | **Hoàn thành** | Đã cấu hình scrape metrics backend tự động |
 | **Phase 3.7.6** | Tích hợp Grafana | **Hoàn thành** | Đã sẵn sàng datasource & dashboards giám sát |
-| **Phase 3.8.1** | Đóng gói Docker & Production Hardening | **Hoàn thành** | Multi-stage build & non-root user image |
+| **Phase 3.8.1** | Đóng gói Docker & Sơ Khởi Production | **Hoàn thành** | Multi-stage build & non-root user image |
 | **Phase 3.8.2** | GitHub Actions CI & Security Scan | **Hoàn thành** | Tích hợp Bandit, pip-audit & Pytest tự động |
-| **Phase 3.8.3** | Nâng cấp Grafana dashboards & alerting | *Kế hoạch* | Tối ưu hóa ngưỡng cảnh báo (Alerting rules) |
+| **Phase 3.8.3** | Production Docker Image Hardening | **Hoàn thành** | Đóng gói nâng cấp đa tầng bảo mật phi quyền |
 
 *Bằng chứng vận hành mới nhất:* Xem thêm tại [Báo Cáo Hoạt Động Prometheus (docs/reports/phase_3_7_5_runtime_validation.md)](file:///e:/TaskSyncEnterprise/docs/reports/phase_3_7_5_runtime_validation.md).
 
@@ -191,9 +191,13 @@ python seed_v2.py
 ### Bước 4: Khởi chạy API Backend
 
 #### Cách A: Chạy bằng Docker (Phù hợp triển khai nhanh)
-Quay lại thư mục gốc và chạy lệnh:
+Quay lại thư mục gốc và chạy lệnh phát triển:
 ```powershell
 docker compose up -d --build backend
+```
+Hoặc khởi chạy môi trường sản xuất (hardened):
+```powershell
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 #### Cách B: Chạy local (Dành cho Debug mã nguồn trực tiếp)
@@ -279,5 +283,9 @@ Dưới đây là các liên kết tài liệu chi tiết trong hệ thống đ�
 *   **Kịch bản kiểm thử thủ công:** [Checklist Manual Test Hệ Thống (docs/testing/MANUAL_SYSTEM_TEST.md)](file:///e:/TaskSyncEnterprise/docs/testing/MANUAL_SYSTEM_TEST.md)
 *   **Quản trị dữ liệu mẫu:** [Hướng Dẫn Chạy Seed Dữ Liệu (docs/database/SEED_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/database/SEED_GUIDE.md)
 *   **Sổ tay đào tạo Backend:** [Hướng Dẫn Kỹ Thuật Backend Doanh Nghiệp (docs/learning/phase-3.8-backend-enterprise-guide-vi.md)](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.8-backend-enterprise-guide-vi.md)
-*   **Vận hành giám sát:** [Cấu Hình & Vận Hành Prometheus (docs/monitoring/prometheus_setup.md)](file:///e:/TaskSyncEnterprise/docs/monitoring/prometheus_setup.md)
+*   **Đào tạo bảo mật Docker:** [Đào Tạo Hardening Docker Image (docs/learning/phase-3.8.3-docker-hardening-guide-vi.md)](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.8.3-docker-hardening-guide-vi.md)
+*   **Vận hành giám sát:** [Cấu hình & Vận Hành Prometheus (docs/monitoring/prometheus_setup.md)](file:///e:/TaskSyncEnterprise/docs/monitoring/prometheus_setup.md)
 *   **Vận hành quét bảo mật:** [Cấu Hình Bandit & pip-audit (docs/deployment/SECURITY_SCAN_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/deployment/SECURITY_SCAN_GUIDE.md)
+*   **Vận hành Docker Production:** [Hướng Dẫn Vận Hành Docker Production (docs/deployment/PRODUCTION_DOCKER_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/deployment/PRODUCTION_DOCKER_GUIDE.md)
+*   **Kiểm thử Docker:** [Manual Validation Checklist Docker (docs/testing/DOCKER_MANUAL_VALIDATION.md)](file:///e:/TaskSyncEnterprise/docs/testing/DOCKER_MANUAL_VALIDATION.md)
+*   **Khắc phục sự cố Docker:** [Hướng Dẫn Sửa Lỗi Docker Container (docs/deployment/DOCKER_TROUBLESHOOTING.md)](file:///e:/TaskSyncEnterprise/docs/deployment/DOCKER_TROUBLESHOOTING.md)
