@@ -37,13 +37,12 @@ _SENSITIVE_PATTERNS: list[tuple[re.Pattern, str]] = [
         ),
         _REDACTED,
     ),
-    # password/secret/token/key fields in key=value or JSON "key": "value" form
     (
         re.compile(
-            r'("?(?:password|passwd|pwd|secret|token|api_key|apikey|access_token|'
+            r'((?:["\'\\]*)*(?:password|passwd|pwd|secret|token|api_key|apikey|access_token|'
             r'refresh_token|client_secret|private_key|auth_token|authorization|'
             r'db_password|database_password|connection_string|db_url|database_url|'
-            r'redis_password|smtp_password|secret_key)"?\s*[:=]\s*"?)[^",\s&\}]{3,}',
+            r'redis_password|smtp_password|secret_key)(?:["\'\\]*)*\s*[:=]\s*(?:["\'\\]*)*)[^"\'\\,\s&\}]{3,}',
             re.IGNORECASE,
         ),
         r"\1" + _REDACTED,

@@ -1,5 +1,6 @@
 # 📂 FILE: app/core/validation.py
 import logging
+import os
 import sys
 import threading
 from pathlib import Path
@@ -47,7 +48,7 @@ def check_directory_writable(path: Path) -> bool:
         return False
 
 
-def validate_pagination_settings() -> None:
+def validate_pagination_settings(settings=settings) -> None:
     """Validates configuration parameters for pagination limits."""
     if settings.DEFAULT_PAGE_SIZE <= 0:
         raise ValueError(
@@ -60,22 +61,79 @@ def validate_pagination_settings() -> None:
         )
 
 
-def validate_security_settings() -> None:
+def validate_security_settings(settings=settings) -> None:
     """Validates production credentials safety."""
     if settings.ENVIRONMENT == "production":
         secret_key_val = settings.SECRET_KEY.get_secret_value()
+        # 1. Reject default development key
         if secret_key_val == "task_sync_enterprise_secret_key_chuandry_2026":
             raise ValueError(
                 "CRITICAL SECURITY ALERT: SECRET_KEY is using the default development fallback value in a production environment! "
                 "You must configure a strong, unique SECRET_KEY."
             )
+
+        # 2. Reject short keys (<32 characters)
         if len(secret_key_val) < 32:
             raise ValueError(
                 "CRITICAL SECURITY ALERT: SECRET_KEY must be at least 32 characters long in a production environment."
             )
 
+        # 3. Reject insecure placeholders
+        placeholders = ["changeme", "secret", "password", "your-secret-key", "example", "default", "temporary_validation"]
+        secret_key_lower = secret_key_val.lower()
+        for ph in placeholders:
+            if ph in secret_key_lower:
+                raise ValueError(
+                    f"CRITICAL SECURITY ALERT: SECRET_KEY contains insecure placeholder '{ph}' in a production environment!"
+                )
 
-def validate_directory_settings() -> None:
+        # 4. Reject DEBUG=true in production environment variables
+        if os.environ.get("DEBUG", "").lower() in ("true", "1"):
+            raise ValueError(
+                "CRITICAL SECURITY ALERT: DEBUG mode must not be enabled in a production environment."
+            )
+
+        # 5. Reject wildcard '*' in CORS allowed origins
+        if hasattr(settings, "BACKEND_CORS_ORIGINS"):
+            if "*" in settings.BACKEND_CORS_ORIGINS:
+                raise ValueError(
+                    "CRITICAL SECURITY ALERT: BACKEND_CORS_ORIGINS contains wildcard '*' in a production environment! "
+                    "You must specify exact allowed origins."
+                )
+
+        # 6. Reject wildcard '*' in allowed hosts (prevent Host Header spoofing)
+        if hasattr(settings, "ALLOWED_HOSTS"):
+            if "*" in settings.ALLOWED_HOSTS:
+                raise ValueError(
+                    "CRITICAL SECURITY ALERT: ALLOWED_HOSTS contains wildcard '*' in a production environment! "
+                    "You must specify exact allowed hosts to prevent Host Header spoofing."
+                )
+
+        # 7. Reject localhost as database or Redis host
+        from urllib.parse import urlparse
+        # Database host validation
+        db_uri = settings.SQLALCHEMY_DATABASE_URI
+        if db_uri:
+            parsed = urlparse(db_uri)
+            db_host = parsed.hostname
+            if db_host in ("localhost", "127.0.0.1", "::1"):
+                raise ValueError(
+                    f"CRITICAL SECURITY ALERT: Database host is configured as '{db_host}' in a production container environment! "
+                    "In a Docker-orchestrated production stack, services must use the network service names."
+                )
+        # Redis host validation
+        redis_uri = settings.REDIS_URL
+        if redis_uri:
+            parsed = urlparse(redis_uri)
+            redis_host = parsed.hostname
+            if redis_host in ("localhost", "127.0.0.1", "::1"):
+                raise ValueError(
+                    f"CRITICAL SECURITY ALERT: Redis host is configured as '{redis_host}' in a production container environment! "
+                    "In a Docker-orchestrated production stack, services must use the network service names."
+                )
+
+
+def validate_directory_settings(settings=settings) -> None:
     """Validates filesystem upload folders and user privileges."""
     required_directories = {
         "Root Uploads": settings.UPLOAD_DIR_PATH,
@@ -91,7 +149,7 @@ def validate_directory_settings() -> None:
             )
 
 
-def validate_database_settings() -> None:
+def validate_database_settings(settings=settings) -> None:
     """Verifies backend database connection with a short login timeout to avoid hanging the app boot process."""
     is_testing = settings.ENVIRONMENT == "testing" or "pytest" in sys.modules
 
@@ -121,7 +179,7 @@ def validate_database_settings() -> None:
             val_engine.dispose()
 
 
-def validate_startup() -> None:
+def validate_startup(settings=settings) -> None:
     """
     Main entry point for application startup validation checks.
     Guarantees thread-safe, single-execution flow.
@@ -134,10 +192,10 @@ def validate_startup() -> None:
 
         try:
             logger.info("Executing TaskSyncEnterprise startup validations...")
-            validate_pagination_settings()
-            validate_security_settings()
-            validate_directory_settings()
-            validate_database_settings()
+            validate_pagination_settings(settings)
+            validate_security_settings(settings)
+            validate_directory_settings(settings)
+            validate_database_settings(settings)
             logger.info("Startup validations completed successfully.")
             _validation_run = True
         except Exception as e:

@@ -8,6 +8,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: tasksync-backend-prod
+    read_only: true
+    tmpfs:
+      - /tmp
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -29,6 +32,11 @@ services:
       - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}
       - DATABASE_URL=mssql+pymssql://sa:${MSSQL_SA_PASSWORD}@sqlserver:1433/TaskSyncEnterprise
       - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:?BACKEND_CORS_ORIGINS is required}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENABLE_FILE_LOGGING=${ENABLE_FILE_LOGGING:-true}
+      - ENABLE_CONSOLE_LOGGING=${ENABLE_CONSOLE_LOGGING:-true}
     depends_on:
       redis:
         condition: service_healthy
@@ -50,6 +58,10 @@ services:
       args:
         - VITE_API_URL=${VITE_API_URL:-/api/v1}
     container_name: tasksync-frontend-prod
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -189,7 +201,7 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
     networks:
       - monitoring-network
     deploy:

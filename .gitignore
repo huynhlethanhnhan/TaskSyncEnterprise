@@ -55,5 +55,14 @@ Thumbs.db
 htmlcov/
 coverage.xml
 
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.production.example
+!.env.development.example
+!.env.test.example
 
-.env.production
+# Secret keys / credentials
+*.secret
+credentials.json
