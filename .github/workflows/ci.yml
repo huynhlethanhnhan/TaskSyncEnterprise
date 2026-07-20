@@ -214,3 +214,12 @@ jobs:
           tags: tasksync-backend:prod
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Validate docker-compose.yml syntax
+        run: docker compose -f docker-compose.yml config --quiet
+
+      - name: Validate docker-compose.production.yml syntax
+        run: docker compose --env-file .env.production.example -f docker-compose.production.yml config --quiet
+
+      - name: Validate docker-compose.monitoring.yml syntax
+        run: docker compose -f docker-compose.monitoring.yml config --quiet

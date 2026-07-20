@@ -1,6 +1,7 @@
 # TaskSyncEnterprise — Nền Tảng Quản Lý Nhân Sự & Dự Án Doanh Nghiệp (Enterprise HRM & Project Management Platform)
 
 [![CI Foundation](https://github.com/huynhlethanhnhan/TaskSyncEnterprise/actions/workflows/ci.yml/badge.svg)](https://github.com/huynhlethanhnhan/TaskSyncEnterprise/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/release-v1.0.0--rc1-orange.svg)](RELEASE_NOTES.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)](backend/pyproject.toml)
 [![React Version](https://img.shields.io/badge/react-19.0-blue.svg)](frontend/package.json)
@@ -11,7 +12,7 @@ TaskSyncEnterprise là một giải pháp quản lý nhân sự (HRM), đội nh
 
 ## 🎯 1. Trạng Thái Dự Án & Lộ Trình (Project Status & Roadmap)
 
-Hiện tại hệ thống đã hoàn thành **Phase 3.8.6 (Nginx, Reverse Proxy & HTTPS Preparation)** với Nginx đóng vai trò là API Gateway / Single Entry Point duy nhất cho môi trường Production.
+Hệ thống đã đạt **Release Candidate v1.0.0-rc1** sau khi hoàn thành toàn bộ Phase 3.1–3.8.8, bao gồm Production Hardening, CI/CD, Monitoring, Backup/DR và Final Release Preparation.
 
 | Giai đoạn | Tính năng | Trạng thái | Ghi chú |
 |---|---|---|---|
@@ -21,6 +22,8 @@ Hiện tại hệ thống đã hoàn thành **Phase 3.8.6 (Nginx, Reverse Proxy 
 | **Phase 3.8.2** | GitHub Actions CI & Security Scan | **Hoàn thành** | Tích hợp Bandit, pip-audit & Pytest tự động |
 | **Phase 3.8.3** | Production Docker Image Hardening | **Hoàn thành** | Đóng gói nâng cấp đa tầng bảo mật phi quyền |
 | **Phase 3.8.6** | Nginx Gateway, Reverse Proxy & HTTPS | **Hoàn thành** | Nginx entrypoint duy nhất, ẩn backend/frontend port |
+| **Phase 3.8.7** | Backup, Restore & Disaster Recovery | **Hoàn thành** | SQL Server, Uploads, Redis backup/restore, 61 tests |
+| **Phase 3.8.8** | Release Pipeline & Final Audit | **Hoàn thành** | Release workflow, production audit, RC1 certification |
 
 
 *Bằng chứng vận hành mới nhất:* Xem thêm tại [Báo Cáo Hoạt Động Prometheus (docs/reports/phase_3_7_5_runtime_validation.md)](file:///e:/TaskSyncEnterprise/docs/reports/phase_3_7_5_runtime_validation.md).
@@ -299,3 +302,9 @@ Dưới đây là các liên kết tài liệu chi tiết trong hệ thống đ�
 *   **Vận hành Docker Production:** [Hướng Dẫn Vận Hành Docker Production (docs/deployment/PRODUCTION_DOCKER_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/deployment/PRODUCTION_DOCKER_GUIDE.md)
 *   **Kiểm thử Docker:** [Manual Validation Checklist Docker (docs/testing/DOCKER_MANUAL_VALIDATION.md)](file:///e:/TaskSyncEnterprise/docs/testing/DOCKER_MANUAL_VALIDATION.md)
 *   **Khắc phục sự cố Docker:** [Hướng Dẫn Sửa Lỗi Docker Container (docs/deployment/DOCKER_TROUBLESHOOTING.md)](file:///e:/TaskSyncEnterprise/docs/deployment/DOCKER_TROUBLESHOOTING.md)
+*   **Backup & Disaster Recovery:** [Vận Hành Backup/Restore (infrastructure/backup/README.md)](file:///e:/TaskSyncEnterprise/infrastructure/backup/README.md)
+*   **Kiểm định DR:** [Chứng Nhận DR Phase 3.8.7 (docs/reports/PHASE_3_8_7_FINAL_DR_CERTIFICATION.md)](file:///e:/TaskSyncEnterprise/docs/reports/PHASE_3_8_7_FINAL_DR_CERTIFICATION.md)
+*   **Kiểm toán sản xuất:** [Báo Cáo Kiểm Toán Production (docs/reports/final/FINAL_PRODUCTION_AUDIT.md)](file:///e:/TaskSyncEnterprise/docs/reports/final/FINAL_PRODUCTION_AUDIT.md)
+*   **Release Candidate:** [Chứng Nhận RC1 (docs/releases/RELEASE_CANDIDATE_RC1.md)](file:///e:/TaskSyncEnterprise/docs/releases/RELEASE_CANDIDATE_RC1.md)
+*   **Nhật ký thay đổi:** [CHANGELOG.md](file:///e:/TaskSyncEnterprise/CHANGELOG.md)
+*   **Ghi chú phát hành:** [RELEASE_NOTES.md](file:///e:/TaskSyncEnterprise/RELEASE_NOTES.md)
