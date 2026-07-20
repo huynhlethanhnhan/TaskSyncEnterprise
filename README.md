@@ -11,7 +11,7 @@ TaskSyncEnterprise là một giải pháp quản lý nhân sự (HRM), đội nh
 
 ## 🎯 1. Trạng Thái Dự Án & Lộ Trình (Project Status & Roadmap)
 
-Hiện tại hệ thống đã hoàn thành **Phase 3.8.2** với toàn bộ hạ tầng CI/CD, cơ chế quét bảo mật và giám sát được kiểm thử hoạt động ổn định (CI xanh hoàn toàn).
+Hiện tại hệ thống đã hoàn thành **Phase 3.8.6 (Nginx, Reverse Proxy & HTTPS Preparation)** với Nginx đóng vai trò là API Gateway / Single Entry Point duy nhất cho môi trường Production.
 
 | Giai đoạn | Tính năng | Trạng thái | Ghi chú |
 |---|---|---|---|
@@ -20,6 +20,8 @@ Hiện tại hệ thống đã hoàn thành **Phase 3.8.2** với toàn bộ h�
 | **Phase 3.8.1** | Đóng gói Docker & Sơ Khởi Production | **Hoàn thành** | Multi-stage build & non-root user image |
 | **Phase 3.8.2** | GitHub Actions CI & Security Scan | **Hoàn thành** | Tích hợp Bandit, pip-audit & Pytest tự động |
 | **Phase 3.8.3** | Production Docker Image Hardening | **Hoàn thành** | Đóng gói nâng cấp đa tầng bảo mật phi quyền |
+| **Phase 3.8.6** | Nginx Gateway, Reverse Proxy & HTTPS | **Hoàn thành** | Nginx entrypoint duy nhất, ẩn backend/frontend port |
+
 
 *Bằng chứng vận hành mới nhất:* Xem thêm tại [Báo Cáo Hoạt Động Prometheus (docs/reports/phase_3_7_5_runtime_validation.md)](file:///e:/TaskSyncEnterprise/docs/reports/phase_3_7_5_runtime_validation.md).
 
@@ -243,15 +245,18 @@ docker compose -f docker-compose.monitoring.yml up -d
 
 ## 🔗 6. Danh Sách Địa Chỉ Dịch Vụ (Service Endpoints)
 Khi toàn bộ stack đã được khởi động thành công, các dịch vụ sẽ hoạt động tại các địa chỉ sau:
-| Dịch vụ | Môi trường phát triển (Dev) | Môi trường sản xuất (Prod) | Tài khoản mặc định | Mô tả |
+| Dịch vụ | Môi trường phát triển (Dev) | Môi trường sản xuất (Prod via Nginx Gateway) | Tài khoản mặc định | Mô tả |
 |---|---|---|---|---|
-| **Frontend SPA** | [http://localhost:5173](http://localhost:5173) | [http://localhost:8080](http://localhost:8080) | `admin@gmail.com` / `123456` | Giao diện Kanban Board & HRM |
-| **API Root** | [http://localhost:8000/api/v1](http://localhost:8000/api/v1) | [http://127.0.0.1:8000/api/v1](http://127.0.0.1:8000/api/v1) | - | Điểm truy cập các nghiệp vụ |
-| **Swagger UI** | [http://localhost:8000/docs](http://localhost:8000/docs) | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) | - | Tài liệu tương tác API |
-| **Health Details**| [http://localhost:8000/health/details](http://localhost:8000/health/details) | [http://127.0.0.1:8000/health/details](http://127.0.0.1:8000/health/details) | - | Trạng thái ổ đĩa, DB, Redis |
+| **Nginx Gateway** | - | [http://localhost/](http://localhost/) | - | Entry point duy nhất (Port 80/443) |
+| **Frontend SPA** | [http://localhost:5173](http://localhost:5173) | [http://localhost/](http://localhost/) | `admin@gmail.com` / `123456` | Giao diện Single Page Application |
+| **API Root** | [http://localhost:8000/api/v1](http://localhost:8000/api/v1) | [http://localhost/api/v1](http://localhost/api/v1) | - | Điểm truy cập các nghiệp vụ API |
+| **Swagger UI** | [http://localhost:8000/docs](http://localhost:8000/docs) | [http://localhost/docs](http://localhost/docs) | - | Tài liệu tương tác API (OpenAPI) |
+| **Health Details**| [http://localhost:8000/health/details](http://localhost:8000/health/details) | [http://localhost/health/details](http://localhost/health/details) | - | Trạng thái ổ đĩa, DB, Redis |
+| **Gateway Health**| - | [http://localhost/healthz](http://localhost/healthz) | - | Nginx container live probe |
 | **Prometheus UI** | [http://127.0.0.1:9090](http://127.0.0.1:9090) | [http://127.0.0.1:9090](http://127.0.0.1:9090) | Không yêu cầu | Tra cứu chỉ số dạng PromQL |
 | **Grafana UI** | [http://127.0.0.1:3000](http://127.0.0.1:3000) | [http://127.0.0.1:3000](http://127.0.0.1:3000) | `admin` / `${GRAFANA_ADMIN_PASSWORD}` | Đồ thị trực quan hóa metrics |
-| **cAdvisor UI** | [http://127.0.0.1:8080](http://127.0.0.1:8080) | [http://127.0.0.1:8080](http://127.0.0.1:8080) | Không yêu cầu | Chỉ số tài nguyên các container |
+| **cAdvisor UI** | [http://127.0.0.1:8081](http://127.0.0.1:8081) | [http://127.0.0.1:8081](http://127.0.0.1:8081) | Không yêu cầu | Chỉ số tài nguyên các container |
+
 
 ---
 

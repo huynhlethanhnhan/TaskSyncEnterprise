@@ -66,3 +66,13 @@ coverage.xml
 # Secret keys / credentials
 *.secret
 credentials.json
+
+# SSL / TLS Certificates and Private Keys
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+nginx/ssl/*
+!nginx/ssl/.gitkeep
+!nginx/ssl/generate_self_signed_cert.ps1
