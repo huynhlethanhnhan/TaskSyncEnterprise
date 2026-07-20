@@ -129,7 +129,7 @@ TaskSyncEnterprise `v1.0.0-rc1` is the first release candidate for the enterpris
 | Backup/DR Tests | 4 (61 tests) | ✅ All pass |
 | Nginx Security Tests | 1 | ✅ All pass |
 | Infrastructure Tests | 3 | ✅ All pass |
-| **Total** | **29** | **✅ 100% PASS** |
+| **Total** | **29 files (265 tests)** | **✅ 100% PASS (265 passed)** |
 
 ### 6.2 Quality Gate Results
 
