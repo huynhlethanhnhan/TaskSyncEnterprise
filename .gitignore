@@ -76,3 +76,13 @@ credentials.json
 nginx/ssl/*
 !nginx/ssl/.gitkeep
 !nginx/ssl/generate_self_signed_cert.ps1
+
+# ===========================
+# Backup & DR Storage (Phase 3.8.7)
+# ===========================
+/backups/
+/infrastructure/backup/runtime/
+*.bak
+*.rdb
+/backups/**/*.tar.gz
+/infrastructure/backup/runtime/**/*.tar.gz

@@ -20,6 +20,14 @@ Chào mừng bạn đến với trung tâm tài liệu kỹ thuật của dự �
     *   Cấu hình docker-compose mạng nội bộ và vùng đĩa volumes.
     *   Chốt chặn kiểm tra sức khỏe của container (SRE health check probes).
     *   Danh sách kiểm tra triển khai sản xuất (Production Checklist).
+*   **[Hướng Dẫn Vận Hành Sao Lưu & Phục Hồi (docs/operations/BACKUP_OPERATIONS_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/operations/BACKUP_OPERATIONS_GUIDE.md)**:
+    *   Hướng dẫn chạy script sao lưu tự động Full & Differential.
+    *   Cấu trúc bundle backup, manifest JSON và SHA-256 checksums.
+*   **[Hướng Dẫn Phục Hồi Dữ Liệu An Toàn (docs/operations/RESTORE_OPERATIONS_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/operations/RESTORE_OPERATIONS_GUIDE.md)**:
+    *   Hướng dẫn phục hồi cơ sở dữ liệu isolated test DB mặc định và production dual controls.
+    *   Dynamic `RESTORE FILELISTONLY` MOVE mapping, upload staging/rollback và Redis restore.
+
+
 *   **[Hướng Dẫn Vận Hành CI (docs/deployment/CI_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/deployment/CI_GUIDE.md)**:
     *   Quy trình kiểm thử và kiểm tra chất lượng tự động qua GitHub Actions.
     *   Hướng dẫn chạy Ruff, Black check và Pytest cục bộ.
@@ -61,3 +69,5 @@ Chào mừng bạn đến với trung tâm tài liệu kỹ thuật của dự �
 
 *   **[Lộ Trình Phát Triển (roadmap/README.md)](file:///e:/TaskSyncEnterprise/roadmap/README.md)**: Gantt chart tiến trình các Milestone nghiệp vụ và kế hoạch Phase 3.7 - Phase 4.
 *   **[Mục Lục Báo Cáo Đánh Giá (reports/README.md)](file:///e:/TaskSyncEnterprise/reports/README.md)**: Tập hợp các báo cáo đánh giá an ninh bảo mật, kiểm thử hiệu năng, chất lượng mã nguồn và mức độ sẵn sàng vận hành thực tế.
+    *   **[Báo Cáo Đánh Giá Kiến Trúc Backup & Disaster Recovery (docs/reports/PHASE_3_8_7_BACKUP_DR_ARCHITECTURE_AUDIT.md)](file:///e:/TaskSyncEnterprise/docs/reports/PHASE_3_8_7_BACKUP_DR_ARCHITECTURE_AUDIT.md)**: Audit tổng thể và thiết kế kiến trúc sao lưu, phục hồi dữ liệu và phòng chống thảm họa.
+    *   **[Báo Cáo Chứng Nhận Phòng Chống Thảm Họa DR (docs/reports/PHASE_3_8_7_FINAL_DR_CERTIFICATION.md)](file:///e:/TaskSyncEnterprise/docs/reports/PHASE_3_8_7_FINAL_DR_CERTIFICATION.md)**: Báo cáo nghiệm thu và chứng nhận sẵn sàng triển khai hệ thống Backup/DR (Phase 3.8.7 - Hoàn thành).
