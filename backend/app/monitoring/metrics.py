@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 class PerformanceMetrics:
     """Thread-safe statistics collector for request latencies and error counters."""
+
     def __init__(self):
         self.request_count = 0
         self.error_count = 0
@@ -40,7 +41,7 @@ class PerformanceMetrics:
                 "avg_response_time_seconds": round(avg_time, 4),
                 "max_response_time_seconds": round(max_time, 4),
                 "min_response_time_seconds": round(min_time, 4),
-                "uptime_seconds": round(uptime, 2)
+                "uptime_seconds": round(uptime, 2),
             }
 
 

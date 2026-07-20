@@ -41,6 +41,7 @@ JSON Schema (every field is always present – absent values use null / "-"):
   "exception":      "<traceback | null>"
 }
 """
+
 import json
 import logging
 import traceback
@@ -53,11 +54,11 @@ from typing import Any
 _RESET = "\033[0m"
 _BOLD = "\033[1m"
 _LEVEL_COLOURS = {
-    "DEBUG": "\033[36m",       # Cyan
-    "INFO": "\033[32m",        # Green
-    "WARNING": "\033[33m",     # Yellow
-    "ERROR": "\033[31m",       # Red
-    "CRITICAL": "\033[35m",    # Magenta
+    "DEBUG": "\033[36m",  # Cyan
+    "INFO": "\033[32m",  # Green
+    "WARNING": "\033[33m",  # Yellow
+    "ERROR": "\033[31m",  # Red
+    "CRITICAL": "\033[35m",  # Magenta
 }
 
 
@@ -95,6 +96,7 @@ class StructuredFormatter(logging.Formatter):
         if self._service_name is None:
             try:
                 from app.config import settings
+
                 self._service_name = settings.APP_NAME
                 self._environment = settings.ENVIRONMENT
             except Exception:
@@ -104,6 +106,7 @@ class StructuredFormatter(logging.Formatter):
     def _get_context(self) -> dict[str, Any]:
         try:
             from app.logging.context import get_log_context
+
             return get_log_context()
         except Exception:
             return {}
@@ -144,7 +147,9 @@ class StructuredFormatter(logging.Formatter):
         record.error_code = ctx.get("error_code", "-")
 
         # duration_ms – prefer explicitly passed extra value, then context
-        record.duration_ms = getattr(record, "duration_ms", None) or ctx.get("duration_ms", 0.0)
+        record.duration_ms = getattr(record, "duration_ms", None) or ctx.get(
+            "duration_ms", 0.0
+        )
 
         # status_code – may be passed via extra={"status_code": …}
         record.status_code = getattr(record, "status_code", None)
@@ -161,7 +166,9 @@ class StructuredFormatter(logging.Formatter):
         exception_text = self._format_exception(record)
 
         log_entry: dict[str, Any] = {
-            "timestamp": datetime.fromtimestamp(record.created, timezone.utc).isoformat(),
+            "timestamp": datetime.fromtimestamp(
+                record.created, timezone.utc
+            ).isoformat(),
             "level": record.levelname,
             "service_name": self._service_name,
             "environment": self._environment,
@@ -200,7 +207,9 @@ class StructuredFormatter(logging.Formatter):
 
     def _format_pretty(self, record: logging.LogRecord) -> str:
         colour = _LEVEL_COLOURS.get(record.levelname, "")
-        ts = datetime.fromtimestamp(record.created, timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        ts = datetime.fromtimestamp(record.created, timezone.utc).strftime(
+            "%Y-%m-%d %H:%M:%S.%f"
+        )[:-3]
         level_tag = f"{colour}{_BOLD}[{record.levelname:<8}]{_RESET}"
 
         rid = record.request_id if record.request_id != "-" else ""

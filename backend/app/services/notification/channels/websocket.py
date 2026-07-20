@@ -15,14 +15,23 @@ class WebSocketChannel(BaseChannel):
     def name(self) -> NotificationChannel:
         return NotificationChannel.WEBSOCKET
 
-    def send(self, db: Session, recipient_id: int, title: str, message: str, notification_id: int) -> bool:
-        app_logger.info(f"Initiating WebSocket push for employee {recipient_id} (notification: {notification_id})")
+    def send(
+        self,
+        db: Session,
+        recipient_id: int,
+        title: str,
+        message: str,
+        notification_id: int,
+    ) -> bool:
+        app_logger.info(
+            f"Initiating WebSocket push for employee {recipient_id} (notification: {notification_id})"
+        )
 
         payload = {
             "id": notification_id,
             "title": title,
             "message": message,
-            "channel": "WEBSOCKET"
+            "channel": "WEBSOCKET",
         }
 
         # Safely schedule the coroutine from synchronous threads
@@ -38,7 +47,9 @@ class WebSocketChannel(BaseChannel):
             try:
                 success = future.result(timeout=2.0)
             except concurrent.futures.TimeoutError:
-                app_logger.warning(f"WebSocket push timed out for employee {recipient_id}")
+                app_logger.warning(
+                    f"WebSocket push timed out for employee {recipient_id}"
+                )
                 success = False
             except Exception as fut_err:
                 app_logger.error(f"WebSocket future delivery failed: {fut_err}")
@@ -62,16 +73,18 @@ class WebSocketChannel(BaseChannel):
                 if success
                 else "User offline; notification cached in DB for in-app retrieval."
             )
-            
+
             notification_repo.log_delivery_attempt(
                 db=db,
                 notification_id=notification_id,
                 channel=self.name.value,
                 status=NotificationStatus.SENT.value,
                 retry_count=0,
-                provider_response=provider_msg
+                provider_response=provider_msg,
             )
             return True
 
-        app_logger.error(f"WebSocketChannel failed: Notification ID {notification_id} was not found in the database.")
+        app_logger.error(
+            f"WebSocketChannel failed: Notification ID {notification_id} was not found in the database."
+        )
         return False

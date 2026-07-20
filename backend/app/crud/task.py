@@ -10,7 +10,7 @@ def get_all(
     skip: int = 0,
     limit: int = 20,
     project_id: int | None = None,
-    status: str | None = None
+    status: str | None = None,
 ):
 
     stmt = select(Task).where(Task.is_deleted == False)
@@ -24,13 +24,9 @@ def get_all(
     return db.scalars(stmt).all()
 
 
-
 def get_by_id(db: Session, task_id: int):
 
-    return db.get(
-        Task,
-        task_id
-    )
+    return db.get(Task, task_id)
 
 
 def create(db: Session, data: TaskCreate):
@@ -44,21 +40,21 @@ def create(db: Session, data: TaskCreate):
 
     if assigned_to is not None:
         from app.models.task_assignment import TaskAssignment
+
         assignment = TaskAssignment(task_id=obj.id, employee_id=assigned_to)
         db.add(assignment)
         db.commit()
-        
+
         # KÍCH HOẠT TRIGGER NOTIFICATION
         from app.crud import notification as notification_crud
+
         try:
             notification_crud.create_notification(
-                db,
-                title="Bạn có task mới",
-                message=obj.title,
-                employee_id=assigned_to
+                db, title="Bạn có task mới", message=obj.title, employee_id=assigned_to
             )
         except Exception as e:
             from app.core.logger import app_logger
+
             app_logger.error(f"Error creating notification: {e}")
 
         db.refresh(obj)
@@ -66,9 +62,7 @@ def create(db: Session, data: TaskCreate):
     return obj
 
 
-def update(db: Session,
-           obj: Task,
-           data: TaskUpdate):
+def update(db: Session, obj: Task, data: TaskUpdate):
 
     task_data = data.model_dump(exclude_unset=True)
     assigned_to = task_data.pop("assigned_to", None)
@@ -81,30 +75,32 @@ def update(db: Session,
     if "assigned_to" in data.model_fields_set:
         from app.models.task_assignment import TaskAssignment
         from sqlalchemy import delete
-        
+
         # Lưu lại người được gán cũ
         old_assigned_to = obj.assigned_to
-        
+
         # Xóa các assignments cũ
         db.execute(delete(TaskAssignment).where(TaskAssignment.task_id == obj.id))
-        
+
         if assigned_to is not None:
             new_assignment = TaskAssignment(task_id=obj.id, employee_id=assigned_to)
             db.add(new_assignment)
             db.commit()
-            
+
             # KÍCH HOẠT TRIGGER NOTIFICATION (Nếu gán cho người mới hoặc người được gán thay đổi)
             if old_assigned_to != assigned_to:
                 from app.crud import notification as notification_crud
+
                 try:
                     notification_crud.create_notification(
                         db,
                         title="Bạn có task mới",
                         message=obj.title,
-                        employee_id=assigned_to
+                        employee_id=assigned_to,
                     )
                 except Exception as e:
                     from app.core.logger import app_logger
+
                     app_logger.error(f"Error creating notification: {e}")
         else:
             db.commit()
@@ -113,39 +109,43 @@ def update(db: Session,
     new_status = obj.status
     if old_status != new_status and obj.assigned_to is not None:
         from app.crud import notification as notification_crud
+
         try:
             notification_crud.create_notification(
                 db,
                 title="Thay đổi trạng thái Task",
                 message=f"Task '{obj.title}' đã chuyển sang trạng thái '{new_status}'",
-                employee_id=obj.assigned_to
+                employee_id=obj.assigned_to,
             )
         except Exception as e:
             from app.core.logger import app_logger
+
             app_logger.error(f"Error creating status notification: {e}")
 
     db.refresh(obj)
     return obj
 
 
-def delete(db: Session,
-           obj: Task):
+def delete(db: Session, obj: Task):
 
     obj.is_deleted = True
 
     db.commit()
 
+
 def get_by_project(db: Session, project_id: int):
     stmt = (
         select(Task)
-        .where(Task.project_id == project_id) # 🟢 Chỉ lấy task thuộc dự án này
+        .where(Task.project_id == project_id)  # 🟢 Chỉ lấy task thuộc dự án này
         .where(Task.is_deleted == False)
         .order_by(Task.id.desc())
     )
     return db.scalars(stmt).all()
 
+
 def get_my_tasks(db: Session, employee_id: int):
     from app.models.task_assignment import TaskAssignment
+
     stmt = (
         select(Task)
         .join(TaskAssignment, Task.id == TaskAssignment.task_id)

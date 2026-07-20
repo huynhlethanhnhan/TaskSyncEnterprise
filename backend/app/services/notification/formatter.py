@@ -7,7 +7,9 @@ class NotificationFormatter:
     """Formatter responsible for generating formatted titles and messages from event context payloads."""
 
     @staticmethod
-    def format(event_type: NotificationType, payload: Dict[str, Any]) -> Tuple[str, str]:
+    def format(
+        event_type: NotificationType, payload: Dict[str, Any]
+    ) -> Tuple[str, str]:
         """
         Generates (title, message) tuple formatted using context interpolation.
         Supports plain text formatting.
@@ -17,7 +19,9 @@ class NotificationFormatter:
 
         if event_type == NotificationType.TASKS:
             title_template = "Task Assigned: {task_title}"
-            message_template = "You have been assigned to the task '{task_title}' by {actor_name}."
+            message_template = (
+                "You have been assigned to the task '{task_title}' by {actor_name}."
+            )
         elif event_type == NotificationType.VACATION:
             status = payload.get("status", "UPDATED")
             title_template = f"Vacation Request {status.capitalize()}"
@@ -30,7 +34,9 @@ class NotificationFormatter:
             message_template = "A new login was detected for your account on {login_time} from IP {ip_address}."
         elif event_type == NotificationType.PROJECTS:
             title_template = "Project Updated: {project_name}"
-            message_template = "The project '{project_name}' has been updated to status: {status}."
+            message_template = (
+                "The project '{project_name}' has been updated to status: {status}."
+            )
         else:
             # SYSTEM or fallback
             title_template = "{subject}"

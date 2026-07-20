@@ -10,10 +10,13 @@ from app.core.logger import app_logger
 
 class SMTPConfig(BaseModel):
     """Configuration schema for SMTP server connection parameters."""
+
     host: str = Field(..., description="SMTP server hostname")
     port: int = Field(..., description="SMTP server port number")
     username: Optional[str] = Field(None, description="Authentication username")
-    password: Optional[SecretStr] = Field(None, description="Authentication secret password")
+    password: Optional[SecretStr] = Field(
+        None, description="Authentication secret password"
+    )
     use_tls: bool = Field(default=True, description="Enables TLS encapsulation")
     use_ssl: bool = Field(default=False, description="Enables SSL connection wrapping")
     timeout: int = Field(default=10, description="Network timeout limit in seconds")
@@ -36,7 +39,9 @@ class ConnectionManager:
                 if status == 250:
                     return conn
             except Exception:
-                app_logger.warning("Cached SMTP connection has disconnected or timed out. Reconnecting...")
+                app_logger.warning(
+                    "Cached SMTP connection has disconnected or timed out. Reconnecting..."
+                )
                 try:
                     conn.close()
                 except Exception:
@@ -48,19 +53,21 @@ class ConnectionManager:
 
     def _create_connection(self) -> smtplib.SMTP:
         """Establishes connection and handles authentication."""
-        app_logger.info(f"Connecting to SMTP server at {self.config.host}:{self.config.port}")
-        
+        app_logger.info(
+            f"Connecting to SMTP server at {self.config.host}:{self.config.port}"
+        )
+
         if self.config.use_ssl:
             conn = smtplib.SMTP_SSL(
                 host=self.config.host,
                 port=self.config.port,
-                timeout=self.config.timeout
+                timeout=self.config.timeout,
             )
         else:
             conn = smtplib.SMTP(
                 host=self.config.host,
                 port=self.config.port,
-                timeout=self.config.timeout
+                timeout=self.config.timeout,
             )
 
         if self.config.use_tls and not self.config.use_ssl:
@@ -103,7 +110,7 @@ class SMTPClient:
         reply_to: Optional[str],
         subject: str,
         body_text: Optional[str],
-        body_html: Optional[str]
+        body_html: Optional[str],
     ) -> str:
         """Sends an assembled email over the managed connection."""
         msg = MIMEMultipart("alternative")
@@ -127,7 +134,7 @@ class SMTPClient:
 
         # Retrieve thread-local active connection
         conn = self.manager.get_connection()
-        
+
         # Send envelope
         refused = conn.sendmail(sender_address, all_recipients, msg.as_string())
         if refused:

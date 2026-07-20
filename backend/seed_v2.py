@@ -46,9 +46,24 @@ def seed():
 
         # 1. Create Roles (IDs 1, 2, 3)
         roles = {
-            "admin": Role(id=1, role_name="admin", description="Administrator Role with full access", is_system=True),
-            "manager": Role(id=2, role_name="manager", description="Manager Role for department heads", is_system=True),
-            "employee": Role(id=3, role_name="employee", description="Standard Employee Role", is_system=True),
+            "admin": Role(
+                id=1,
+                role_name="admin",
+                description="Administrator Role with full access",
+                is_system=True,
+            ),
+            "manager": Role(
+                id=2,
+                role_name="manager",
+                description="Manager Role for department heads",
+                is_system=True,
+            ),
+            "employee": Role(
+                id=3,
+                role_name="employee",
+                description="Standard Employee Role",
+                is_system=True,
+            ),
         }
         for r in roles.values():
             db.add(r)
@@ -60,7 +75,7 @@ def seed():
             department_code="IT",
             name="Information Technology",
             description="Information Technology Department",
-            is_active=True
+            is_active=True,
         )
         db.add(dept_it)
         db.flush()
@@ -75,7 +90,7 @@ def seed():
             role_id=1,
             is_active=True,
             is_first_login=False,
-            job_title="System Administrator"
+            job_title="System Administrator",
         )
         db.add(admin)
         db.flush()  # To obtain admin.id
@@ -90,7 +105,7 @@ def seed():
             manager_id=admin.id,
             is_active=True,
             is_first_login=False,
-            job_title="IT Manager"
+            job_title="IT Manager",
         )
         db.add(manager)
         db.flush()
@@ -105,11 +120,13 @@ def seed():
             manager_id=manager.id,
             is_active=True,
             is_first_login=False,
-            job_title="Software Engineer"
+            job_title="Software Engineer",
         )
         db.add(employee)
         db.flush()
-        print("- Employees seeded (admin@gmail.com, manager@gmail.com, demo1@gmail.com)")
+        print(
+            "- Employees seeded (admin@gmail.com, manager@gmail.com, demo1@gmail.com)"
+        )
 
         # 4. Create Project
         project = Project(
@@ -119,7 +136,7 @@ def seed():
             status="Planning",
             priority="Medium",
             progress_percent=0.0,
-            created_by=admin.id
+            created_by=admin.id,
         )
         db.add(project)
         db.flush()
@@ -140,7 +157,7 @@ def seed():
             status="Done",
             story_points=5,
             progress_percent=100.0,
-            created_by=admin.id
+            created_by=admin.id,
         )
         db.add(task1)
         db.flush()
@@ -155,13 +172,21 @@ def seed():
             status="In Progress",
             story_points=3,
             progress_percent=40.0,
-            created_by=manager.id
+            created_by=manager.id,
         )
         db.add(task2)
         db.flush()
         db.add(TaskAssignment(task_id=task2.id, employee_id=employee.id))
-        db.add(TaskChecklist(task_id=task2.id, title="Phác thảo layout Dashboard", is_completed=True))
-        db.add(TaskChecklist(task_id=task2.id, title="Liên kết API thống kê", is_completed=False))
+        db.add(
+            TaskChecklist(
+                task_id=task2.id, title="Phác thảo layout Dashboard", is_completed=True
+            )
+        )
+        db.add(
+            TaskChecklist(
+                task_id=task2.id, title="Liên kết API thống kê", is_completed=False
+            )
+        )
 
         # Task 3: To Do DB schema checks
         task3 = Task(
@@ -172,7 +197,7 @@ def seed():
             status="To Do",
             story_points=8,
             progress_percent=0.0,
-            created_by=admin.id
+            created_by=admin.id,
         )
         db.add(task3)
         db.flush()

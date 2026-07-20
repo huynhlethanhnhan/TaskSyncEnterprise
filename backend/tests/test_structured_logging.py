@@ -14,6 +14,7 @@ Covers:
   ✓ Middleware – access log written for normal requests
   ✓ Context helpers – set/get user_id, tenant_id, project_id, correlation_id
 """
+
 import json
 import logging
 import re
@@ -44,6 +45,7 @@ from app.config import settings
 # Fixtures
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="module")
 def client():
     """TestClient that returns 5xx responses instead of raising exceptions."""
@@ -67,7 +69,9 @@ def sensitive_filter() -> SensitiveDataFilter:
     return SensitiveDataFilter()
 
 
-def _make_record(msg: str = "test message", level: int = logging.INFO) -> logging.LogRecord:
+def _make_record(
+    msg: str = "test message", level: int = logging.INFO
+) -> logging.LogRecord:
     """Creates a minimal LogRecord for formatter / filter tests."""
     record = logging.LogRecord(
         name="test",
@@ -84,6 +88,7 @@ def _make_record(msg: str = "test message", level: int = logging.INFO) -> loggin
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. Request ID Tests
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class TestRequestID:
     def test_request_id_auto_generated(self, client):
@@ -115,6 +120,7 @@ class TestRequestID:
 # 2. Correlation ID Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestCorrelationID:
     def test_correlation_id_auto_generated(self, client):
         """When no X-Correlation-ID header is sent, the server generates one."""
@@ -140,14 +146,34 @@ class TestCorrelationID:
 # 3. JSON Formatter Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestJSONFormatter:
     REQUIRED_FIELDS = [
-        "timestamp", "level", "service_name", "environment", "version",
-        "logger", "module", "function", "line",
-        "request_id", "correlation_id", "trace_id", "span_id",
-        "client_ip", "method", "path", "status_code", "duration_ms",
-        "user_id", "tenant_id", "project_id", "user_agent",
-        "error_code", "message", "exception",
+        "timestamp",
+        "level",
+        "service_name",
+        "environment",
+        "version",
+        "logger",
+        "module",
+        "function",
+        "line",
+        "request_id",
+        "correlation_id",
+        "trace_id",
+        "span_id",
+        "client_ip",
+        "method",
+        "path",
+        "status_code",
+        "duration_ms",
+        "user_id",
+        "tenant_id",
+        "project_id",
+        "user_agent",
+        "error_code",
+        "message",
+        "exception",
     ]
 
     def test_json_output_is_valid_json(self, json_formatter):
@@ -161,7 +187,9 @@ class TestJSONFormatter:
         output = json_formatter.format(record)
         parsed = json.loads(output)
         for field in self.REQUIRED_FIELDS:
-            assert field in parsed, f"Required field '{field}' missing from JSON log output"
+            assert (
+                field in parsed
+            ), f"Required field '{field}' missing from JSON log output"
 
     def test_timestamp_is_iso8601_utc(self, json_formatter):
         record = _make_record("ts test")
@@ -187,6 +215,7 @@ class TestJSONFormatter:
             raise ValueError("test exception value")
         except ValueError:
             import sys
+
             record.exc_info = sys.exc_info()
         parsed = json.loads(json_formatter.format(record))
         assert parsed["exception"] is not None
@@ -213,6 +242,7 @@ class TestJSONFormatter:
 # ──────────────────────────────────────────────────────────────────────────────
 # 4. Sensitive Data Masking Tests
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class TestSensitiveDataMasking:
     def test_mask_password_field(self):
@@ -275,6 +305,7 @@ class TestSensitiveDataMasking:
 # 5. Log Rotation Configuration Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestLogRotationConfiguration:
     def test_setup_logging_creates_log_directory(self):
         """setup_logging must create the log directory if it does not exist."""
@@ -282,15 +313,16 @@ class TestLogRotationConfiguration:
         # The log dir is determined by settings.LOG_DIR_PATH which points to the
         # configured LOG_DIRECTORY relative to the backend root.
         setup_logging()
-        assert settings.LOG_DIR_PATH.exists(), (
-            f"Log directory '{settings.LOG_DIR_PATH}' was not created by setup_logging()"
-        )
+        assert (
+            settings.LOG_DIR_PATH.exists()
+        ), f"Log directory '{settings.LOG_DIR_PATH}' was not created by setup_logging()"
 
     def test_rotating_handler_max_bytes(self):
         """RotatingFileHandler must be configured with the correct maxBytes."""
         from logging.handlers import RotatingFileHandler
         from app.logging.config import build_rotating_file_handler
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmp:
             handler = build_rotating_file_handler(
                 file_path=settings.LOG_DIR_PATH / "test_rotation.log",
@@ -315,6 +347,7 @@ class TestLogRotationConfiguration:
 # 6. Exception Logging Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestExceptionLogging:
     def test_unhandled_exception_returns_500_not_traceback(self, client):
         """5xx exceptions must not expose Python tracebacks to the client."""
@@ -325,7 +358,7 @@ class TestExceptionLogging:
         body = response.text
         # Python stack-trace keywords must NEVER appear in the response body
         assert "Traceback (most recent call last)" not in body
-        assert "File \"" not in body
+        assert 'File "' not in body
         assert "raise RuntimeError" not in body
 
     def test_exception_response_contains_safe_error_envelope(self, client):
@@ -354,6 +387,7 @@ class TestExceptionLogging:
         Verify this by formatting the record directly with a JSON formatter.
         """
         from app.logging.formatter import StructuredFormatter
+
         json_fmt = StructuredFormatter(use_json=True)
 
         record = _make_record("test error", level=logging.ERROR)
@@ -361,6 +395,7 @@ class TestExceptionLogging:
             raise ValueError("capture this")
         except ValueError:
             import sys
+
             record.exc_info = sys.exc_info()
 
         output = json_fmt.format(record)
@@ -373,6 +408,7 @@ class TestExceptionLogging:
 # ──────────────────────────────────────────────────────────────────────────────
 # 7. Middleware Tests
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class TestMiddleware:
     def test_x_process_time_header_present(self, client):
@@ -440,6 +476,7 @@ class TestMiddleware:
 # 8. Context Helper Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestContextHelpers:
     def test_set_and_get_tenant_id(self):
         token = set_tenant_id("tenant-abc-123")
@@ -456,9 +493,17 @@ class TestContextHelpers:
     def test_get_log_context_has_expected_keys(self):
         ctx = get_log_context()
         expected_keys = {
-            "request_id", "correlation_id", "trace_id", "span_id",
-            "method", "path", "client_ip", "user_id",
-            "duration_ms", "tenant_id", "project_id",
+            "request_id",
+            "correlation_id",
+            "trace_id",
+            "span_id",
+            "method",
+            "path",
+            "client_ip",
+            "user_id",
+            "duration_ms",
+            "tenant_id",
+            "project_id",
         }
         for key in expected_keys:
             assert key in ctx, f"Key '{key}' missing from get_log_context() output"
@@ -466,6 +511,7 @@ class TestContextHelpers:
     def test_trace_id_null_when_otel_unavailable(self):
         """trace_id must return None gracefully when OTel is not installed."""
         from app.logging.context import get_trace_id
+
         # OTel is not installed in the test environment by default
         trace_id = get_trace_id()
         # Should be None (not installed) or a string (installed) – never raises
@@ -473,6 +519,7 @@ class TestContextHelpers:
 
     def test_span_id_null_when_otel_unavailable(self):
         from app.logging.context import get_span_id
+
         span_id = get_span_id()
         assert span_id is None or isinstance(span_id, str)
 
@@ -481,8 +528,10 @@ class TestContextHelpers:
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _count_lines(path) -> int:
     from pathlib import Path
+
     p = Path(path)
     if not p.exists():
         return 0
@@ -492,6 +541,7 @@ def _count_lines(path) -> int:
 
 def _read_new_lines(path, start_line: int) -> list[str]:
     from pathlib import Path
+
     p = Path(path)
     if not p.exists():
         return []

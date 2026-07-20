@@ -18,6 +18,7 @@ Design goals:
   - Security: sensitive headers (Authorization, Cookie) are masked before being
     logged.  Stack traces are captured internally but never echoed to the client.
 """
+
 import time
 import uuid
 import traceback
@@ -30,13 +31,15 @@ from starlette.responses import Response
 from app.logging.logger import access_logger, error_logger
 
 # Paths that should be excluded from verbose access logging to reduce noise
-_SKIP_ACCESS_LOG_PATHS: frozenset[str] = frozenset({
-    "/health",
-    "/health/live",
-    "/health/ready",
-    "/metrics",
-    "/favicon.ico",
-})
+_SKIP_ACCESS_LOG_PATHS: frozenset[str] = frozenset(
+    {
+        "/health",
+        "/health/live",
+        "/health/ready",
+        "/metrics",
+        "/favicon.ico",
+    }
+)
 
 
 class StructuredLoggingMiddleware(BaseHTTPMiddleware):
@@ -114,7 +117,9 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
                     "path": path,
                     "client_ip": client_ip,
                     "user_agent": user_agent,
-                    "request_size_bytes": int(content_length) if content_length.isdigit() else 0,
+                    "request_size_bytes": (
+                        int(content_length) if content_length.isdigit() else 0
+                    ),
                     "request_id": request_id,
                     "correlation_id": correlation_id,
                 },
@@ -132,7 +137,9 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
         except Exception as exc:
             exception_occurred = True
             # Log internally with full traceback – never re-raise raw to client
-            tb_text = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+            tb_text = "".join(
+                traceback.format_exception(type(exc), exc, exc.__traceback__)
+            )
             user_id = ctx.get("user_id", "-")
             error_logger.error(
                 f"Unhandled exception: {type(exc).__name__}: {exc}",
@@ -163,7 +170,9 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
                 response_size = 0
                 if response is not None:
                     response_size_str = response.headers.get("content-length", "0")
-                    response_size = int(response_size_str) if response_size_str.isdigit() else 0
+                    response_size = (
+                        int(response_size_str) if response_size_str.isdigit() else 0
+                    )
 
                 user_id = ctx.get("user_id", "-")
 

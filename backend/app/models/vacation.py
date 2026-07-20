@@ -18,12 +18,24 @@ class Vacation(Base):
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
     reason: Mapped[Optional[str]] = mapped_column(String(500))
-    status: Mapped[str] = mapped_column(String(50), nullable=False, server_default=text("N'Pending'"))
-    requested_by: Mapped[int] = mapped_column(ForeignKey("employees.id"), nullable=False)
-    approved_by: Mapped[Optional[int]] = mapped_column(ForeignKey("employees.id"), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default=text("N'Pending'")
+    )
+    requested_by: Mapped[int] = mapped_column(
+        ForeignKey("employees.id"), nullable=False
+    )
+    approved_by: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("employees.id"), nullable=True
+    )
     approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=text("SYSUTCDATETIME()"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("SYSUTCDATETIME()")
+    )
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    requester: Mapped["Employee"] = relationship("Employee", foreign_keys=[requested_by], lazy="joined")
-    approver: Mapped[Optional["Employee"]] = relationship("Employee", foreign_keys=[approved_by], lazy="joined")
+    requester: Mapped["Employee"] = relationship(
+        "Employee", foreign_keys=[requested_by], lazy="joined"
+    )
+    approver: Mapped[Optional["Employee"]] = relationship(
+        "Employee", foreign_keys=[approved_by], lazy="joined"
+    )

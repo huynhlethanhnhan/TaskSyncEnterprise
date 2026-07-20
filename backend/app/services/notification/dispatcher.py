@@ -22,13 +22,19 @@ class NotificationDispatcher:
         for recipient_id in event.recipient_ids:
             try:
                 # 3. Resolve user-specific preferences
-                enabled_channels = self._resolve_channels(db, recipient_id, event.event_type)
+                enabled_channels = self._resolve_channels(
+                    db, recipient_id, event.event_type
+                )
 
                 # 4. Dispatch to each enabled channel
                 for channel in enabled_channels:
                     notification_record = None
                     try:
-                        db_channel = "IN_APP" if channel == NotificationChannel.SYSTEM else channel.value
+                        db_channel = (
+                            "IN_APP"
+                            if channel == NotificationChannel.SYSTEM
+                            else channel.value
+                        )
                         # 5. Persist record to notifications table in database (Status: PROCESSING)
                         notification_record = notification_repo.create_notification(
                             db=db,
@@ -40,7 +46,7 @@ class NotificationDispatcher:
                             status=NotificationStatus.PROCESSING.value,
                             channel=db_channel,
                             event_id=event.event_id,
-                            context_json=json.dumps(event.payload)
+                            context_json=json.dumps(event.payload),
                         )
 
                         # 6. Retrieve delivery channel strategy
@@ -52,17 +58,21 @@ class NotificationDispatcher:
                             recipient_id=recipient_id,
                             title=title,
                             message=message,
-                            notification_id=notification_record.id
+                            notification_id=notification_record.id,
                         )
 
                         if not success:
-                            self._mark_failed(db, notification_record.id, "Delivery adapter returned False")
+                            self._mark_failed(
+                                db,
+                                notification_record.id,
+                                "Delivery adapter returned False",
+                            )
 
                     except Exception as ch_err:
                         app_logger.error(
                             f"Error during notification dispatch via channel '{channel.value}' "
                             f"to recipient {recipient_id}: {str(ch_err)}",
-                            exc_info=True
+                            exc_info=True,
                         )
                         if notification_record:
                             self._mark_failed(db, notification_record.id, str(ch_err))
@@ -70,13 +80,15 @@ class NotificationDispatcher:
             except Exception as rec_err:
                 app_logger.error(
                     f"Orchestration failure resolving preferences or routing for recipient {recipient_id}: {str(rec_err)}",
-                    exc_info=True
+                    exc_info=True,
                 )
 
-    def _resolve_channels(self, db: Session, employee_id: int, event_type: NotificationType) -> List[NotificationChannel]:
+    def _resolve_channels(
+        self, db: Session, employee_id: int, event_type: NotificationType
+    ) -> List[NotificationChannel]:
         """Resolves preferences or falls back to IN_APP and EMAIL by default."""
         prefs = notification_repo.get_user_preferences(db, employee_id)
-        
+
         type_str = event_type.value
         filtered_prefs = [p for p in prefs if p.notification_type == type_str]
 
@@ -85,14 +97,16 @@ class NotificationDispatcher:
             return [NotificationChannel.IN_APP, NotificationChannel.EMAIL]
 
         enabled = [NotificationChannel(p.channel) for p in filtered_prefs if p.enabled]
-        
+
         # Ensure fallback so notifications are never entirely lost
         if not enabled:
             return [NotificationChannel.IN_APP]
 
         return enabled
 
-    def _mark_failed(self, db: Session, notification_id: int, error_message: str) -> None:
+    def _mark_failed(
+        self, db: Session, notification_id: int, error_message: str
+    ) -> None:
         """Helper to mark a notification record as FAILED and log the error context."""
         try:
             notif = notification_repo.get_by_id(db, notification_id)
@@ -105,7 +119,9 @@ class NotificationDispatcher:
                     channel=notif.channel,
                     status=NotificationStatus.FAILED.value,
                     retry_count=0,
-                    provider_response=f"Delivery failure details: {error_message}"
+                    provider_response=f"Delivery failure details: {error_message}",
                 )
         except Exception as mark_ex:
-            app_logger.error(f"Failed to write failure audit for notification {notification_id}: {mark_ex}")
+            app_logger.error(
+                f"Failed to write failure audit for notification {notification_id}: {mark_ex}"
+            )

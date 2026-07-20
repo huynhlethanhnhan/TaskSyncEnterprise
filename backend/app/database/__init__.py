@@ -32,5 +32,6 @@ def get_db() -> Generator:
     finally:
         db.close()
 
+
 # Import query monitor to register execution event listeners on startup
 import app.database.query_monitor

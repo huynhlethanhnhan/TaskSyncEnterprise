@@ -9,9 +9,7 @@ from app.schemas.audit import AuditLogResponse
 from app.services import audit_service
 
 router = APIRouter(
-    prefix="/audit-logs",
-    tags=["Audit Logs"],
-    dependencies=[Depends(RequireAdmin)]
+    prefix="/audit-logs", tags=["Audit Logs"], dependencies=[Depends(RequireAdmin)]
 )
 
 

@@ -15,6 +15,7 @@ Logger hierarchy
   ├── security           → security events (auth failures, brute-force, …)
   └── database           → SQLAlchemy / database activity
 """
+
 import logging
 from app.config import settings
 from app.logging.config import (
@@ -37,6 +38,7 @@ db_logger = logging.getLogger("database")
 # ──────────────────────────────────────────────────────────────────────────────
 # Setup function
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def setup_logging() -> None:
     """
@@ -101,7 +103,11 @@ def setup_logging() -> None:
     _configure_isolated_logger(
         logger=access_logger,
         level=level,
-        log_file=settings.LOG_DIR_PATH / "access.log" if settings.ENABLE_FILE_LOGGING else None,
+        log_file=(
+            settings.LOG_DIR_PATH / "access.log"
+            if settings.ENABLE_FILE_LOGGING
+            else None
+        ),
         max_bytes=settings.LOG_ROTATION_SIZE,
         backup_count=settings.LOG_BACKUP_COUNT,
         console=settings.ENABLE_CONSOLE_LOGGING,
@@ -113,7 +119,11 @@ def setup_logging() -> None:
     _configure_isolated_logger(
         logger=audit_logger,
         level="INFO",
-        log_file=settings.LOG_DIR_PATH / "audit.log" if settings.ENABLE_FILE_LOGGING else None,
+        log_file=(
+            settings.LOG_DIR_PATH / "audit.log"
+            if settings.ENABLE_FILE_LOGGING
+            else None
+        ),
         max_bytes=settings.LOG_ROTATION_SIZE,
         backup_count=settings.LOG_BACKUP_COUNT,
         console=settings.ENABLE_CONSOLE_LOGGING,
@@ -138,6 +148,7 @@ def setup_logging() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 # Internal helpers
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def _configure_isolated_logger(
     logger: logging.Logger,

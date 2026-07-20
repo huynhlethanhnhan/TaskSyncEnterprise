@@ -33,10 +33,10 @@ def before_cursor_execute(conn, cursor, statement, parameters, context, executem
 def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
     """Calculates query duration, logs warnings if execution is slow, and records metrics."""
     total_time = time.perf_counter() - context._query_start_time
-    
+
     # Trace log query speed
     db_logger.debug(f"SQL Query duration={total_time:.4f}s: {statement}")
-    
+
     # Check slow query conditions
     if total_time > SLOW_QUERY_THRESHOLD_SECONDS:
         db_logger.warning(
@@ -47,10 +47,13 @@ def after_cursor_execute(conn, cursor, statement, parameters, context, executema
     # Record Prometheus Database Metrics
     try:
         from app.monitoring.prometheus_metrics import prometheus_metrics
+
         stmt_type = get_statement_type(statement)
         prometheus_metrics.db_requests_total.labels(statement_type=stmt_type).inc()
         prometheus_metrics.db_queries_successful.inc()
-        prometheus_metrics.db_query_duration.labels(statement_type=stmt_type).observe(total_time)
+        prometheus_metrics.db_query_duration.labels(statement_type=stmt_type).observe(
+            total_time
+        )
     except Exception:
         pass
 
@@ -60,10 +63,11 @@ def handle_db_error(exception_context):
     """Hooks query execution failures and increments the failed queries counter."""
     try:
         from app.monitoring.prometheus_metrics import prometheus_metrics
+
         statement = exception_context.statement
         stmt_type = get_statement_type(statement)
         err_type = type(exception_context.original_exception).__name__
-        
+
         prometheus_metrics.db_requests_total.labels(statement_type=stmt_type).inc()
         prometheus_metrics.db_queries_failed.labels(error_type=err_type).inc()
     except Exception:

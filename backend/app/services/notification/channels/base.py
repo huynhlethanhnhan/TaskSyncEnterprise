@@ -14,7 +14,14 @@ class NotificationChannel(ABC):
         pass
 
     @abstractmethod
-    def send(self, db: Session, recipient_id: int, title: str, message: str, notification_id: int) -> bool:
+    def send(
+        self,
+        db: Session,
+        recipient_id: int,
+        title: str,
+        message: str,
+        notification_id: int,
+    ) -> bool:
         """
         Sends the notification to the target recipient.
         Returns:

@@ -18,6 +18,7 @@ Covers:
   ✓ Exception recording in spans
   ✓ Settings defaults are correct
 """
+
 import json
 import logging
 import re
@@ -31,16 +32,19 @@ from fastapi.testclient import TestClient
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _reset_tracing_state():
     """Reset module-level state so each test starts clean."""
     try:
         from app.tracing.config import reset_tracing
+
         reset_tracing()
     except Exception:
         pass
 
     try:
         from app.tracing.instrumentation import reset_instrumentation
+
         reset_instrumentation()
     except Exception:
         pass
@@ -58,25 +62,31 @@ def fresh_tracing():
 # 1. Settings Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestTracingSettings:
     def test_enable_tracing_default_is_true(self):
         from app.config import settings
+
         assert settings.ENABLE_TRACING is True
 
     def test_otel_service_name_default(self):
         from app.config import settings
+
         assert settings.OTEL_SERVICE_NAME == "TaskSyncEnterprise"
 
     def test_otel_exporter_type_default_is_console(self):
         from app.config import settings
+
         assert settings.OTEL_EXPORTER_TYPE == "console"
 
     def test_otel_sampling_rate_default_is_one(self):
         from app.config import settings
+
         assert settings.OTEL_SAMPLING_RATE == 1.0
 
     def test_otel_excluded_paths_contains_health_and_metrics(self):
         from app.config import settings
+
         excluded = settings.OTEL_EXCLUDED_PATHS
         assert "/metrics" in excluded
         assert "/health" in excluded
@@ -86,6 +96,7 @@ class TestTracingSettings:
 
     def test_otel_max_attribute_length_default(self):
         from app.config import settings
+
         assert settings.OTEL_MAX_ATTRIBUTE_LENGTH == 256
 
     @pytest.mark.parametrize("rate", [-0.01, 1.01])
@@ -106,6 +117,7 @@ class TestTracingSettings:
 # 2. TracerProvider Initialisation Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestTracerProviderSetup:
     def test_setup_tracing_registers_global_tracer_provider(self, fresh_tracing):
         from opentelemetry import trace
@@ -122,6 +134,7 @@ class TestTracerProviderSetup:
         """Calling setup_tracing() twice must not raise or double-register."""
         from opentelemetry import trace
         from app.tracing.config import setup_tracing
+
         setup_tracing()
         provider = trace.get_tracer_provider()
         setup_tracing()  # second call must be silent
@@ -137,6 +150,7 @@ class TestTracerProviderSetup:
             _reset_tracing_state()
             setup_tracing()
             from opentelemetry import trace
+
             provider = trace.get_tracer_provider()
             assert isinstance(provider, NoOpTracerProvider)
 
@@ -151,6 +165,7 @@ class TestTracerProviderSetup:
             _reset_tracing_state()
             setup_tracing()
             from opentelemetry import trace
+
             provider = trace.get_tracer_provider()
             assert isinstance(provider, NoOpTracerProvider)
 
@@ -173,6 +188,7 @@ class TestTracerProviderSetup:
 # 3. get_tracer() Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestGetTracer:
     def test_get_tracer_returns_tracer_instance(self, fresh_tracing):
         from opentelemetry.trace import Tracer
@@ -194,7 +210,9 @@ class TestGetTracer:
     def test_get_tracer_creates_spans(self, fresh_tracing):
         """Tracer returned by get_tracer() must be able to create spans."""
         from opentelemetry.sdk.trace import ReadableSpan
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
@@ -204,6 +222,7 @@ class TestGetTracer:
         provider.add_span_processor(SimpleSpanProcessor(exporter))
 
         from opentelemetry import trace
+
         trace.set_tracer_provider(provider)
 
         tracer = trace.get_tracer("test")
@@ -220,10 +239,12 @@ class TestGetTracer:
 # 4. Trace ID / Span ID in Logging Context
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestLoggingIntegration:
     def test_trace_id_is_none_outside_span(self):
         """get_trace_id() must return None when no span is active."""
         from app.logging.context import get_trace_id
+
         trace_id = get_trace_id()
         assert trace_id is None or isinstance(trace_id, str)
 
@@ -231,7 +252,9 @@ class TestLoggingIntegration:
         """get_trace_id() must return a valid 32-char hex string inside an active span."""
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry import trace
         from app.logging.context import get_trace_id, get_span_id
 
@@ -254,7 +277,9 @@ class TestLoggingIntegration:
         """JSON log output must include trace_id and span_id when inside a span."""
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry import trace
         from app.logging.formatter import StructuredFormatter
 
@@ -268,24 +293,36 @@ class TestLoggingIntegration:
         tracer = trace.get_tracer("test")
         with tracer.start_as_current_span("log-span"):
             record = logging.LogRecord(
-                name="test", level=logging.INFO, pathname="test.py",
-                lineno=1, msg="inside span message", args=(), exc_info=None,
+                name="test",
+                level=logging.INFO,
+                pathname="test.py",
+                lineno=1,
+                msg="inside span message",
+                args=(),
+                exc_info=None,
             )
             output = formatter.format(record)
 
         parsed = json.loads(output)
-        assert parsed.get("trace_id") is not None, "JSON log must have trace_id inside span"
-        assert parsed.get("span_id") is not None, "JSON log must have span_id inside span"
+        assert (
+            parsed.get("trace_id") is not None
+        ), "JSON log must have trace_id inside span"
+        assert (
+            parsed.get("span_id") is not None
+        ), "JSON log must have span_id inside span"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. FastAPI Instrumentation Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestFastAPIInstrumentation:
     @pytest.fixture(scope="class")
     def client(self):
-        return TestClient(__import__("app.main", fromlist=["app"]).app, raise_server_exceptions=False)
+        return TestClient(
+            __import__("app.main", fromlist=["app"]).app, raise_server_exceptions=False
+        )
 
     def test_instrumentation_does_not_break_health_endpoint(self, client):
         """FastAPI auto-instrumentation must not break existing routes."""
@@ -295,6 +332,7 @@ class TestFastAPIInstrumentation:
     def test_x_request_id_still_propagated(self, client):
         """Request ID propagation must remain intact after OTel instrumentation."""
         import uuid
+
         rid = str(uuid.uuid4())
         response = client.get("/health", headers={"X-Request-ID": rid})
         assert response.headers.get("X-Request-ID") == rid
@@ -314,13 +352,16 @@ class TestFastAPIInstrumentation:
 # 6. Excluded Endpoint Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestExcludedEndpoints:
     @pytest.fixture(scope="class")
     def in_memory_provider(self):
         """Create an isolated TracerProvider with in-memory exporter for assertions."""
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry import trace
 
         exporter = InMemorySpanExporter()
@@ -331,14 +372,17 @@ class TestExcludedEndpoints:
 
     def test_health_path_is_in_excluded_list(self):
         from app.config import settings
+
         assert "/health" in settings.OTEL_EXCLUDED_PATHS
 
     def test_metrics_path_is_in_excluded_list(self):
         from app.config import settings
+
         assert "/metrics" in settings.OTEL_EXCLUDED_PATHS
 
     def test_docs_path_is_in_excluded_list(self):
         from app.config import settings
+
         assert "/docs" in settings.OTEL_EXCLUDED_PATHS
 
     @pytest.mark.parametrize(
@@ -362,7 +406,9 @@ class TestExcludedEndpoints:
         from app.tracing.instrumentation import _build_excluded_urls_string
 
         patterns = _build_excluded_urls_string().split(",")
-        assert not any(re.search(pattern, "http://testserver/api/v1/tasks") for pattern in patterns)
+        assert not any(
+            re.search(pattern, "http://testserver/api/v1/tasks") for pattern in patterns
+        )
 
     def test_excluded_url_patterns_match_query_strings(self):
         from app.tracing.instrumentation import _build_excluded_urls_string
@@ -378,12 +424,15 @@ class TestExcludedEndpoints:
 # 7. SQLAlchemy Instrumentation Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestSQLAlchemyInstrumentation:
     def test_sqlalchemy_instrumentor_can_instrument_engine(self, fresh_tracing):
         """SQLAlchemyInstrumentor must be importable and callable without error."""
         from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
         from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
         from opentelemetry import trace
         from sqlalchemy import create_engine
@@ -404,7 +453,12 @@ class TestSQLAlchemyInstrumentation:
             conn.execute(__import__("sqlalchemy").text("SELECT 1"))
 
         spans = exporter.get_finished_spans()
-        db_spans = [s for s in spans if "SELECT" in s.name.upper() or "sqlite" in (s.attributes.get("db.system", ""))]
+        db_spans = [
+            s
+            for s in spans
+            if "SELECT" in s.name.upper()
+            or "sqlite" in (s.attributes.get("db.system", ""))
+        ]
         assert len(db_spans) >= 1, "SQLAlchemy query must produce at least one span"
 
         SQLAlchemyInstrumentor().uninstrument()
@@ -413,7 +467,9 @@ class TestSQLAlchemyInstrumentation:
         """SQL spans must include db.system attribute."""
         from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
         from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
         from opentelemetry import trace
         from sqlalchemy import create_engine, text
@@ -442,16 +498,20 @@ class TestSQLAlchemyInstrumentation:
 # 8. Redis Instrumentation Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestRedisInstrumentation:
     def test_redis_instrumentor_importable(self):
         """RedisInstrumentor must be importable from the installed packages."""
         from opentelemetry.instrumentation.redis import RedisInstrumentor
+
         assert RedisInstrumentor is not None
 
     def test_instrumented_redis_calls_otel_span(self, fresh_tracing):
         """InstrumentedRedis._start_otel_span must return a span when tracing is enabled."""
         from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
         from opentelemetry import trace
         from app.monitoring.redis_instrumentation import InstrumentedRedis
@@ -462,9 +522,12 @@ class TestRedisInstrumentation:
         trace.set_tracer_provider(provider)
 
         from app.config import settings
+
         configured_settings = settings.model_copy(update={"ENABLE_TRACING": True})
         with patch("app.config.settings", configured_settings):
-            span = InstrumentedRedis._start_otel_span("SET", ("SET", "mykey", "myvalue"))
+            span = InstrumentedRedis._start_otel_span(
+                "SET", ("SET", "mykey", "myvalue")
+            )
             if span is not None:
                 InstrumentedRedis._end_otel_span(span, success=True, duration=0.001)
 
@@ -485,7 +548,9 @@ class TestRedisInstrumentation:
     def test_instrumented_redis_records_exception_in_span(self, fresh_tracing):
         """Failed Redis commands must record the exception in the span."""
         from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
         from opentelemetry import trace
         from opentelemetry.trace import StatusCode
@@ -497,12 +562,15 @@ class TestRedisInstrumentation:
         trace.set_tracer_provider(provider)
 
         from app.config import settings
+
         configured_settings = settings.model_copy(update={"ENABLE_TRACING": True})
         with patch("app.config.settings", configured_settings):
             span = InstrumentedRedis._start_otel_span("SET", ("SET", "k", "v"))
             if span is not None:
                 exc = ConnectionError("Redis connection refused")
-                InstrumentedRedis._end_otel_span(span, success=False, duration=0.1, exc=exc)
+                InstrumentedRedis._end_otel_span(
+                    span, success=False, duration=0.1, exc=exc
+                )
 
         spans = exporter.get_finished_spans()
         error_spans = [s for s in spans if s.status.status_code == StatusCode.ERROR]
@@ -512,6 +580,7 @@ class TestRedisInstrumentation:
 # ──────────────────────────────────────────────────────────────────────────────
 # 9. Configuration Toggle Tests
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class TestConfigurationToggle:
     def test_instrument_app_skips_when_disabled(self, fresh_tracing):
@@ -529,12 +598,14 @@ class TestConfigurationToggle:
         """Console exporter must initialise without error."""
         from opentelemetry.sdk.trace.export import ConsoleSpanExporter
         from app.tracing.config import _build_exporter
+
         exporter = _build_exporter("console")
         assert isinstance(exporter, ConsoleSpanExporter)
 
     def test_exporter_type_none_returns_none(self, fresh_tracing):
         """'none' exporter type must return None (signals NoOp mode)."""
         from app.tracing.config import _build_exporter
+
         exporter = _build_exporter("none")
         assert exporter is None
 
@@ -572,18 +643,21 @@ class TestConfigurationToggle:
     def test_sampling_rate_one_returns_always_on(self, fresh_tracing):
         from opentelemetry.sdk.trace.sampling import ALWAYS_ON
         from app.tracing.config import _build_sampler
+
         sampler = _build_sampler(1.0)
         assert sampler is ALWAYS_ON
 
     def test_sampling_rate_zero_returns_always_off(self, fresh_tracing):
         from opentelemetry.sdk.trace.sampling import ALWAYS_OFF
         from app.tracing.config import _build_sampler
+
         sampler = _build_sampler(0.0)
         assert sampler is ALWAYS_OFF
 
     def test_sampling_rate_partial_returns_ratio_sampler(self, fresh_tracing):
         from opentelemetry.sdk.trace.sampling import ParentBasedTraceIdRatio
         from app.tracing.config import _build_sampler
+
         sampler = _build_sampler(0.5)
         assert isinstance(sampler, ParentBasedTraceIdRatio)
 
@@ -596,9 +670,14 @@ class TestConfigurationToggle:
         reset_tracing()
         assert isinstance(trace.get_tracer_provider(), NoOpTracerProvider)
 
-    def test_reset_instrumentation_allows_a_fresh_fastapi_instrumentation(self, fresh_tracing):
+    def test_reset_instrumentation_allows_a_fresh_fastapi_instrumentation(
+        self, fresh_tracing
+    ):
         from fastapi import FastAPI
-        from app.tracing.instrumentation import _instrument_fastapi, reset_instrumentation
+        from app.tracing.instrumentation import (
+            _instrument_fastapi,
+            reset_instrumentation,
+        )
 
         app = FastAPI()
         with patch(
@@ -619,7 +698,9 @@ class TestTracingShutdown:
         from app.tracing.config import shutdown_tracing
 
         provider = MagicMock(spec=TracerProvider)
-        with patch("app.tracing.config.trace.get_tracer_provider", return_value=provider):
+        with patch(
+            "app.tracing.config.trace.get_tracer_provider", return_value=provider
+        ):
             shutdown_tracing()
             shutdown_tracing()
 
@@ -631,11 +712,14 @@ class TestTracingShutdown:
 # 10. Manual Span Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestManualSpans:
     def test_manual_span_records_attributes(self, fresh_tracing):
         """Manual spans via get_tracer() must correctly record attributes."""
         from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
         from opentelemetry import trace
 
@@ -645,6 +729,7 @@ class TestManualSpans:
         trace.set_tracer_provider(provider)
 
         from app.tracing.instrumentation import get_tracer
+
         tracer = get_tracer("test.manual")
 
         with tracer.start_as_current_span("manual-span") as span:
@@ -661,7 +746,9 @@ class TestManualSpans:
     def test_exception_is_recorded_in_span(self, fresh_tracing):
         """Exceptions raised inside a span must be recorded and marked as error."""
         from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
         from opentelemetry import trace
         from opentelemetry.trace import StatusCode
@@ -692,7 +779,9 @@ class TestManualSpans:
     def test_nested_spans_parent_child_relationship(self, fresh_tracing):
         """Nested spans must form a proper parent-child relationship."""
         from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
         from opentelemetry import trace
 

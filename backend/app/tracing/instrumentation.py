@@ -21,6 +21,7 @@ Design Decisions
   both the InstrumentedRedis subclass and any direct redis.Redis usage.
 - httpx instrumentation is applied globally (covers both sync and async clients).
 """
+
 from __future__ import annotations
 
 import logging
@@ -41,6 +42,7 @@ _httpx_instrumented: bool = False
 # ──────────────────────────────────────────────────────────────────────────────
 # Public API
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def get_tracer(name: str = "app") -> trace.Tracer:
     """
@@ -87,6 +89,7 @@ def instrument_app(app) -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 # Private instrumentors
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def _build_excluded_urls_string() -> str:
     """Return URL regexes accepted by FastAPIInstrumentor's excluded_urls API."""
@@ -203,6 +206,7 @@ def reset_instrumentation() -> None:
     if _fastapi_instrumented:
         try:
             from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
             FastAPIInstrumentor().uninstrument()
         except Exception:
             pass
@@ -210,6 +214,7 @@ def reset_instrumentation() -> None:
     if _sqlalchemy_instrumented:
         try:
             from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
             SQLAlchemyInstrumentor().uninstrument()
         except Exception:
             pass
@@ -217,6 +222,7 @@ def reset_instrumentation() -> None:
     if _redis_instrumented:
         try:
             from opentelemetry.instrumentation.redis import RedisInstrumentor
+
             RedisInstrumentor().uninstrument()
         except Exception:
             pass
@@ -224,6 +230,7 @@ def reset_instrumentation() -> None:
     if _httpx_instrumented:
         try:
             from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
             HTTPXClientInstrumentor().uninstrument()
         except Exception:
             pass

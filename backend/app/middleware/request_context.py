@@ -13,13 +13,18 @@ Responsibilities:
 This middleware runs FIRST in the middleware stack (added last in main.py),
 so all subsequent middlewares and route handlers see a fully populated context.
 """
+
 import time
 import uuid
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.core.request_context import _request_context, request_id_ctx, correlation_id_ctx
+from app.core.request_context import (
+    _request_context,
+    request_id_ctx,
+    correlation_id_ctx,
+)
 from app.logging.logger import app_logger, access_logger
 from app.config import settings
 from app.monitoring.metrics import metrics
@@ -46,6 +51,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         if auth_header.startswith("Bearer "):
             try:
                 from jose import jwt
+
                 bearer_token = auth_header.split(" ", 1)[1]
                 payload = jwt.decode(
                     bearer_token,
@@ -86,6 +92,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             # Increment request counter metric
             try:
                 from app.services.health_service import metrics_registry
+
                 metrics_registry.increment_request_count()
             except Exception:
                 pass

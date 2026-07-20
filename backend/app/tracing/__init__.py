@@ -20,6 +20,7 @@ Usage
     with tracer.start_as_current_span("do_something"):
         ...
 """
+
 from app.tracing.config import setup_tracing
 from app.tracing.instrumentation import instrument_app, get_tracer
 

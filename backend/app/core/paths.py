@@ -5,6 +5,7 @@ import tempfile
 # Resolve project root directory (TaskSyncEnterprise/backend)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
+
 def resolve_path(path_str: str) -> Path:
     """
     Resolves an absolute path.
@@ -14,6 +15,7 @@ def resolve_path(path_str: str) -> Path:
     if not path.is_absolute():
         path = PROJECT_ROOT / path
     return path.resolve()
+
 
 # Centralized paths
 TEMP_DIR = Path(tempfile.gettempdir())

@@ -19,6 +19,7 @@ from app.cache import RedisClient, cache_service
 # Track SQL statements executed by SQLAlchemy
 sql_query_count = 0
 
+
 @event.listens_for(engine, "before_cursor_execute")
 def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
     global sql_query_count
@@ -48,8 +49,11 @@ task_id = db.query(Task.id).first()[0]
 db.close()
 
 # Mock FastAPI user dependency override
-app.dependency_overrides[app.dependency_overrides.get(Employee, lambda: admin_user)] = lambda: admin_user
+app.dependency_overrides[app.dependency_overrides.get(Employee, lambda: admin_user)] = (
+    lambda: admin_user
+)
 from app.core.deps import get_current_user
+
 app.dependency_overrides[get_current_user] = lambda: admin_user
 
 client = TestClient(app)
@@ -86,44 +90,46 @@ def run_benchmarks():
     ]
 
     report = []
-    
+
     for ep in endpoints:
         name = ep["name"]
         path = ep["path"]
-        
+
         print(f"Benchmarking {name} ({path})...")
-        
+
         # --- 1. COLD CACHE ---
         flush_redis()
         reset_sql_query_count()
-        
+
         t0 = time.perf_counter()
         res_cold = client.get(path)
         cold_time = (time.perf_counter() - t0) * 1000
         cold_sql = get_sql_query_count()
-        
-        assert res_cold.status_code == 200, f"Cold request failed: {res_cold.status_code}"
-        
+
+        assert (
+            res_cold.status_code == 200
+        ), f"Cold request failed: {res_cold.status_code}"
+
         # --- 2. WARM CACHE (Repeated Latency Stats) ---
         warm_latencies = []
         warm_sqls = []
-        
+
         # Warm run to populate and record multiple requests
         for _ in range(50):
             reset_sql_query_count()
             t0 = time.perf_counter()
             res_warm = client.get(path)
             warm_time = (time.perf_counter() - t0) * 1000
-            
+
             warm_latencies.append(warm_time)
             warm_sqls.append(get_sql_query_count())
-            
+
             assert res_warm.status_code == 200
-        
+
         # Compute Stats in Pure Python
         sorted_warm = sorted(warm_latencies)
         n = len(sorted_warm)
-        
+
         avg_warm = sum(warm_latencies) / n
         min_warm = sorted_warm[0]
         max_warm = sorted_warm[-1]
@@ -131,15 +137,15 @@ def run_benchmarks():
         p95_warm = sorted_warm[int(n * 0.95)]
         p99_warm = sorted_warm[int(n * 0.99)]
         warm_sql = int(sum(warm_sqls) / len(warm_sqls))
-        
+
         # Verification: Check that data is identical
         cold_data = res_cold.json()
         warm_data = res_warm.json()
         data_match = "YES" if cold_data == warm_data else "NO"
-        
+
         # Speedup Ratio
         speedup = cold_time / avg_warm if avg_warm > 0 else 0
-        
+
         # Calculate stats for reporting
         ep_stats = {
             "name": name,
@@ -154,41 +160,52 @@ def run_benchmarks():
             "p99_warm": p99_warm,
             "warm_sql": warm_sql,
             "data_match": data_match,
-            "speedup": speedup
+            "speedup": speedup,
         }
         report.append(ep_stats)
         print(f"  -> Cold: {cold_time:.2f}ms (SQL queries: {cold_sql})")
-        print(f"  -> Warm Avg: {avg_warm:.2f}ms (SQL queries: {warm_sql}) [Speedup: {speedup:.1f}x]")
+        print(
+            f"  -> Warm Avg: {avg_warm:.2f}ms (SQL queries: {warm_sql}) [Speedup: {speedup:.1f}x]"
+        )
 
     # --- 3. REDIS OUTAGE SIMULATION ---
     print("\nSimulating Redis Outage (Bypass / Fail-Silent)...")
     # We patch RedisClient to raise connection errors to force DB fallback
     from unittest.mock import patch, MagicMock, PropertyMock
+
     outage_report = []
-    
-    with patch("app.cache.redis_client.RedisClient.client", new_callable=PropertyMock) as mock_client_prop:
+
+    with patch(
+        "app.cache.redis_client.RedisClient.client", new_callable=PropertyMock
+    ) as mock_client_prop:
         mock_client = MagicMock()
         mock_client.get.side_effect = Exception("Connection Refused")
         mock_client.set.side_effect = Exception("Connection Refused")
         mock_client.setex.side_effect = Exception("Connection Refused")
         mock_client.ping.side_effect = Exception("Connection Refused")
         mock_client_prop.return_value = mock_client
-        
+
         for ep in endpoints:
             reset_sql_query_count()
             t0 = time.perf_counter()
             res_fallback = client.get(ep["path"])
             fallback_time = (time.perf_counter() - t0) * 1000
             fallback_sql = get_sql_query_count()
-            
-            assert res_fallback.status_code == 200, f"Fallback failed: {res_fallback.status_code}"
-            
-            outage_report.append({
-                "name": ep["name"],
-                "fallback_time": fallback_time,
-                "fallback_sql": fallback_sql
-            })
-            print(f"  -> {ep['name']}: {fallback_time:.2f}ms (SQL queries: {fallback_sql}) [FALLBACK SUCCESS]")
+
+            assert (
+                res_fallback.status_code == 200
+            ), f"Fallback failed: {res_fallback.status_code}"
+
+            outage_report.append(
+                {
+                    "name": ep["name"],
+                    "fallback_time": fallback_time,
+                    "fallback_sql": fallback_sql,
+                }
+            )
+            print(
+                f"  -> {ep['name']}: {fallback_time:.2f}ms (SQL queries: {fallback_sql}) [FALLBACK SUCCESS]"
+            )
 
     # Redis info memory
     redis_mem = "N/A"
@@ -203,20 +220,26 @@ def run_benchmarks():
     print("\n==========================================================")
     print("FINAL BENCHMARK PERFORMANCE REPORT")
     print("==========================================================\n")
-    
+
     print(f"Redis Used Memory: {redis_mem}\n")
-    
+
     # Markdown Table Output
-    print("| Endpoint | Cold Cache (ms) | SQL (Cold) | Warm Cache (ms) | SQL (Warm) | P95 (ms) | Speedup | Data Match |")
+    print(
+        "| Endpoint | Cold Cache (ms) | SQL (Cold) | Warm Cache (ms) | SQL (Warm) | P95 (ms) | Speedup | Data Match |"
+    )
     print("| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |")
     for r in report:
-        print(f"| {r['name']} | {r['cold_time']:.2f} | {r['cold_sql']} | {r['avg_warm']:.2f} | {r['warm_sql']} | {r['p95_warm']:.2f} | {r['speedup']:.1f}x | {r['data_match']} |")
-        
+        print(
+            f"| {r['name']} | {r['cold_time']:.2f} | {r['cold_sql']} | {r['avg_warm']:.2f} | {r['warm_sql']} | {r['p95_warm']:.2f} | {r['speedup']:.1f}x | {r['data_match']} |"
+        )
+
     print("\n### Redis Outage Fallback Metrics")
     print("| Endpoint | Fallback Time (ms) | Fallback SQL Queries | Status |")
     print("| :--- | :---: | :---: | :---: |")
     for o in outage_report:
-        print(f"| {o['name']} | {o['fallback_time']:.2f} | {o['fallback_sql']} | Bypassed / UP |")
+        print(
+            f"| {o['name']} | {o['fallback_time']:.2f} | {o['fallback_sql']} | Bypassed / UP |"
+        )
 
 
 if __name__ == "__main__":

@@ -4,12 +4,14 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 
+
 class APIVersionMiddleware(BaseHTTPMiddleware):
     """
     Middleware that validates API version prefixes.
     Intercepts paths matching /api/vX/... and returns a structured 404 error
     if the parsed version is not configured in settings.SUPPORTED_API_VERSIONS.
     """
+
     def __init__(self, app):
         super().__init__(app)
         # Matches /api/v followed by digits, optionally followed by / or end of string
@@ -28,7 +30,7 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
                     content={
                         "success": False,
                         "message": "Unsupported API Version",
-                        "supported_versions": list(supported)
-                    }
+                        "supported_versions": list(supported),
+                    },
                 )
         return await call_next(request)

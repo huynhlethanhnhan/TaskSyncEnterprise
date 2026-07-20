@@ -21,6 +21,7 @@ Fields provided:
   - user_agent     : User-Agent header value
   - duration_ms    : request duration in milliseconds (set post-response)
 """
+
 import contextvars
 from typing import Any
 
@@ -48,6 +49,7 @@ project_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 # ──────────────────────────────────────────────────────────────────────────────
 # Public helpers – set context values
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def set_correlation_id(value: str) -> contextvars.Token:
     return correlation_id_ctx.set(value)
@@ -80,6 +82,7 @@ def set_project_id(value: str | None) -> contextvars.Token:
 # Public helpers – read context values
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def get_correlation_id() -> str:
     return correlation_id_ctx.get()
 
@@ -93,6 +96,7 @@ def get_trace_id() -> str | None:
     # Optional OTel integration (no hard dependency)
     try:
         from opentelemetry import trace as otel_trace  # type: ignore[import]
+
         span = otel_trace.get_current_span()
         ctx = span.get_span_context()
         if ctx and ctx.is_valid:
@@ -109,6 +113,7 @@ def get_span_id() -> str | None:
     """
     try:
         from opentelemetry import trace as otel_trace  # type: ignore[import]
+
         span = otel_trace.get_current_span()
         ctx = span.get_span_context()
         if ctx and ctx.is_valid:
@@ -129,6 +134,7 @@ def get_project_id() -> str | None:
 # ──────────────────────────────────────────────────────────────────────────────
 # Aggregated context snapshot consumed by the formatter
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def get_log_context() -> dict[str, Any]:
     """

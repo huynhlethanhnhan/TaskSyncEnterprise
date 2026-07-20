@@ -4,6 +4,7 @@ import time
 from fastapi import BackgroundTasks
 from app.services.background_job_service import BackgroundJobService
 
+
 @pytest.mark.anyio
 async def test_background_job_success():
     executed = []
@@ -13,12 +14,12 @@ async def test_background_job_success():
 
     bg_tasks = BackgroundTasks()
     service = BackgroundJobService(bg_tasks)
-    
+
     service.enqueue(mock_task, "success_test")
-    
+
     # Verify the task was added to FastAPI BackgroundTasks
     assert len(bg_tasks.tasks) == 1
-    
+
     # Run the background tasks asynchronously
     await bg_tasks()
     assert "success_test" in executed
@@ -31,10 +32,10 @@ async def test_background_job_failure():
 
     bg_tasks = BackgroundTasks()
     service = BackgroundJobService(bg_tasks)
-    
+
     service.enqueue(failing_task)
     assert len(bg_tasks.tasks) == 1
-    
+
     # Execute and ensure it handles the error gracefully without raising
     try:
         await bg_tasks()
@@ -51,9 +52,9 @@ def test_background_job_threadpool_fallback():
 
     # Instantiate without FastAPI BackgroundTasks (fallback to ThreadPoolExecutor)
     service = BackgroundJobService(None)
-    
+
     service.enqueue(fallback_task, "threadpool_test")
-    
+
     # Allow small window for thread to execute
     time.sleep(0.3)
     assert "threadpool_test" in executed

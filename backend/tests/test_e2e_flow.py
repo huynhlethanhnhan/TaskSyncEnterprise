@@ -7,13 +7,14 @@ from app.models.task_attachment import TaskAttachment
 from app.core.security import get_password_hash
 from app.core.constants import ROLE_ADMIN, ROLE_EMPLOYEE
 
+
 def test_complete_e2e_flow(client, db):
     print("\n--- E2E FLOW START ---")
-    
+
     # 1. SETUP: Create Admin and Employee users
     admin_email = "admin_e2e@example.com"
     emp_email = "worker_e2e@example.com"
-    
+
     admin_user = Employee(
         employee_code="EMP_ADM_E2E",
         full_name="E2E Admin",
@@ -23,7 +24,7 @@ def test_complete_e2e_flow(client, db):
         is_active=True,
         is_deleted=False,
         is_first_login=False,
-        login_count=0
+        login_count=0,
     )
     emp_user = Employee(
         employee_code="EMP_WRK_E2E",
@@ -34,12 +35,12 @@ def test_complete_e2e_flow(client, db):
         is_active=True,
         is_deleted=False,
         is_first_login=False,
-        login_count=0
+        login_count=0,
     )
     db.add(admin_user)
     db.add(emp_user)
     db.commit()
-    
+
     # Create test project
     project = Project(
         name="E2E Test Project",
@@ -47,15 +48,14 @@ def test_complete_e2e_flow(client, db):
         status="Planning",
         priority="Medium",
         progress_percent=0.0,
-        is_deleted=False
+        is_deleted=False,
     )
     db.add(project)
     db.commit()
 
     # 2. LOGIN: Admin signs in to obtain access token
     response = client.post(
-        "/api/v1/auth/login",
-        data={"username": admin_email, "password": "adminpass"}
+        "/api/v1/auth/login", data={"username": admin_email, "password": "adminpass"}
     )
     assert response.status_code == 200
     admin_token = response.json()["access_token"]
@@ -71,9 +71,9 @@ def test_complete_e2e_flow(client, db):
             "description": "Verify complete system flow",
             "priority": "High",
             "status": "To Do",
-            "story_points": 3
+            "story_points": 3,
         },
-        headers=admin_headers
+        headers=admin_headers,
     )
     assert task_res.status_code == 200
     task_id = task_res.json()["id"]
@@ -87,8 +87,7 @@ def test_complete_e2e_flow(client, db):
 
     # 5. ATTACH FILE: Employee logs in and uploads an attachment
     emp_login_res = client.post(
-        "/api/v1/auth/login",
-        data={"username": emp_email, "password": "workerpass"}
+        "/api/v1/auth/login", data={"username": emp_email, "password": "workerpass"}
     )
     assert emp_login_res.status_code == 200
     emp_token = emp_login_res.json()["access_token"]
@@ -96,13 +95,14 @@ def test_complete_e2e_flow(client, db):
 
     # Mock file upload
     import io
+
     file_content = b"E2E Verification File Content"
     file_tuple = ("test_doc.txt", io.BytesIO(file_content), "text/plain")
-    
+
     upload_res = client.post(
         f"/api/v1/tasks/{task_id}/attachments",
         files={"file": file_tuple},
-        headers=emp_headers
+        headers=emp_headers,
     )
     assert upload_res.status_code == 200
     assert upload_res.json()["success"] is True

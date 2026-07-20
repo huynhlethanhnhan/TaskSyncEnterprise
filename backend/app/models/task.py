@@ -8,14 +8,10 @@ from sqlalchemy import (
     Text,
     Numeric,
     Boolean,
-    text
+    text,
 )
 
-from sqlalchemy.orm import (
-    Mapped,
-    mapped_column,
-    relationship
-)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -25,77 +21,49 @@ class Task(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    project_id: Mapped[int] = mapped_column(
-        ForeignKey("projects.id")
-    )
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
 
-    title: Mapped[str] = mapped_column(
-        String(200)
-    )
+    title: Mapped[str] = mapped_column(String(200))
 
-    description: Mapped[str | None] = mapped_column(
-        Text
-    )
+    description: Mapped[str | None] = mapped_column(Text)
 
-    priority: Mapped[str] = mapped_column(
-        String(20),
-        server_default=text("N'Medium'")
-    )
+    priority: Mapped[str] = mapped_column(String(20), server_default=text("N'Medium'"))
 
-    status: Mapped[str] = mapped_column(
-        String(30),
-        server_default=text("N'To Do'")
-    )
+    status: Mapped[str] = mapped_column(String(30), server_default=text("N'To Do'"))
 
-    story_points: Mapped[int] = mapped_column(
-        Integer,
-        server_default=text("0")
-    )
+    story_points: Mapped[int] = mapped_column(Integer, server_default=text("0"))
 
     progress_percent: Mapped[float] = mapped_column(
-        Numeric(5, 2),
-        server_default=text("0")
+        Numeric(5, 2), server_default=text("0")
     )
 
     deadline: Mapped[datetime | None]
 
-    created_by: Mapped[int | None] = mapped_column(
-        ForeignKey("employees.id")
-    )
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("employees.id"))
 
-    is_deleted: Mapped[bool] = mapped_column(
-        Boolean,
-        server_default=text("0")
-    )
+    is_deleted: Mapped[bool] = mapped_column(Boolean, server_default=text("0"))
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        server_default=text("SYSUTCDATETIME()")
+        DateTime, server_default=text("SYSUTCDATETIME()")
     )
 
     assignments = relationship(
-        "TaskAssignment",
-        back_populates="task",
-        cascade="all, delete-orphan"
+        "TaskAssignment", back_populates="task", cascade="all, delete-orphan"
     )
 
     comments = relationship(
-        "TaskComment",
-        back_populates="task",
-        cascade="all, delete-orphan"
+        "TaskComment", back_populates="task", cascade="all, delete-orphan"
     )
 
     checklists = relationship(
-        "TaskChecklist",
-        back_populates="task",
-        cascade="all, delete-orphan"
+        "TaskChecklist", back_populates="task", cascade="all, delete-orphan"
     )
 
     attachments = relationship(
         "TaskAttachment",
         back_populates="task",
         cascade="all, delete-orphan",
-        lazy="selectin"
+        lazy="selectin",
     )
 
     @property

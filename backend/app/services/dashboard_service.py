@@ -24,7 +24,7 @@ class DashboardService:
         return cache_manager.get_or_set(
             key=key,
             creator_fn=lambda: self._get_overview_db(db),
-            ttl=settings.CACHE_TTL_DASHBOARD
+            ttl=settings.CACHE_TTL_DASHBOARD,
         )
 
     def _get_overview_db(self, db: Session) -> dict:
@@ -34,25 +34,72 @@ class DashboardService:
             now_val = func.sysutcdatetime()
         else:
             from datetime import datetime, timezone
+
             now_val = datetime.now(timezone.utc)
 
         # 1. Define individual count queries as scalar subqueries
-        total_employees_q = select(func.count(Employee.id)).where(Employee.is_deleted == False).scalar_subquery()
-        active_employees_q = select(func.count(Employee.id)).where(Employee.is_deleted == False, Employee.is_active == True).scalar_subquery()
-        inactive_employees_q = select(func.count(Employee.id)).where(Employee.is_deleted == False, Employee.is_active == False).scalar_subquery()
+        total_employees_q = (
+            select(func.count(Employee.id))
+            .where(Employee.is_deleted == False)
+            .scalar_subquery()
+        )
+        active_employees_q = (
+            select(func.count(Employee.id))
+            .where(Employee.is_deleted == False, Employee.is_active == True)
+            .scalar_subquery()
+        )
+        inactive_employees_q = (
+            select(func.count(Employee.id))
+            .where(Employee.is_deleted == False, Employee.is_active == False)
+            .scalar_subquery()
+        )
 
-        total_departments_q = select(func.count(Department.id)).where(Department.is_active == True).scalar_subquery()
+        total_departments_q = (
+            select(func.count(Department.id))
+            .where(Department.is_active == True)
+            .scalar_subquery()
+        )
 
-        total_projects_q = select(func.count(Project.id)).where(Project.is_deleted == False).scalar_subquery()
-        active_projects_q = select(func.count(Project.id)).where(Project.is_deleted == False, Project.status == "Active").scalar_subquery()
+        total_projects_q = (
+            select(func.count(Project.id))
+            .where(Project.is_deleted == False)
+            .scalar_subquery()
+        )
+        active_projects_q = (
+            select(func.count(Project.id))
+            .where(Project.is_deleted == False, Project.status == "Active")
+            .scalar_subquery()
+        )
 
-        total_tasks_q = select(func.count(Task.id)).where(Task.is_deleted == False).scalar_subquery()
-        completed_tasks_q = select(func.count(Task.id)).where(Task.is_deleted == False, Task.status == "Done").scalar_subquery()
-        pending_tasks_q = select(func.count(Task.id)).where(Task.is_deleted == False, Task.status != "Done").scalar_subquery()
-        overdue_tasks_q = select(func.count(Task.id)).where(Task.is_deleted == False, Task.status != "Done", Task.deadline < now_val).scalar_subquery()
+        total_tasks_q = (
+            select(func.count(Task.id))
+            .where(Task.is_deleted == False)
+            .scalar_subquery()
+        )
+        completed_tasks_q = (
+            select(func.count(Task.id))
+            .where(Task.is_deleted == False, Task.status == "Done")
+            .scalar_subquery()
+        )
+        pending_tasks_q = (
+            select(func.count(Task.id))
+            .where(Task.is_deleted == False, Task.status != "Done")
+            .scalar_subquery()
+        )
+        overdue_tasks_q = (
+            select(func.count(Task.id))
+            .where(
+                Task.is_deleted == False, Task.status != "Done", Task.deadline < now_val
+            )
+            .scalar_subquery()
+        )
 
         total_vacations_q = select(func.count(Vacation.id)).scalar_subquery()
-        pending_vacations_q = select(func.count(Vacation.id)).where(Vacation.status == "Pending").scalar_subquery()
+        pending_vacations_q = (
+            select(func.count(Vacation.id))
+            .where(Vacation.status == "Pending")
+            .scalar_subquery()
+        )
 
         # 2. Combine subqueries in a single SELECT
         stmt = select(
@@ -67,16 +114,24 @@ class DashboardService:
             pending_tasks_q.label("pending_tasks"),
             overdue_tasks_q.label("overdue_tasks"),
             total_vacations_q.label("vacation_requests"),
-            pending_vacations_q.label("pending_vacation_requests")
+            pending_vacations_q.label("pending_vacation_requests"),
         )
 
         row = db.execute(stmt).first()
         if not row:
             return {
-                "total_employees": 0, "active_employees": 0, "inactive_employees": 0,
-                "total_departments": 0, "total_projects": 0, "active_projects": 0,
-                "total_tasks": 0, "completed_tasks": 0, "pending_tasks": 0, "overdue_tasks": 0,
-                "vacation_requests": 0, "pending_vacation_requests": 0
+                "total_employees": 0,
+                "active_employees": 0,
+                "inactive_employees": 0,
+                "total_departments": 0,
+                "total_projects": 0,
+                "active_projects": 0,
+                "total_tasks": 0,
+                "completed_tasks": 0,
+                "pending_tasks": 0,
+                "overdue_tasks": 0,
+                "vacation_requests": 0,
+                "pending_vacation_requests": 0,
             }
 
         return dict(row._mapping)
@@ -90,7 +145,7 @@ class DashboardService:
         return cache_manager.get_or_set(
             key=key,
             creator_fn=lambda: self._get_detailed_analytics_db(db),
-            ttl=settings.CACHE_TTL_DASHBOARD
+            ttl=settings.CACHE_TTL_DASHBOARD,
         )
 
     def _get_detailed_analytics_db(self, db: Session) -> dict:
@@ -117,7 +172,10 @@ class DashboardService:
 
         # 3. Fetch Employees count grouped by Department
         dept_stmt = (
-            select(Department.name.label("department_name"), func.count(Employee.id).label("employee_count"))
+            select(
+                Department.name.label("department_name"),
+                func.count(Employee.id).label("employee_count"),
+            )
             .join(Employee, Department.id == Employee.department_id)
             .where(Employee.is_deleted == False, Department.is_active == True)
             .group_by(Department.name)
@@ -132,7 +190,7 @@ class DashboardService:
             "overview": overview,
             "tasks_by_status": tasks_by_status,
             "projects_by_status": projects_by_status,
-            "employees_by_department": employees_by_department
+            "employees_by_department": employees_by_department,
         }
 
 

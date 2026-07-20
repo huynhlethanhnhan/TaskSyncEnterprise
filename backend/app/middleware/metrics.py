@@ -10,9 +10,10 @@ from app.config import settings
 
 class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
     """
-    HTTP Middleware that collects HTTP request count, duration, 
+    HTTP Middleware that collects HTTP request count, duration,
     and responses status codes. Integrates with PrometheusMetrics.
     """
+
     async def dispatch(self, request: Request, call_next) -> Response:
         if not settings.ENABLE_METRICS:
             return await call_next(request)
@@ -48,7 +49,7 @@ class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
             return response
         except Exception as e:
             duration = time.perf_counter() - start_time
-            
+
             # Record failed request metrics
             prometheus_metrics.http_requests_total.labels(
                 method=method, path=path, status_code="500"
@@ -61,4 +62,6 @@ class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
             ).observe(duration)
             raise e
         finally:
-            prometheus_metrics.requests_in_progress.labels(method=method, path=path).dec()
+            prometheus_metrics.requests_in_progress.labels(
+                method=method, path=path
+            ).dec()

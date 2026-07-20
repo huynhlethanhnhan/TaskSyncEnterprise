@@ -17,6 +17,7 @@ properly nested:
     redis.execute_command (OTel, from RedisInstrumentor)
         └─ redis.SET (OTel, from InstrumentedRedis)   ← enriched with extra attributes
 """
+
 import time
 import redis
 from app.monitoring.prometheus_metrics import prometheus_metrics
@@ -44,7 +45,9 @@ class InstrumentedRedis(redis.Redis):
             result = super().execute_command(*args, **options)
             duration = time.perf_counter() - start_time
 
-            prometheus_metrics.redis_query_duration.labels(command=command).observe(duration)
+            prometheus_metrics.redis_query_duration.labels(command=command).observe(
+                duration
+            )
 
             if otel_span is not None:
                 self._end_otel_span(otel_span, success=True, duration=duration)
@@ -58,10 +61,14 @@ class InstrumentedRedis(redis.Redis):
             prometheus_metrics.redis_failures_total.labels(
                 command=command, error_type=err_type
             ).inc()
-            prometheus_metrics.redis_query_duration.labels(command=command).observe(duration)
+            prometheus_metrics.redis_query_duration.labels(command=command).observe(
+                duration
+            )
 
             if otel_span is not None:
-                self._end_otel_span(otel_span, success=False, duration=duration, exc=exc)
+                self._end_otel_span(
+                    otel_span, success=False, duration=duration, exc=exc
+                )
 
             raise
 
@@ -77,6 +84,7 @@ class InstrumentedRedis(redis.Redis):
         """
         try:
             from app.config import settings
+
             if not settings.ENABLE_TRACING:
                 return None
 
@@ -100,7 +108,9 @@ class InstrumentedRedis(redis.Redis):
             return None
 
     @staticmethod
-    def _end_otel_span(span, success: bool, duration: float, exc: Exception | None = None) -> None:
+    def _end_otel_span(
+        span, success: bool, duration: float, exc: Exception | None = None
+    ) -> None:
         """Finish an OTel span, marking error status if needed."""
         try:
             from opentelemetry.trace import StatusCode

@@ -44,7 +44,7 @@ def test_websocket_valid_flow(client, db):
         is_active=True,
         is_deleted=False,
         is_first_login=False,
-        login_count=0
+        login_count=0,
     )
     db.add(emp)
     db.commit()
@@ -52,8 +52,7 @@ def test_websocket_valid_flow(client, db):
 
     # Login to acquire token
     login_res = client.post(
-        "/api/v1/auth/login",
-        data={"username": emp_email, "password": "password123"}
+        "/api/v1/auth/login", data={"username": emp_email, "password": "password123"}
     )
     assert login_res.status_code == 200
     token = login_res.json()["access_token"]
@@ -63,7 +62,7 @@ def test_websocket_valid_flow(client, db):
         employee_id=emp.id,
         notification_type="SYSTEM",
         channel="WEBSOCKET",
-        enabled=True
+        enabled=True,
     )
     db.add(pref)
     db.commit()
@@ -79,7 +78,7 @@ def test_websocket_valid_flow(client, db):
         event = notification_service.create_event(
             event_type=NotificationType.SYSTEM,
             recipient_ids=[emp.id],
-            payload={"subject": "WS Push", "body": "This is sent over websocket!"}
+            payload={"subject": "WS Push", "body": "This is sent over websocket!"},
         )
         notification_service.trigger_event(db, event)
 
@@ -100,7 +99,7 @@ def test_websocket_private_channels(client, db):
         email=u1_email,
         password_hash=get_password_hash("pass"),
         role_id=ROLE_EMPLOYEE,
-        is_active=True
+        is_active=True,
     )
     u2_email = "u2_ws@example.com"
     u2 = Employee(
@@ -109,17 +108,23 @@ def test_websocket_private_channels(client, db):
         email=u2_email,
         password_hash=get_password_hash("pass"),
         role_id=ROLE_EMPLOYEE,
-        is_active=True
+        is_active=True,
     )
     db.add_all([u1, u2])
     db.commit()
 
     # Get tokens
-    token1 = client.post("/api/v1/auth/login", data={"username": u1_email, "password": "pass"}).json()["access_token"]
-    token2 = client.post("/api/v1/auth/login", data={"username": u2_email, "password": "pass"}).json()["access_token"]
+    token1 = client.post(
+        "/api/v1/auth/login", data={"username": u1_email, "password": "pass"}
+    ).json()["access_token"]
+    token2 = client.post(
+        "/api/v1/auth/login", data={"username": u2_email, "password": "pass"}
+    ).json()["access_token"]
 
     # Set WEBSOCKET preference for User 1
-    p1 = NotificationPreference(employee_id=u1.id, notification_type="SYSTEM", channel="WEBSOCKET", enabled=True)
+    p1 = NotificationPreference(
+        employee_id=u1.id, notification_type="SYSTEM", channel="WEBSOCKET", enabled=True
+    )
     db.add(p1)
     db.commit()
 
@@ -130,7 +135,7 @@ def test_websocket_private_channels(client, db):
             event = notification_service.create_event(
                 event_type=NotificationType.SYSTEM,
                 recipient_ids=[u1.id],
-                payload={"subject": "Private Event", "body": "For User 1 Only"}
+                payload={"subject": "Private Event", "body": "For User 1 Only"},
             )
             notification_service.trigger_event(db, event)
 
@@ -152,7 +157,7 @@ def test_email_retry_poller(db):
         email="poller@example.com",
         password_hash=get_password_hash("pass"),
         role_id=ROLE_EMPLOYEE,
-        is_active=True
+        is_active=True,
     )
     db.add(emp)
     db.commit()
@@ -164,13 +169,15 @@ def test_email_retry_poller(db):
         title="Retry Subject",
         message="Retry Body",
         channel="EMAIL",
-        status="FAILED"
+        status="FAILED",
     )
     db.add(failed_notif)
     db.commit()
 
     # Patch email_service to verify the send call is executed
-    with patch("app.services.email.service.EmailService.send_notification_email") as mock_send:
+    with patch(
+        "app.services.email.service.EmailService.send_notification_email"
+    ) as mock_send:
         mock_send.return_value = True
 
         retry_failed_emails(db)

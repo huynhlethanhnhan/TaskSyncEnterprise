@@ -4,6 +4,7 @@ Centralized Logger Facade.
 Re-exports the setup_logging function and standard loggers from the
 new app.logging.logger module to ensure 100% backward compatibility.
 """
+
 from app.logging.logger import (
     setup_logging,
     app_logger,
@@ -11,7 +12,7 @@ from app.logging.logger import (
     audit_logger,
     access_logger,
     security_logger,
-    db_logger
+    db_logger,
 )
 from app.core.request_context import request_id_ctx
 
@@ -24,5 +25,5 @@ __all__ = [
     "access_logger",
     "security_logger",
     "db_logger",
-    "request_id_ctx"
+    "request_id_ctx",
 ]

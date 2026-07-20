@@ -15,18 +15,18 @@ def get_metrics(response: Response, db: Session = Depends(get_db)):
     """
     if not settings.ENABLE_METRICS:
         from fastapi import HTTPException
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Metrics collection is disabled."
+            detail="Metrics collection is disabled.",
         )
 
     # Update custom business metrics from database
     from app.monitoring.prometheus_metrics import prometheus_metrics
+
     prometheus_metrics.update_business_metrics(db)
 
     # Generate latest metrics output
     from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-    return Response(
-        content=generate_latest(),
-        media_type=CONTENT_TYPE_LATEST
-    )
+
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

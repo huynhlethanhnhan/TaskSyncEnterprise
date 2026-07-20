@@ -14,15 +14,19 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 @pytest.fixture(scope="function")
 def db():
     from sqlalchemy import text
     from sqlalchemy.sql.schema import DefaultClause
+
     # Intercept and adapt metadata dynamically for SQLite
     for table in Base.metadata.tables.values():
         table.schema = None
         for column in table.columns:
-            if column.server_default is not None and isinstance(column.server_default, DefaultClause):
+            if column.server_default is not None and isinstance(
+                column.server_default, DefaultClause
+            ):
                 arg = column.server_default.arg
                 default_val = arg.text if hasattr(arg, "text") else str(arg)
                 if "GETDATE()" in default_val or "SYSUTCDATETIME()" in default_val:
@@ -37,6 +41,7 @@ def db():
         db.close()
         Base.metadata.drop_all(bind=engine)
 
+
 @pytest.fixture(scope="function")
 def client(db):
     def override_get_db():
@@ -44,6 +49,7 @@ def client(db):
             yield db
         finally:
             pass
+
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c
@@ -53,7 +59,11 @@ def client(db):
 @pytest.fixture(autouse=True)
 def mock_smtp_client():
     from unittest.mock import patch
-    with patch("app.services.email.smtp_client.SMTPClient.send", return_value="SMTP delivery successful") as mock:
+
+    with patch(
+        "app.services.email.smtp_client.SMTPClient.send",
+        return_value="SMTP delivery successful",
+    ) as mock:
         yield mock
 
 
@@ -65,12 +75,15 @@ def mock_redis_client(request):
         return
 
     from unittest.mock import patch, MagicMock, PropertyMock
+
     mock_client = MagicMock()
     mock_client.get.return_value = None
     mock_client.set.return_value = True
     mock_client.setex.return_value = True
     mock_client.ping.return_value = True
-    
-    with patch("app.cache.redis_client.RedisClient.client", new_callable=PropertyMock) as mock_prop:
+
+    with patch(
+        "app.cache.redis_client.RedisClient.client", new_callable=PropertyMock
+    ) as mock_prop:
         mock_prop.return_value = mock_client
         yield mock_client

@@ -11,10 +11,7 @@ class SearchEngine:
 
     @staticmethod
     def search(
-        query: Query,
-        model: Type[ModelT],
-        keyword: str | None,
-        search_fields: List[str]
+        query: Query, model: Type[ModelT], keyword: str | None, search_fields: List[str]
     ) -> Query:
         """
         Applies a case-insensitive, partial-matching search query on the specified model fields.
@@ -29,8 +26,8 @@ class SearchEngine:
                 field_attr = getattr(model, field_name)
                 if hasattr(field_attr, "ilike"):
                     search_filters.append(field_attr.ilike(f"%{keyword}%"))
-        
+
         if search_filters:
             query = query.filter(or_(*search_filters))
-            
+
         return query

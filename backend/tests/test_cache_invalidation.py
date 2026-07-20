@@ -8,6 +8,7 @@ from app.cache import CacheInvalidator, cache_service, cache_keys
 def reset_redis_singleton():
     from app.cache.redis_client import RedisClient
     from app.cache import cache_service
+
     RedisClient._instance = None
     if hasattr(cache_service, "client_manager"):
         cache_service.client_manager._client = None
@@ -37,10 +38,7 @@ def mock_redis():
 def test_pattern_deletion(mock_redis):
     """Verify that SCAN-based pattern deletion is triggered and uses SCAN instead of KEYS."""
     # Override scan return value for this test
-    mock_redis.scan.side_effect = [
-        (1, ["k1", "k2"]),
-        (0, ["k3"])
-    ]
+    mock_redis.scan.side_effect = [(1, ["k1", "k2"]), (0, ["k3"])]
 
     success = cache_service.clear_pattern("test:*")
     assert success is True
@@ -73,9 +71,15 @@ def test_employee_update_invalidation(mock_redis):
     mock_redis.delete.assert_any_call(cache_keys.get_employee_key(42))
 
     # 2. Invalidate lists and search patterns via SCAN
-    mock_redis.scan.assert_any_call(cursor=0, match=cache_keys.get_employee_list_pattern(), count=100)
-    mock_redis.scan.assert_any_call(cursor=0, match=cache_keys.get_employee_search_pattern(), count=100)
-    mock_redis.scan.assert_any_call(cursor=0, match=cache_keys.get_department_list_pattern(), count=100)
+    mock_redis.scan.assert_any_call(
+        cursor=0, match=cache_keys.get_employee_list_pattern(), count=100
+    )
+    mock_redis.scan.assert_any_call(
+        cursor=0, match=cache_keys.get_employee_search_pattern(), count=100
+    )
+    mock_redis.scan.assert_any_call(
+        cursor=0, match=cache_keys.get_department_list_pattern(), count=100
+    )
 
     # 3. Invalidate dashboard
     mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
@@ -90,7 +94,9 @@ def test_department_delete_invalidation(mock_redis):
     mock_redis.delete.assert_any_call(cache_keys.get_department_key(10))
 
     # Invalidate list patterns
-    mock_redis.scan.assert_any_call(cursor=0, match=cache_keys.get_department_list_pattern(), count=100)
+    mock_redis.scan.assert_any_call(
+        cursor=0, match=cache_keys.get_department_list_pattern(), count=100
+    )
 
     # Invalidate dashboard
     mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
@@ -101,7 +107,9 @@ def test_project_create_invalidation(mock_redis):
     CacheInvalidator.invalidate_project(project_id=None)
 
     # Invalidate lists pattern
-    mock_redis.scan.assert_any_call(cursor=0, match=cache_keys.get_project_list_pattern(), count=100)
+    mock_redis.scan.assert_any_call(
+        cursor=0, match=cache_keys.get_project_list_pattern(), count=100
+    )
 
     # Invalidate dashboard
     mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
@@ -115,15 +123,21 @@ def test_task_update_invalidation(mock_redis):
     mock_redis.delete.assert_any_call(cache_keys.get_task_key(101))
 
     # Invalidate task list pattern
-    mock_redis.scan.assert_any_call(cursor=0, match=cache_keys.get_task_list_pattern(), count=100)
+    mock_redis.scan.assert_any_call(
+        cursor=0, match=cache_keys.get_task_list_pattern(), count=100
+    )
 
     # Invalidate associated project
     mock_redis.delete.assert_any_call(cache_keys.get_project_key(7))
-    mock_redis.scan.assert_any_call(cursor=0, match=cache_keys.get_project_list_pattern(), count=100)
+    mock_redis.scan.assert_any_call(
+        cursor=0, match=cache_keys.get_project_list_pattern(), count=100
+    )
 
     # Invalidate associated employee
     mock_redis.delete.assert_any_call(cache_keys.get_employee_key(15))
-    mock_redis.scan.assert_any_call(cursor=0, match=cache_keys.get_employee_list_pattern(), count=100)
+    mock_redis.scan.assert_any_call(
+        cursor=0, match=cache_keys.get_employee_list_pattern(), count=100
+    )
 
     # Invalidate dashboard
     mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
@@ -139,7 +153,9 @@ def test_redis_unavailable():
             CacheInvalidator.invalidate_employee(employee_id=99)
             CacheInvalidator.invalidate_task(task_id=10)
         except Exception as e:
-            pytest.fail(f"CacheInvalidator failed to fail-silently. Threw exception: {e}")
+            pytest.fail(
+                f"CacheInvalidator failed to fail-silently. Threw exception: {e}"
+            )
 
 
 def test_bulk_invalidation(mock_redis):

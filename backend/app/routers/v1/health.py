@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.health.service import health_service
-from app.health.models import HealthResponse, LivenessResponse, ReadinessResponse, DetailedHealthResponse
+from app.health.models import (
+    HealthResponse,
+    LivenessResponse,
+    ReadinessResponse,
+    DetailedHealthResponse,
+)
 
 router = APIRouter(prefix="/health", tags=["Health Checks"])
 
@@ -43,7 +48,9 @@ def readiness_probe(response: Response, db: Session = Depends(get_db)) -> dict:
     return report
 
 
-@router.get("/details", response_model=DetailedHealthResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/details", response_model=DetailedHealthResponse, status_code=status.HTTP_200_OK
+)
 def detailed_health_check(request: Request, response: Response) -> dict:
     """
     Detailed operational health status report for diagnostics and SRE dashboards.

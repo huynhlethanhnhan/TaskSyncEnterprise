@@ -35,6 +35,7 @@ except Exception as exc:
 async def lifespan(app: FastAPI):
     # Log successful startup metadata details
     from app.database import engine
+
     try:
         db_provider = engine.dialect.name
     except Exception:
@@ -47,19 +48,26 @@ async def lifespan(app: FastAPI):
     app_logger.info(f"OS Platform: {platform.platform()}")
     app_logger.info(f"Database Provider: {db_provider}")
     app_logger.info("Application startup validation check: Passed")
-    
+
     # Start the background email retry poller
-    from app.services.notification.poller import start_email_retry_poller, stop_email_retry_poller
+    from app.services.notification.poller import (
+        start_email_retry_poller,
+        stop_email_retry_poller,
+    )
+
     start_email_retry_poller()
-    
-    app_logger.info("TaskSyncEnterprise successfully started and ready to handle requests.")
+
+    app_logger.info(
+        "TaskSyncEnterprise successfully started and ready to handle requests."
+    )
     yield
-    
+
     # Stop the background email retry poller
     stop_email_retry_poller()
-    
+
     # Graceful shutdown event handling
     from app.lifecycle.shutdown import run_shutdown
+
     run_shutdown()
 
 
@@ -69,7 +77,9 @@ app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 try:
     instrument_app(app)
 except Exception as exc:
-    app_logger.warning(f"OpenTelemetry FastAPI instrumentation failed (non-fatal): {exc}")
+    app_logger.warning(
+        f"OpenTelemetry FastAPI instrumentation failed (non-fatal): {exc}"
+    )
 
 # Import governance middlewares
 from app.middleware.api_version import APIVersionMiddleware
@@ -87,10 +97,7 @@ app.add_middleware(LoggingMiddleware)
 app.add_middleware(PrometheusMetricsMiddleware)
 
 # Trusted Host checking to prevent Host Header spoofing
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=settings.ALLOWED_HOSTS
-)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
 
 # Standard OWASP response security headers and caching control
 app.add_middleware(SecurityHeadersMiddleware)
@@ -106,7 +113,11 @@ app.add_middleware(
 register_exception_handlers(app)
 
 uploads_dir = settings.UPLOAD_DIR_PATH
-app.mount(f"/{settings.STORAGE_UPLOAD_DIR}", StaticFiles(directory=str(uploads_dir)), name="uploads")
+app.mount(
+    f"/{settings.STORAGE_UPLOAD_DIR}",
+    StaticFiles(directory=str(uploads_dir)),
+    name="uploads",
+)
 
 # ----------------------------------------------------------------------
 # 🛣️ ĐĂNG KÝ DANH SÁCH ROUTERS
@@ -119,11 +130,14 @@ app.include_router(health.router)
 
 # Mount Prometheus metrics endpoint at root level
 from app.routers.metrics import router as metrics_router
+
 app.include_router(metrics_router)
 
 # Mount WebSockets at root level
 from app.routers.v1.notifications import ws_router
+
 app.include_router(ws_router)
+
 
 @app.get("/")
 def read_root(request: Request):
@@ -131,5 +145,5 @@ def read_root(request: Request):
     return {
         "success": True,
         "message": f"Chào mừng đến với {settings.APP_NAME} API!",
-        "docs_url": f"{base_url}/docs"
+        "docs_url": f"{base_url}/docs",
     }

@@ -38,9 +38,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(ProjectBase):
 
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     progress_percent: float

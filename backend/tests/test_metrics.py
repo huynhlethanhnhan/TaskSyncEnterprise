@@ -37,7 +37,7 @@ def test_http_metrics_increment(client):
 
     # Verify HTTP request counter includes GET /health
     assert 'path="/health"' in content
-    assert 'http_request_duration_seconds_bucket' in content
+    assert "http_request_duration_seconds_bucket" in content
 
 
 def test_business_metrics_exposed(client):

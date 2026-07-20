@@ -1,14 +1,6 @@
-from sqlalchemy import (
-    ForeignKey,
-    Boolean,
-    text
-)
+from sqlalchemy import ForeignKey, Boolean, text
 
-from sqlalchemy.orm import (
-    Mapped,
-    mapped_column,
-    relationship
-)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -18,18 +10,10 @@ class TaskChecklist(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    task_id: Mapped[int] = mapped_column(
-        ForeignKey("tasks.id")
-    )
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
 
     title: Mapped[str]
 
-    is_completed: Mapped[bool] = mapped_column(
-        Boolean,
-        server_default=text("0")
-    )
+    is_completed: Mapped[bool] = mapped_column(Boolean, server_default=text("0"))
 
-    task = relationship(
-        "Task",
-        back_populates="checklists"
-    )
+    task = relationship("Task", back_populates="checklists")

@@ -43,6 +43,7 @@ class HealthService:
         Runs a lightweight SELECT 1 query against the database using SQLAlchemy session.
         Executes query inside a ThreadPoolExecutor to handle database hangs and enforce timeout.
         """
+
         def run_query():
             # SQLAlchemy connection execution
             db.execute(text("SELECT 1"))
@@ -66,11 +67,15 @@ class HealthService:
         Sends PING to Redis client and verifies if the reply is PONG.
         """
         from app.cache.redis_client import RedisClient
+
         try:
             client = RedisClient().client
             # Execute standard PING command
             response = client.execute_command("PING")
-            if response in ("PONG", b"PONG", True) or type(response).__name__ in ("MagicMock", "Mock"):
+            if response in ("PONG", b"PONG", True) or type(response).__name__ in (
+                "MagicMock",
+                "Mock",
+            ):
                 return True, "connected"
             error_logger.warning(f"Unexpected Redis PING response: {response}")
             return False, "failed"
@@ -94,7 +99,7 @@ class HealthService:
     def get_readiness(cls, db: Session) -> tuple[int, dict]:
         """Runs readiness verification queries against database and Redis."""
         app_logger.info("Health Check Requested")
-        
+
         db_ok, db_status = cls.check_database(db)
         redis_ok, redis_status = cls.check_redis()
 
@@ -104,14 +109,14 @@ class HealthService:
         report = {
             "status": "ready" if overall_ok else "unavailable",
             "database": db_status,
-            "redis": redis_status
+            "redis": redis_status,
         }
 
         if not overall_ok:
             error_logger.warning(
                 f"Readiness check failed - database: {db_status}, redis: {redis_status}"
             )
-        
+
         return status_code, report
 
     @classmethod
@@ -120,14 +125,17 @@ class HealthService:
         # Database pool metrics
         from app.database import engine
         from app.database.query_monitor import get_pool_status
+
         pool_stats = get_pool_status(engine)
 
         # General request performance metrics
         from app.monitoring.metrics import metrics
+
         metrics_report = metrics.get_metrics_report()
 
         # Gather checks status
         from app.database import SessionLocal
+
         db = SessionLocal()
         try:
             db_ok, db_msg = cls.check_database(db)
@@ -138,6 +146,7 @@ class HealthService:
 
         # Temporary check for configuration and storage for detailed health report
         from app.health.checks import StorageCheck, ConfigurationCheck
+
         storage_ok, storage_msg = StorageCheck.run()
         config_ok, config_msg = ConfigurationCheck.run()
 
@@ -150,51 +159,51 @@ class HealthService:
             "application": {
                 "name": settings.APP_NAME,
                 "status": "UP",
-                "routes_registered": routes_count
+                "routes_registered": routes_count,
             },
             "database": {
                 "status": "UP" if db_ok else "DOWN",
                 "provider": "mssql+pymssql",
                 "message": "connected" if db_ok else db_msg,
-                "pool": pool_stats
+                "pool": pool_stats,
             },
             "storage": {
                 "status": "UP" if storage_ok else "DOWN",
                 "upload_dir": settings.STORAGE_UPLOAD_DIR,
-                "message": storage_msg
+                "message": storage_msg,
             },
             "configuration": {
                 "status": "UP" if config_ok else "DOWN",
-                "message": config_msg
+                "message": config_msg,
             },
             "redis": {
                 "status": "UP" if redis_ok else "DOWN",
-                "message": "connected" if redis_ok else redis_msg
+                "message": "connected" if redis_ok else redis_msg,
             },
             "environment": {
                 "name": settings.ENVIRONMENT,
                 "platform": platform.platform(),
-                "python_version": platform.python_version()
+                "python_version": platform.python_version(),
             },
             "version": "2.0.0",
-            "build_info": {
-                "release": "2.0.0",
-                "compiler": platform.python_compiler()
-            },
-            "startup_time": datetime.fromtimestamp(STARTUP_TIMESTAMP, tz=timezone.utc).isoformat(),
+            "build_info": {"release": "2.0.0", "compiler": platform.python_compiler()},
+            "startup_time": datetime.fromtimestamp(
+                STARTUP_TIMESTAMP, tz=timezone.utc
+            ).isoformat(),
             "current_uptime": uptime_str,
-            
             # Legacy fields to preserve backward compatibility
             "application_name": settings.APP_NAME,
             "server_uptime": uptime_str,
             "uptime_seconds": round(uptime_seconds, 2),
             "metrics": metrics_report,
             "diagnostics": {
-                "startup_timestamp": datetime.fromtimestamp(STARTUP_TIMESTAMP, tz=timezone.utc).isoformat(),
+                "startup_timestamp": datetime.fromtimestamp(
+                    STARTUP_TIMESTAMP, tz=timezone.utc
+                ).isoformat(),
                 "configured_api_prefix": settings.API_V1_STR,
                 "registered_routes_count": routes_count,
-                "platform_details": platform.platform()
-            }
+                "platform_details": platform.platform(),
+            },
         }
 
 

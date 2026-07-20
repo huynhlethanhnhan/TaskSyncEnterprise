@@ -6,6 +6,7 @@ from app.config import settings
 
 class SystemValidator:
     """Validator class executing health and config parameter assertions."""
+
     @staticmethod
     def validate_configuration() -> bool:
         """Verifies that crucial environment credentials are loaded."""
@@ -34,7 +35,7 @@ class SystemValidator:
             paths = [
                 settings.UPLOAD_DIR_PATH,
                 settings.AVATAR_DIR_PATH,
-                settings.ATTACHMENT_DIR_PATH
+                settings.ATTACHMENT_DIR_PATH,
             ]
             for p in paths:
                 p.mkdir(parents=True, exist_ok=True)
@@ -49,6 +50,7 @@ class SystemValidator:
     def validate_database() -> bool:
         """Verifies database connectivity by executing a quick query statement."""
         from app.database import engine
+
         try:
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))

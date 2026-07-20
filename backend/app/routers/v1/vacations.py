@@ -31,8 +31,7 @@ def _format_vacation(vacation: Vacation) -> dict:
 
 @router.get("", response_model=list[VacationResponse])
 def list_vacations(
-    current_user: Employee = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: Employee = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     vacations = vacation_service.get_all_vacations(db, current_user)
     return [_format_vacation(vac) for vac in vacations]
@@ -42,7 +41,7 @@ def list_vacations(
 def get_vacation(
     vacation_id: int,
     current_user: Employee = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     vacation = vacation_service.get_vacation_by_id(db, vacation_id, current_user)
     return _format_vacation(vacation)
@@ -52,10 +51,11 @@ def get_vacation(
 def create_vacation(
     data: VacationCreate,
     current_user: Employee = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     vacation = vacation_service.create_vacation(db, data, current_user)
     from app.cache import CacheInvalidator
+
     CacheInvalidator.invalidate_dashboard()
     return _format_vacation(vacation)
 
@@ -65,10 +65,12 @@ def patch_vacation(
     vacation_id: int,
     data: VacationUpdate,
     current_user: Employee = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    vacation = vacation_service.update_vacation_status(db, vacation_id, data.status, current_user)
+    vacation = vacation_service.update_vacation_status(
+        db, vacation_id, data.status, current_user
+    )
     from app.cache import CacheInvalidator
+
     CacheInvalidator.invalidate_dashboard()
     return _format_vacation(vacation)
-

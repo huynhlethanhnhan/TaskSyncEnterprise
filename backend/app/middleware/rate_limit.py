@@ -9,12 +9,14 @@ from app.core.request_context import get_request_context
 
 logger = logging.getLogger("rate_limit")
 
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Redis-backed Sliding Window Log Rate Limiter Middleware.
     Maintains client request timestamps in a Redis Sorted Set (ZSET)
     to enforce rolling request thresholds.
     """
+
     def __init__(self, app):
         super().__init__(app)
         self.redis_client_mgr = RedisClient()
@@ -64,15 +66,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # Atomic sliding window updates using pipeline
             pipe = client.pipeline()
             pipe.zremrangebyscore(redis_key, "-inf", window_start)
-            
+
             # Add element first to include it in the count
             val_str = f"{current_time}_{time.time_ns()}"
             pipe.zadd(redis_key, {val_str: current_time})
-            
+
             # Count cardinality of ZSET after adding
             pipe.zcard(redis_key)
             pipe.expire(redis_key, window)
-            
+
             results = pipe.execute()
             if isinstance(results, (list, tuple)) and len(results) >= 4:
                 current_count = results[2]  # results[2] is the ZCARD count
@@ -93,13 +95,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     headers={
                         "Retry-After": str(retry_after),
                         "X-RateLimit-Limit": str(limit),
-                        "X-RateLimit-Remaining": "0"
+                        "X-RateLimit-Remaining": "0",
                     },
                     content={
                         "success": False,
                         "message": "Too many requests. Please try again later.",
-                        "error_code": "RATE_LIMIT_EXCEEDED"
-                    }
+                        "error_code": "RATE_LIMIT_EXCEEDED",
+                    },
                 )
 
             # Normal path: append telemetry headers to the response

@@ -11,6 +11,7 @@ in development). Compatible with:
   - Splunk
   - OpenTelemetry Log Bridge
 """
+
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
@@ -36,6 +37,7 @@ def build_json_formatter() -> "logging.Formatter":
     Used in production and for all file handlers.
     """
     from app.logging.formatter import StructuredFormatter
+
     return StructuredFormatter(use_json=True)
 
 
@@ -45,6 +47,7 @@ def build_pretty_formatter(fmt: str | None = None) -> "logging.Formatter":
     output. Used in development / local environment only.
     """
     from app.logging.formatter import StructuredFormatter
+
     if fmt and fmt.lower() == "json":
         fmt = None
     return StructuredFormatter(fmt=fmt, use_json=False)
@@ -53,6 +56,7 @@ def build_pretty_formatter(fmt: str | None = None) -> "logging.Formatter":
 def build_sensitive_filter() -> "logging.Filter":
     """Returns a SensitiveDataFilter that masks secrets before emission."""
     from app.logging.filters import SensitiveDataFilter
+
     return SensitiveDataFilter()
 
 
@@ -68,7 +72,9 @@ def build_console_handler(
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(_resolve_numeric_level(level))
     handler.addFilter(build_sensitive_filter())
-    handler.setFormatter(build_json_formatter() if use_json else build_pretty_formatter(fmt))
+    handler.setFormatter(
+        build_json_formatter() if use_json else build_pretty_formatter(fmt)
+    )
     return handler
 
 

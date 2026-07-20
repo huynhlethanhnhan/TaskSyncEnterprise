@@ -7,6 +7,7 @@ Import from here to avoid internal path coupling:
     from app.logging import app_logger, setup_logging
     from app.logging import set_correlation_id, set_user_id
 """
+
 from app.logging.logger import (
     setup_logging,
     app_logger,

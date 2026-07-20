@@ -23,7 +23,9 @@ class WebSocketConnectionManager:
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
         self.active_connections[user_id].append(websocket)
-        app_logger.info(f"WebSocket client registered: User ID {user_id} (Total sessions: {len(self.active_connections[user_id])})")
+        app_logger.info(
+            f"WebSocket client registered: User ID {user_id} (Total sessions: {len(self.active_connections[user_id])})"
+        )
 
     def disconnect(self, websocket: WebSocket, user_id: int) -> None:
         """Safely cleans up registered connection metadata upon client disconnect."""
@@ -34,14 +36,21 @@ class WebSocketConnectionManager:
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
 
-    async def send_private_notification(self, user_id: int, notification_data: dict) -> bool:
+    async def send_private_notification(
+        self, user_id: int, notification_data: dict
+    ) -> bool:
         """
         Sends a private message to all active WebSocket sessions of a specific user.
         Returns:
             True if user is online and messages were dispatched, False otherwise.
         """
-        if user_id not in self.active_connections or not self.active_connections[user_id]:
-            app_logger.debug(f"WebSocket delivery skipped: User ID {user_id} is offline")
+        if (
+            user_id not in self.active_connections
+            or not self.active_connections[user_id]
+        ):
+            app_logger.debug(
+                f"WebSocket delivery skipped: User ID {user_id} is offline"
+            )
             return False
 
         success = False
@@ -52,7 +61,9 @@ class WebSocketConnectionManager:
                 await connection.send_json(notification_data)
                 success = True
             except Exception as send_err:
-                app_logger.warning(f"Failed to send JSON over WebSocket to user {user_id}: {send_err}")
+                app_logger.warning(
+                    f"Failed to send JSON over WebSocket to user {user_id}: {send_err}"
+                )
                 self.disconnect(connection, user_id)
 
         return success
@@ -85,7 +96,7 @@ def get_websocket_user(token: str, db: Session) -> Employee | None:
         payload = jwt.decode(
             token,
             settings.SECRET_KEY.get_secret_value(),
-            algorithms=[settings.ALGORITHM]
+            algorithms=[settings.ALGORITHM],
         )
         user_id_str: str = payload.get("sub")
         if not user_id_str:
@@ -95,7 +106,9 @@ def get_websocket_user(token: str, db: Session) -> Employee | None:
         stmt_blacklist = select(TokenBlacklist).where(TokenBlacklist.token == token)
         is_blacklisted = db.execute(stmt_blacklist).scalar_one_or_none()
         if is_blacklisted:
-            app_logger.warning("WebSocket token validation rejected: Token is blacklisted.")
+            app_logger.warning(
+                "WebSocket token validation rejected: Token is blacklisted."
+            )
             return None
 
         # Resolve employee

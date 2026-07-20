@@ -23,6 +23,7 @@ Context fields:
   duration_ms     – request duration in milliseconds (set post-response)
   error_code      – application error code populated by exception handlers
 """
+
 import contextvars
 from typing import Any, Dict
 
@@ -49,6 +50,7 @@ correlation_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar(
 # Context dict accessors
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def get_request_context() -> Dict[str, Any]:
     """Retrieves the full request context dictionary for the current scope."""
     return _request_context.get()
@@ -67,6 +69,7 @@ def reset_request_context(token: contextvars.Token) -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 # Scalar convenience accessors
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def get_request_id() -> str:
     """Returns only the request_id string from the context."""

@@ -11,10 +11,12 @@ WARNING: This is an IRREVERSIBLE operation. Run only when sure.
 
 import sys
 import os
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from sqlalchemy import text
 from app.database import engine
+
 
 def get_table_soft_delete_count(conn, table: str, col: str = "is_deleted") -> int:
     """Count soft-deleted rows in a table."""
@@ -24,6 +26,7 @@ def get_table_soft_delete_count(conn, table: str, col: str = "is_deleted") -> in
     except Exception as e:
         print(f"  [SKIP] Could not query {table}: {e}")
         return -1
+
 
 def purge_table(conn, table: str, col: str = "is_deleted", dry_run: bool = True) -> int:
     """Delete soft-deleted rows from a table. Returns count of deleted rows."""
@@ -38,9 +41,10 @@ def purge_table(conn, table: str, col: str = "is_deleted", dry_run: bool = True)
     print(f"  [DONE] {table}: DELETED {count} rows")
     return count
 
+
 def main():
     dry_run = "--execute" not in sys.argv
-    
+
     if dry_run:
         print("\n[DRY RUN] No actual changes will be made.")
         print("    Pass --execute flag to perform actual deletion.\n")
@@ -57,7 +61,9 @@ def main():
     with engine.begin() as conn:
         if not dry_run:
             # Temporarily disable all FK constraints in DB to allow safe purge
-            conn.execute(text("EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'"))
+            conn.execute(
+                text("EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'")
+            )
 
         for table, col in TABLES:
             count = purge_table(conn, table, col, dry_run=dry_run)
@@ -66,7 +72,11 @@ def main():
 
         if not dry_run:
             # Re-enable FK constraints
-            conn.execute(text("EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'"))
+            conn.execute(
+                text(
+                    "EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'"
+                )
+            )
 
     print(f"\n{'='*50}")
     if dry_run:
@@ -75,6 +85,7 @@ def main():
         print("  .venv\\Scripts\\python.exe tests\\db_purge_soft_deleted.py --execute")
     else:
         print(f"CLEANUP COMPLETE: {total_to_purge} soft-deleted rows purged.")
+
 
 if __name__ == "__main__":
     main()

@@ -19,6 +19,7 @@ Design Decisions
 - Sampling is applied BEFORE exporting so the overhead is purely proportional to
   the configured OTEL_SAMPLING_RATE.
 """
+
 from __future__ import annotations
 
 import logging
@@ -83,15 +84,22 @@ def _build_exporter(exporter_type: str):
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
                 OTLPSpanExporter as GrpcOTLPExporter,
             )
+
             endpoint = settings.OTEL_EXPORTER_OTLP_ENDPOINT
             parsed = urlparse(endpoint) if "://" in endpoint else None
-            if settings.ENVIRONMENT == "production" and parsed and parsed.scheme == "http":
+            if (
+                settings.ENVIRONMENT == "production"
+                and parsed
+                and parsed.scheme == "http"
+            ):
                 raise ValueError(
                     "OTLP gRPC production endpoints must use TLS; configure a host:port or https URL."
                 )
             grpc_endpoint = (parsed.netloc if parsed else endpoint).rstrip("/")
             if not grpc_endpoint:
-                raise ValueError("OTEL_EXPORTER_OTLP_ENDPOINT must include a host for OTLP gRPC")
+                raise ValueError(
+                    "OTEL_EXPORTER_OTLP_ENDPOINT must include a host for OTLP gRPC"
+                )
             return GrpcOTLPExporter(
                 endpoint=grpc_endpoint,
                 insecure=settings.ENVIRONMENT != "production",
@@ -101,6 +109,7 @@ def _build_exporter(exporter_type: str):
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
                 OTLPSpanExporter as HttpOTLPExporter,
             )
+
             # HTTP endpoint convention adds /v1/traces suffix automatically
             http_endpoint = settings.OTEL_EXPORTER_OTLP_ENDPOINT
             if not http_endpoint.endswith("/v1/traces"):
@@ -196,6 +205,7 @@ def _setup_logging_bridge() -> None:
 
     try:
         from opentelemetry.instrumentation.logging import LoggingInstrumentor
+
         LoggingInstrumentor().instrument(set_logging_format=False)
         _logging_bridge_initialised = True
         logger.debug("OTel logging bridge activated.")
@@ -220,6 +230,7 @@ def reset_tracing() -> None:
     if _logging_bridge_initialised:
         try:
             from opentelemetry.instrumentation.logging import LoggingInstrumentor
+
             LoggingInstrumentor().uninstrument()
         except Exception:
             pass
