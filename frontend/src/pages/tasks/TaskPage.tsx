@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, LayoutGrid, List } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
@@ -38,7 +39,12 @@ export const TaskPage: React.FC = () => {
   const deleteTask = useDeleteTask();
 
   // Filters & State
-  const [viewMode, setViewMode] = React.useState<'kanban' | 'table'>('kanban');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewParam = searchParams.get('view');
+  const viewMode = (viewParam === 'table' || viewParam === 'kanban') ? viewParam : 'kanban';
+  const setViewMode = (mode: 'kanban' | 'table') => {
+    setSearchParams({ view: mode });
+  };
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [priorityFilter, setPriorityFilter] = React.useState('all');

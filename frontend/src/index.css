@@ -185,6 +185,12 @@
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
   --radius-full: var(--radius-full);
+
+  --shadow-sm: var(--shadow-el-1);
+  --shadow-md: var(--shadow-el-2);
+  --shadow-lg: var(--shadow-el-3);
+  --shadow-xl: var(--shadow-el-4);
+  --shadow-2xl: var(--shadow-el-5);
 }
 
 /* Base Body Styles */

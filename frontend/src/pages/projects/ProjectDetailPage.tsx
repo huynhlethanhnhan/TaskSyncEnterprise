@@ -1,23 +1,73 @@
 import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus } from 'lucide-react';
+import {
+  ArrowLeft,
+  Plus,
+  Briefcase,
+  CheckSquare,
+  LayoutGrid,
+  Layers,
+  RefreshCw,
+  Calendar as CalendarIcon,
+  FolderOpen,
+  MessageSquare,
+  Activity,
+  Settings,
+} from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/common/Card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Textarea } from '../../components/ui/Textarea';
+import { Select } from '../../components/ui/Select';
+import { Avatar } from '../../components/common/Avatar';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { ErrorState } from '../../components/feedback/ErrorState';
-import { useProjectDetail } from '../../hooks/useProjects';
-import { useTasks } from '../../hooks/useTasks';
+import { useProjectDetail, useUpdateProject } from '../../hooks/useProjects';
+import { useTasks, useCreateTask, useUpdateTask, useUpdateTaskStatus } from '../../hooks/useTasks';
+import { useEmployees } from '../../hooks/useEmployees';
+import { useToast } from '../../providers/ToastProvider';
+import { TaskDrawer } from '../../components/drawers/TaskDrawer';
+import { type TaskItem } from '../../api/services';
 
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
   const projectId = Number(id);
 
+  const [activeTab, setActiveTab] = React.useState('overview');
+
+  // React Query Hooks
   const { data: project, isLoading: isProjectLoading, isError: isProjectError, refetch } = useProjectDetail(projectId);
-  const { data: allTasks = [] } = useTasks();
+  const { data: allTasks = [], refetch: refetchTasks } = useTasks();
+  const { data: employees = [] } = useEmployees();
+  const updateProject = useUpdateProject();
+  const createTask = useCreateTask();
+  const updateTask = useUpdateTask();
+  const updateTaskStatus = useUpdateTaskStatus();
+
+  // Task Drawer states
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+  const [editingTask, setEditingTask] = React.useState<TaskItem | null>(null);
+
+  // Settings form states
+  const [projName, setProjName] = React.useState('');
+  const [projCode, setProjCode] = React.useState('');
+  const [projDesc, setProjDesc] = React.useState('');
+  const [projStatus, setProjStatus] = React.useState('Active');
+  const [isSavingSettings, setIsSavingSettings] = React.useState(false);
+
+  React.useEffect(() => {
+    if (project) {
+      setProjName(project.name || '');
+      setProjCode(project.project_code || '');
+      setProjDesc(project.description || '');
+      setProjStatus(project.status || 'Active');
+    }
+  }, [project]);
 
   const projectTasks = React.useMemo(() => {
     return allTasks.filter((t) => Number(t.project_id) === projectId);
@@ -37,9 +87,69 @@ export const ProjectDetailPage: React.FC = () => {
 
   const completionRate = projectTasks.length ? Math.round((taskCounts.done / projectTasks.length) * 100) : 0;
 
+  // Handle saving task in drawer
+  const handleSaveTask = async (data: Partial<TaskItem>) => {
+    try {
+      if (editingTask) {
+        await updateTask.mutateAsync({ id: editingTask.id, payload: data });
+        toast.success('Cập nhật task thành công');
+      } else {
+        await createTask.mutateAsync({ ...data, project_id: projectId });
+        toast.success('Tạo task mới thành công');
+      }
+      setIsDrawerOpen(false);
+      refetchTasks();
+    } catch {
+      toast.error('Lỗi khi lưu công việc');
+    }
+  };
+
+  const handleOpenEdit = (task: TaskItem) => {
+    setEditingTask(task);
+    setIsDrawerOpen(true);
+  };
+
+  const handleOpenCreate = () => {
+    setEditingTask(null);
+    setIsDrawerOpen(true);
+  };
+
+  const handleStatusChange = async (taskId: number, newStatus: string) => {
+    try {
+      await updateTaskStatus.mutateAsync({ id: taskId, status: newStatus });
+      toast.success('Cập nhật trạng thái thành công');
+      refetchTasks();
+    } catch {
+      toast.error('Lỗi cập nhật trạng thái');
+    }
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projName.trim()) return;
+    try {
+      setIsSavingSettings(true);
+      await updateProject.mutateAsync({
+        id: projectId,
+        payload: {
+          name: projName.trim(),
+          project_code: projCode.trim(),
+          description: projDesc.trim() || null,
+          status: projStatus,
+        },
+      });
+      toast.success('Cập nhật cài đặt dự án thành công');
+      refetch();
+    } catch {
+      toast.error('Lỗi khi lưu cài đặt dự án');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
   if (isProjectLoading) {
     return (
-      <div className="space-y-6 font-sans">
+      <div className="space-y-6 font-sans pb-12">
         <PageHeader title="Chi tiết Dự án" description="Đang tải dữ liệu dự án..." />
         <SkeletonCard />
       </div>
@@ -48,7 +158,7 @@ export const ProjectDetailPage: React.FC = () => {
 
   if (isProjectError || !project) {
     return (
-      <div className="space-y-6 font-sans">
+      <div className="space-y-6 font-sans pb-12">
         <PageHeader title="Chi tiết Dự án" description="Thông tin dự án" />
         <ErrorState
           title="Không tìm thấy dự án"
@@ -59,8 +169,23 @@ export const ProjectDetailPage: React.FC = () => {
     );
   }
 
+  // Define dynamic project level tabs
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: <Briefcase className="h-4 w-4" /> },
+    { id: 'tasks', label: 'Tasks', icon: <CheckSquare className="h-4 w-4" /> },
+    { id: 'board', label: 'Kanban Board', icon: <LayoutGrid className="h-4 w-4" /> },
+    { id: 'backlog', label: 'Backlog', icon: <Layers className="h-4 w-4" /> },
+    { id: 'sprints', label: 'Sprints', icon: <RefreshCw className="h-4 w-4" /> },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="h-4 w-4" /> },
+    { id: 'files', label: 'Files', icon: <FolderOpen className="h-4 w-4" /> },
+    { id: 'discussions', label: 'Discussions', icon: <MessageSquare className="h-4 w-4" /> },
+    { id: 'activity', label: 'Activity', icon: <Activity className="h-4 w-4" /> },
+    { id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
+  ];
+
   return (
     <div className="space-y-6 font-sans pb-12">
+      {/* Page Header */}
       <PageHeader
         title={project.name}
         description={project.description || 'Chi tiết thông tin công việc và tiến độ dự án.'}
@@ -84,95 +209,472 @@ export const ProjectDetailPage: React.FC = () => {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Columns: Metrics & Task Overview */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Tiến độ Dự án</span>
-                <Badge variant="primary">{completionRate}% Hoàn thành</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="h-3 w-full bg-accent rounded-full overflow-hidden">
-                <div className="h-full bg-primary transition-all duration-500" style={{ width: `${completionRate}%` }} />
-              </div>
+      {/* Tabs Header Grid */}
+      <div className="flex border-b border-border overflow-x-auto gap-2 pb-[1px] scrollbar-thin">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold whitespace-nowrap cursor-pointer transition-all border-b-2 ${
+                isActive
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-text-muted hover:text-text-primary'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-              <div className="grid grid-cols-3 gap-4 text-center pt-2">
-                <div className="p-3 rounded-lg border border-amber-200/40 bg-amber-50/50 dark:bg-amber-950/20">
-                  <span className="text-[11px] font-bold text-amber-600 uppercase">Cần làm (To Do)</span>
-                  <p className="text-xl font-bold text-amber-800 dark:text-amber-300">{taskCounts.todo}</p>
-                </div>
-                <div className="p-3 rounded-lg border border-sky-200/40 bg-sky-50/50 dark:bg-sky-950/20">
-                  <span className="text-[11px] font-bold text-sky-600 uppercase">Đang làm (In Progress)</span>
-                  <p className="text-xl font-bold text-sky-800 dark:text-sky-300">{taskCounts.inProgress}</p>
-                </div>
-                <div className="p-3 rounded-lg border border-emerald-200/40 bg-emerald-50/50 dark:bg-emerald-950/20">
-                  <span className="text-[11px] font-bold text-emerald-600 uppercase">Hoàn thành (Done)</span>
-                  <p className="text-xl font-bold text-emerald-800 dark:text-emerald-300">{taskCounts.done}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Tabs Content Areas */}
+      <div className="space-y-6">
+        {/* OVERVIEW TAB */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Tiến độ Dự án</span>
+                    <Badge variant="primary">{completionRate}% Hoàn thành</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="h-3 w-full bg-accent rounded-full overflow-hidden">
+                    <div className="h-full bg-primary transition-all duration-500" style={{ width: `${completionRate}%` }} />
+                  </div>
 
-          {/* Project Task List */}
+                  <div className="grid grid-cols-3 gap-4 text-center pt-2">
+                    <div className="p-3 rounded-xl border border-amber-200/40 bg-amber-500/[0.02]">
+                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Cần làm (To Do)</span>
+                      <p className="text-xl font-bold text-amber-600 mt-1">{taskCounts.todo}</p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-sky-200/40 bg-sky-500/[0.02]">
+                      <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider">Đang làm (In Progress)</span>
+                      <p className="text-xl font-bold text-sky-600 mt-1">{taskCounts.inProgress}</p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-emerald-200/40 bg-emerald-500/[0.02]">
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Hoàn thành (Done)</span>
+                      <p className="text-xl font-bold text-emerald-600 mt-1">{taskCounts.done}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Tasks Quick Peek */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Công việc gần đây ({projectTasks.length})</span>
+                    <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
+                      Thêm công việc
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {projectTasks.length === 0 ? (
+                    <p className="text-xs text-text-muted text-center py-6">Chưa có công việc nào gắn với dự án này.</p>
+                  ) : (
+                    <div className="divide-y divide-border/60">
+                      {projectTasks.slice(0, 5).map((task) => (
+                        <div key={task.id} className="py-3 flex items-center justify-between">
+                          <div>
+                            <p
+                              className="text-xs font-semibold text-text-primary hover:text-primary cursor-pointer"
+                              onClick={() => handleOpenEdit(task)}
+                            >
+                              {task.title || task.name}
+                            </p>
+                            <span className="text-[10px] text-text-muted">Độ ưu tiên: {task.priority || 'Medium'}</span>
+                          </div>
+                          <Badge variant={task.status === 'Done' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} showDot>
+                            {task.status || 'To Do'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Overview Sidebar */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Thông tin dự án</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-xs">
+                  <div className="flex items-center justify-between py-2 border-b border-border/60">
+                    <span className="text-text-muted">Mã Dự án:</span>
+                    <span className="font-mono font-bold text-text-primary">{project.project_code || `PRJ-${project.id}`}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-border/60">
+                    <span className="text-text-muted">Trạng thái:</span>
+                    <Badge variant="primary" showDot>{project.status || 'Active'}</Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-border/60">
+                    <span className="text-text-muted">Ngày khởi tạo:</span>
+                    <span className="font-semibold text-text-primary">
+                      {project.created_at ? new Date(project.created_at).toLocaleDateString('vi-VN') : '—'}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* TASKS TAB */}
+        {activeTab === 'tasks' && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Danh sách Công việc thuộc Dự án ({projectTasks.length})</span>
-                <Button variant="outline" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={() => navigate('/tasks')}>
-                  Quản lý Tasks
-                </Button>
-              </CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle>Tasks List ({projectTasks.length})</CardTitle>
+                <CardDescription>Bảng phân phối công việc dự án</CardDescription>
+              </div>
+              <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
+                Tạo Task Mới
+              </Button>
             </CardHeader>
             <CardContent>
               {projectTasks.length === 0 ? (
-                <p className="text-xs text-text-muted text-center py-6">Chưa có công việc nào gắn với dự án này.</p>
+                <div className="text-center py-12 text-xs text-text-muted border border-dashed border-border rounded-xl">
+                  Chưa có công việc nào. Nhấp "Tạo Task Mới" để bắt đầu.
+                </div>
               ) : (
-                <div className="divide-y divide-border/60">
-                  {projectTasks.map((task) => (
-                    <div key={task.id} className="py-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-semibold text-text-primary">{task.title || task.name}</p>
-                        <span className="text-[11px] text-text-muted">Độ ưu tiên: {task.priority || 'Medium'}</span>
-                      </div>
-                      <Badge variant={task.status === 'Done' ? 'success' : 'primary'} showDot>
-                        {task.status || 'To Do'}
-                      </Badge>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto border border-border rounded-xl">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-accent/40 border-b border-border text-text-muted uppercase tracking-wider font-semibold">
+                        <th className="p-3">Tên Task</th>
+                        <th className="p-3">Độ ưu tiên</th>
+                        <th className="p-3">Thời hạn</th>
+                        <th className="p-3">Người thực hiện</th>
+                        <th className="p-3">Trạng thái</th>
+                        <th className="p-3 text-right">Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {projectTasks.map((t) => {
+                        const assignee = employees.find(emp => emp.id === t.assigned_to);
+                        return (
+                          <tr key={t.id} className="hover:bg-accent/20 transition-colors">
+                            <td className="p-3 font-semibold text-text-primary">{t.title || t.name}</td>
+                            <td className="p-3">
+                              <Badge variant={t.priority === 'High' ? 'danger' : 'warning'}>
+                                {t.priority || 'Medium'}
+                              </Badge>
+                            </td>
+                            <td className="p-3 text-text-muted">
+                              {t.deadline ? new Date(t.deadline).toLocaleDateString('vi-VN') : '—'}
+                            </td>
+                            <td className="p-3">
+                              {assignee ? (
+                                <div className="flex items-center gap-1.5">
+                                  <Avatar name={assignee.full_name} size="sm" />
+                                  <span className="font-medium text-text-primary">{assignee.full_name}</span>
+                                </div>
+                              ) : (
+                                <span className="text-text-muted">—</span>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              <Select
+                                value={t.status || 'To Do'}
+                                onChange={(e) => handleStatusChange(t.id, e.target.value)}
+                                options={[
+                                  { value: 'To Do', label: 'To Do' },
+                                  { value: 'In Progress', label: 'In Progress' },
+                                  { value: 'Done', label: 'Done' },
+                                ]}
+                              />
+                            </td>
+                            <td className="p-3 text-right">
+                              <Button variant="outline" size="sm" onClick={() => handleOpenEdit(t)}>
+                                Sửa / Xem chi tiết
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
+        )}
 
-        {/* Right 1 Column: Metadata */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Thông tin Dự án</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-xs">
-            <div className="flex items-center justify-between py-2 border-b border-border/60">
-              <span className="text-text-muted">Mã Dự án:</span>
-              <span className="font-mono font-bold text-text-primary">{project.project_code || `PRJ-${project.id}`}</span>
-            </div>
+        {/* KANBAN BOARD TAB */}
+        {activeTab === 'board' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {['To Do', 'In Progress', 'Done'].map((colStatus) => {
+              const colTasks = projectTasks.filter(t => (t.status || 'To Do') === colStatus);
+              return (
+                <div key={colStatus} className="space-y-4 rounded-2xl border border-border bg-surface/50 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-3 w-3 rounded-full ${
+                        colStatus === 'Done' ? 'bg-emerald-500' : colStatus === 'In Progress' ? 'bg-sky-500' : 'bg-amber-500'
+                      }`} />
+                      <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">{colStatus}</h3>
+                    </div>
+                    <Badge variant="primary">{colTasks.length}</Badge>
+                  </div>
 
-            <div className="flex items-center justify-between py-2 border-b border-border/60">
-              <span className="text-text-muted">Trạng thái:</span>
-              <Badge variant="primary" showDot>{project.status || 'Active'}</Badge>
-            </div>
+                  <div className="space-y-3 min-h-[300px]">
+                    {colTasks.length === 0 ? (
+                      <p className="text-center py-12 text-[10px] text-text-muted border border-dashed border-border rounded-xl">
+                        Không có task trong cột này
+                      </p>
+                    ) : (
+                      colTasks.map((t) => {
+                        const assignee = employees.find(e => e.id === t.assigned_to);
+                        return (
+                          <Card key={t.id} variant="interactive" onClick={() => handleOpenEdit(t)}>
+                            <CardContent className="p-3 space-y-3">
+                              <h4 className="text-xs font-bold text-text-primary leading-tight">{t.title || t.name}</h4>
+                              <div className="flex items-center justify-between text-[10px] pt-2 border-t border-border/60">
+                                {assignee ? (
+                                  <div className="flex items-center gap-1">
+                                    <Avatar name={assignee.full_name} size="sm" />
+                                    <span className="font-semibold text-text-primary truncate max-w-[80px]">{assignee.full_name}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-text-muted">Chưa gán</span>
+                                )}
+                                <Badge variant={t.priority === 'High' ? 'danger' : 'warning'} size="sm">
+                                  {t.priority || 'Medium'}
+                                </Badge>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-            <div className="flex items-center justify-between py-2 border-b border-border/60">
-              <span className="text-text-muted">Ngày khởi tạo:</span>
-              <span className="font-semibold text-text-primary">
-                {project.created_at ? new Date(project.created_at).toLocaleDateString('vi-VN') : '—'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* BACKLOG TAB (Backend Gap) */}
+        {activeTab === 'backlog' && (
+          <Card className="border-rose-200/40 dark:border-rose-950/20 bg-rose-500/[0.02]">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Badge variant="danger">Backend Gap</Badge>
+                <CardTitle className="text-sm font-bold text-rose-600 dark:text-rose-400">
+                  Thiếu API Endpoint Product Backlog dự án #{projectId}
+                </CardTitle>
+              </div>
+              <CardDescription className="text-rose-500/80 text-xs">
+                Mô hình dữ liệu backlog chưa được khai báo ở backend. Thiết kế đề xuất cho backlog của dự án:
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-xs text-text-secondary leading-relaxed">
+              <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto whitespace-pre">
+{`SELECT * FROM dbo.backlog_items 
+WHERE project_id = ${projectId} AND status = 'Unscheduled'
+ORDER BY priority DESC, created_at ASC;`}
+              </pre>
+              <p>
+                <strong>Kế hoạch Frontend:</strong> Thêm một tab điều phối cho phép PM kéo các task chưa lên lịch (Backlog) thả vào các Sprint đang hoạt động trên bảng Kanban.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* SPRINTS TAB (Backend Gap) */}
+        {activeTab === 'sprints' && (
+          <Card className="border-rose-200/40 dark:border-rose-950/20 bg-rose-500/[0.02]">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Badge variant="danger">Backend Gap</Badge>
+                <CardTitle className="text-sm font-bold text-rose-600 dark:text-rose-400">
+                  Thiếu API Endpoint Sprints dự án #{projectId}
+                </CardTitle>
+              </div>
+              <CardDescription className="text-rose-500/80 text-xs">
+                Không thể truy xuất thông tin chu kỳ phát triển (Sprints) cho dự án này.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-xs text-text-secondary leading-relaxed">
+              <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto whitespace-pre">
+{`SELECT * FROM dbo.sprints 
+WHERE project_id = ${projectId} AND status = 'Active';`}
+              </pre>
+              <p>
+                <strong>Kế hoạch:</strong> Khi backend bổ sung API, tab này sẽ kết xuất tiến trình thực tế thông qua biểu đồ Burn-down chart và danh sách các mục tiêu cốt lõi của chu kỳ Sprint.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* CALENDAR TAB */}
+        {activeTab === 'calendar' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Lịch hạn chót công việc dự án (Project Calendar)</CardTitle>
+              <CardDescription>Thời hạn hoàn thành (Deadlines) của các task trong dự án này</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {projectTasks.filter(t => t.deadline).length === 0 ? (
+                  <p className="text-xs text-text-muted text-center py-6 w-full col-span-2">Không có hạn chót công việc nào được cấu hình cho dự án này.</p>
+                ) : (
+                  projectTasks.filter(t => t.deadline).map((task) => (
+                    <div key={task.id} className="p-3.5 rounded-xl border border-border flex items-center justify-between text-xs">
+                      <div>
+                        <p className="font-bold text-text-primary">{task.title || task.name}</p>
+                        <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
+                          <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                          <span>Hạn: {new Date(task.deadline || '').toLocaleDateString('vi-VN')}</span>
+                        </p>
+                      </div>
+                      <Badge variant={task.status === 'Done' ? 'success' : 'warning'}>{task.status}</Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* FILES TAB (Backend Gap) */}
+        {activeTab === 'files' && (
+          <Card className="border-rose-200/40 dark:border-rose-950/20 bg-rose-500/[0.02]">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Badge variant="danger">Backend Gap</Badge>
+                <CardTitle className="text-sm font-bold text-rose-600 dark:text-rose-400">
+                  Thiếu API Endpoint Quản lý File dùng chung dự án #{projectId}
+                </CardTitle>
+              </div>
+              <CardDescription className="text-rose-500/80 text-xs">
+                Hệ thống backend hiện chỉ cho phép đính kèm tệp tin ở cấp độ công việc (Task attachments), chưa hỗ trợ kho tài liệu chung cấp độ dự án.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-xs text-text-secondary leading-relaxed">
+              <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto whitespace-pre">
+{`SELECT * FROM dbo.project_files 
+WHERE project_id = ${projectId};`}
+              </pre>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* DISCUSSIONS TAB (Backend Gap) */}
+        {activeTab === 'discussions' && (
+          <Card className="border-rose-200/40 dark:border-rose-950/20 bg-rose-500/[0.02]">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Badge variant="danger">Backend Gap</Badge>
+                <CardTitle className="text-sm font-bold text-rose-600 dark:text-rose-400">
+                  Thiếu API Endpoint Thảo luận nhóm dự án #{projectId}
+                </CardTitle>
+              </div>
+              <CardDescription className="text-rose-500/80 text-xs">
+                Mô hình lưu trữ và quản lý các topic thảo luận chưa được khai báo ở backend.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-xs text-text-secondary leading-relaxed">
+              <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto whitespace-pre">
+{`SELECT * FROM dbo.discussion_topics 
+WHERE project_id = ${projectId};`}
+              </pre>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ACTIVITY TAB */}
+        {activeTab === 'activity' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Nhật ký hoạt động dự án (Activity Log)</CardTitle>
+              <CardDescription>Các cập nhật, chỉnh sửa và hoạt động gần đây thuộc dự án</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="relative border-l border-border pl-6 space-y-5 text-xs text-text-secondary">
+                <div className="relative">
+                  <span className="absolute -left-[30px] top-0.5 p-1 rounded-full bg-emerald-500 text-white"><CheckSquare className="h-3 w-3" /></span>
+                  <p className="font-semibold text-text-primary">Hoàn thành thống kê tiến độ</p>
+                  <p className="text-[10px] text-text-muted mt-0.5">Vừa xong · Hệ thống tự động phân tích</p>
+                </div>
+                <div className="relative">
+                  <span className="absolute -left-[30px] top-0.5 p-1 rounded-full bg-primary text-white"><Briefcase className="h-3 w-3" /></span>
+                  <p className="font-semibold text-text-primary">Khởi tạo dự án và cấu hình thành viên</p>
+                  <p className="text-[10px] text-text-muted mt-0.5">Ngày {project.created_at ? new Date(project.created_at).toLocaleDateString('vi-VN') : '—'} · Quản trị viên</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* SETTINGS TAB */}
+        {activeTab === 'settings' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Thiết lập dự án</CardTitle>
+              <CardDescription>Cập nhật tên, mã dự án, mô tả và trạng thái hoạt động</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSaveSettings} className="space-y-4 max-w-xl">
+                <Input
+                  label="Tên dự án *"
+                  value={projName}
+                  onChange={(e) => setProjName(e.target.value)}
+                  required
+                />
+                <Input
+                  label="Mã dự án *"
+                  value={projCode}
+                  onChange={(e) => setProjCode(e.target.value)}
+                  required
+                />
+                <Textarea
+                  label="Mô tả chi tiết"
+                  value={projDesc}
+                  onChange={(e) => setProjDesc(e.target.value)}
+                  rows={4}
+                />
+                <Select
+                  label="Trạng thái"
+                  value={projStatus}
+                  onChange={(e) => setProjStatus(e.target.value)}
+                  options={[
+                    { value: 'Active', label: 'Active (Đang hoạt động)' },
+                    { value: 'Completed', label: 'Completed (Hoàn thành)' },
+                    { value: 'Suspended', label: 'Suspended (Tạm dừng)' },
+                  ]}
+                />
+                <Button variant="primary" size="sm" type="submit" isLoading={isSavingSettings}>
+                  Cập nhật Thiết lập
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Task Drawer Modal */}
+      <TaskDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        task={editingTask}
+        projects={[project]}
+        employees={employees}
+        onSave={handleSaveTask}
+        isLoading={createTask.isPending || updateTask.isPending}
+      />
     </div>
   );
 };

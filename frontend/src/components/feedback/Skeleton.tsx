@@ -33,7 +33,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 };
 
 export const SkeletonCard: React.FC<{ className?: string }> = ({ className }) => (
-  <div className={cn('p-5 rounded-lg border border-border bg-surface flex flex-col gap-3', className)}>
+  <div className={cn('p-5 rounded-xl border border-border bg-surface flex flex-col gap-3', className)}>
     <Skeleton className="h-5 w-1/3" />
     <Skeleton className="h-4 w-2/3" />
     <div className="flex gap-2 mt-2">

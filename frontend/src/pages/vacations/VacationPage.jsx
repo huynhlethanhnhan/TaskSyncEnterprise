@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -38,11 +38,18 @@ export default function VacationPage() {
   const currentUser = useMemo(() => JSON.parse(localStorage.getItem('user') || '{}'), []);
   const toast = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [vacations, setVacations] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterTab, setFilterTab] = useState('all');
+
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
   const [loading, setLoading] = useState(true);
 
   const isManager = currentUser.role === 'manager' || Number(currentUser.role_id) === 2;

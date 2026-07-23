@@ -98,10 +98,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={item.onClick}
                   title={isCollapsed ? item.label : undefined}
                   className={cn(
-                    'relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-xs font-medium transition-colors',
+                    'relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer',
                     isActive
-                      ? 'bg-accent text-accent-foreground font-semibold'
-                      : 'text-text-secondary hover:bg-secondary hover:text-text-primary',
+                      ? 'bg-accent text-accent-foreground font-semibold shadow-xs'
+                      : 'text-text-secondary hover:bg-secondary/60 hover:text-text-primary',
                     isCollapsed && 'justify-center px-0'
                   )}
                 >

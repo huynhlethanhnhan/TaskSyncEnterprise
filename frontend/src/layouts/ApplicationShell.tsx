@@ -13,6 +13,15 @@ import {
   User,
   Component,
   Menu,
+  Layers,
+  RefreshCw,
+  MessageSquare,
+  HeartHandshake,
+  FolderOpen,
+  Clock,
+  PlusCircle,
+  BarChart3,
+  Network,
 } from 'lucide-react';
 import { Sidebar, type SidebarSection } from '../components/layout/Sidebar';
 import { Navbar } from '../components/layout/Navbar';
@@ -20,7 +29,7 @@ import { Drawer } from '../components/common/Drawer';
 import { useTheme } from '../providers/ThemeProvider';
 import { useAuth } from '../providers/AuthProvider';
 import { useToast } from '../providers/ToastProvider';
-import { QuickSearchModal } from '../components/modals/QuickSearchModal';
+import { GlobalSearchModal } from '../components/search/GlobalSearchModal';
 import { useNotifications, useNotificationRealtime } from '../hooks/useNotifications';
 
 export interface ApplicationShellProps {
@@ -75,10 +84,9 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
   const roleId = Number(user?.role_id);
   const isAdmin = roleStr === 'admin' || roleId === 1;
 
-  // Sidebar navigation links definition
   const sidebarSections: SidebarSection[] = [
     {
-      title: 'Main Overview',
+      title: 'Overview',
       items: [
         {
           key: '/dashboard',
@@ -87,6 +95,17 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
           onClick: () => { navigate('/dashboard'); setMobileDrawerOpen(false); },
         },
         {
+          key: '/my-work',
+          label: 'My Work',
+          icon: <CheckSquare className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/my-work'); setMobileDrawerOpen(false); },
+        },
+      ],
+    },
+    {
+      title: 'Work Management',
+      items: [
+        {
           key: '/projects',
           label: 'Projects',
           icon: <Briefcase className="h-4.5 w-4.5" />,
@@ -94,14 +113,95 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
         },
         {
           key: '/tasks',
-          label: 'Tasks',
+          label: 'Tasks List',
           icon: <CheckSquare className="h-4.5 w-4.5" />,
-          onClick: () => { navigate('/tasks'); setMobileDrawerOpen(false); },
+          onClick: () => { navigate('/tasks?view=table'); setMobileDrawerOpen(false); },
+        },
+        {
+          key: '/kanban',
+          label: 'Kanban Board',
+          icon: <LayoutDashboard className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/tasks?view=kanban'); setMobileDrawerOpen(false); },
+        },
+        {
+          key: '/backlog',
+          label: 'Product Backlog',
+          icon: <Layers className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/backlog'); setMobileDrawerOpen(false); },
+        },
+        {
+          key: '/sprints',
+          label: 'Sprints',
+          icon: <RefreshCw className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/sprints'); setMobileDrawerOpen(false); },
+        },
+        {
+          key: '/calendar',
+          label: 'Calendar',
+          icon: <Calendar className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/calendar'); setMobileDrawerOpen(false); },
         },
       ],
     },
     {
-      title: 'Organization',
+      title: 'Collaboration',
+      items: [
+        {
+          key: '/topics',
+          label: 'Topics',
+          icon: <MessageSquare className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/topics'); setMobileDrawerOpen(false); },
+        },
+        {
+          key: '/feedback',
+          label: 'Feedback',
+          icon: <HeartHandshake className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/feedback'); setMobileDrawerOpen(false); },
+        },
+        {
+          key: '/files',
+          label: 'Files',
+          icon: <FolderOpen className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/files'); setMobileDrawerOpen(false); },
+        },
+        {
+          key: '/notifications',
+          label: 'Notifications',
+          icon: <Bell className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/notifications'); setMobileDrawerOpen(false); },
+        },
+      ],
+    },
+    {
+      title: 'Employee Self-Service',
+      items: [
+        {
+          key: '/vacations',
+          label: 'My Vacation',
+          icon: <Clock className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/vacations'); setMobileDrawerOpen(false); },
+        },
+        {
+          key: '/vacations-request',
+          label: 'Create Leave Request',
+          icon: <PlusCircle className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/vacations?new=true'); setMobileDrawerOpen(false); },
+        },
+      ],
+    },
+    {
+      title: 'Reports',
+      items: [
+        {
+          key: '/reports',
+          label: 'Performance Reports',
+          icon: <BarChart3 className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/reports'); setMobileDrawerOpen(false); },
+        },
+      ],
+    },
+    {
+      title: 'Administration',
       items: [
         {
           key: '/employees',
@@ -116,25 +216,14 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
           onClick: () => { navigate('/departments'); setMobileDrawerOpen(false); },
         },
         {
-          key: '/calendar',
-          label: 'Calendar & Leave',
-          icon: <Calendar className="h-4.5 w-4.5" />,
-          onClick: () => { navigate('/calendar'); setMobileDrawerOpen(false); },
+          key: '/teams',
+          label: 'Teams',
+          icon: <Network className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/teams'); setMobileDrawerOpen(false); },
         },
-        {
-          key: '/notifications',
-          label: 'Notifications',
-          icon: <Bell className="h-4.5 w-4.5" />,
-          onClick: () => { navigate('/notifications'); setMobileDrawerOpen(false); },
-        },
-      ],
-    },
-    {
-      title: 'Administration',
-      items: [
         {
           key: '/settings',
-          label: 'Settings',
+          label: 'System Settings',
           icon: <Settings className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/settings'); setMobileDrawerOpen(false); },
         },
@@ -244,7 +333,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
           {children || <Outlet />}
         </main>
 
-        <QuickSearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} />
+        <GlobalSearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} />
       </div>
     </div>
   );

@@ -94,7 +94,7 @@ export const Drawer: React.FC<DrawerProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-backdrop"
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-backdrop"
             aria-hidden="true"
           />
 

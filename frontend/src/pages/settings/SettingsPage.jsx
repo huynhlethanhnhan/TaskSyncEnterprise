@@ -108,7 +108,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 relative max-w-5xl mx-auto">
+    <div className="space-y-6 p-4 sm:p-6 relative max-w-5xl mx-auto font-sans">
       
       {/* 🚀 TOAST NOTIFICATION */}
       {showToast && (
@@ -121,28 +121,28 @@ export default function SettingsPage() {
       {/* 🔄 SYNCING OVERLAY */}
       {syncing && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all duration-300">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-xl border border-slate-100">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface shadow-xl border border-border">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
-          <p className="mt-4 text-sm font-bold text-slate-800 bg-white/95 px-4 py-2 rounded-2xl shadow-lg border border-slate-100">{t.saving}</p>
+          <p className="mt-4 text-sm font-bold text-text-primary bg-surface px-4 py-2 rounded-2xl shadow-lg border border-border">{t.saving}</p>
         </div>
       )}
 
       {/* HEADER HERO */}
-      <div className="rounded-[32px] border border-slate-100 bg-white p-6 sm:p-8 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-blue-50/60 blur-3xl -z-10" />
-        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">{t.title}</h1>
-        <p className="mt-2 text-sm text-slate-500 font-medium">{t.subtitle}</p>
+      <div className="rounded-[32px] border border-border bg-surface p-6 sm:p-8 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-primary/10 blur-3xl -z-10" />
+        <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">{t.title}</h1>
+        <p className="mt-2 text-xs text-text-muted font-medium">{t.subtitle}</p>
       </div>
 
       {/* SETTINGS PANELS */}
       <div className="grid gap-6 md:grid-cols-2">
         
         {/* APPEARANCE CARD */}
-        <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm flex flex-col justify-between min-h-[260px]">
+        <div className="rounded-[32px] border border-border bg-surface p-6 shadow-sm flex flex-col justify-between min-h-[260px]">
           <div>
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">🎨 {t.appearance}</h2>
-            <p className="mt-2 text-xs text-slate-400 font-medium leading-relaxed">{t.appearanceDesc}</p>
+            <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">🎨 {t.appearance}</h2>
+            <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">{t.appearanceDesc}</p>
           </div>
           
           <div className="mt-6 space-y-3">
@@ -150,42 +150,42 @@ export default function SettingsPage() {
               onClick={() => handleThemeChange("light")}
               className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border text-sm font-bold transition-all ${
                 theme === "light" 
-                  ? "border-blue-200 bg-blue-50/50 text-blue-600 shadow-sm" 
-                  : "border-slate-100 bg-slate-50/50 text-slate-600 hover:bg-slate-50"
+                  ? "border-primary/20 bg-primary/10 text-primary shadow-sm" 
+                  : "border-border bg-accent/20 text-text-secondary hover:bg-accent/40"
               }`}
             >
               <span>☀️ {t.light}</span>
-              {theme === "light" && <span className="text-blue-500">✓</span>}
+              {theme === "light" && <span className="text-primary">✓</span>}
             </button>
 
             <button
               onClick={() => handleThemeChange("dark")}
               className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border text-sm font-bold transition-all ${
                 theme === "dark" 
-                  ? "border-blue-200 bg-blue-50/50 text-blue-600 shadow-sm" 
-                  : "border-slate-100 bg-slate-50/50 text-slate-600 hover:bg-slate-50"
+                  ? "border-primary/20 bg-primary/10 text-primary shadow-sm" 
+                  : "border-border bg-accent/20 text-text-secondary hover:bg-accent/40"
               }`}
             >
               <span>🌙 {t.dark}</span>
-              {theme === "dark" && <span className="text-blue-500">✓</span>}
+              {theme === "dark" && <span className="text-primary">✓</span>}
             </button>
           </div>
         </div>
 
         {/* REGIONAL / LOCALIZATION CARD */}
-        <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm flex flex-col justify-between min-h-[260px]">
+        <div className="rounded-[32px] border border-border bg-surface p-6 shadow-sm flex flex-col justify-between min-h-[260px]">
           <div>
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">🌐 {t.langTime}</h2>
-            <p className="mt-2 text-xs text-slate-400 font-medium leading-relaxed">{t.langTimeDesc}</p>
+            <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">🌐 {t.langTime}</h2>
+            <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">{t.langTimeDesc}</p>
           </div>
           
           <div className="mt-6 space-y-4">
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t.language}</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">{t.language}</label>
               <select 
                 value={language} 
                 onChange={(e) => handleLanguageChange(e.target.value)} 
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none font-semibold text-slate-700 focus:border-blue-400 transition-colors"
+                className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-xs outline-none font-semibold text-text-primary focus:border-primary transition-colors"
               >
                 {languages.map((lang) => (
                   <option key={lang.value} value={lang.value}>{lang.label}</option>
@@ -194,11 +194,11 @@ export default function SettingsPage() {
             </div>
             
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t.timezone}</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">{t.timezone}</label>
               <select 
                 value={timezone} 
                 onChange={(e) => handleTimezoneChange(e.target.value)} 
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none font-semibold text-slate-700 focus:border-blue-400 transition-colors"
+                className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-xs outline-none font-semibold text-text-primary focus:border-primary transition-colors"
               >
                 {timezones.map((zone) => (
                   <option key={zone.value} value={zone.value}>{zone.label}</option>
@@ -211,26 +211,85 @@ export default function SettingsPage() {
       </div>
 
       {/* SECURITY METRICS */}
-      <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm relative overflow-hidden">
-        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">🛡️ {t.security}</h2>
-        <p className="mt-2 text-xs text-slate-400 font-medium leading-relaxed">{t.securityDesc}</p>
+      <div className="rounded-[32px] border border-border bg-surface p-6 shadow-sm relative overflow-hidden">
+        <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">🛡️ {t.security}</h2>
+        <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">{t.securityDesc}</p>
         
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-3xl border border-slate-50 bg-slate-50/40 p-5 flex items-center justify-between hover:bg-slate-50 transition-colors duration-300">
+          <div className="rounded-3xl border border-border bg-accent/10 p-5 flex items-center justify-between hover:bg-accent/20 transition-colors duration-300">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{t.changePass}</p>
-              <p className="mt-2 text-2xl font-extrabold text-slate-700">{t.changePassVal}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">{t.changePass}</p>
+              <p className="mt-2 text-2xl font-extrabold text-text-primary">{t.changePassVal}</p>
             </div>
-            <span className="text-2xl text-blue-500">🛡️</span>
+            <span className="text-2xl text-primary">🛡️</span>
           </div>
           
-          <div className="rounded-3xl border border-slate-50 bg-slate-50/40 p-5 flex items-center justify-between hover:bg-slate-50 transition-colors duration-300">
+          <div className="rounded-3xl border border-border bg-accent/10 p-5 flex items-center justify-between hover:bg-accent/20 transition-colors duration-300">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{t.sessionInfo}</p>
-              <p className="mt-2 text-2xl font-extrabold text-slate-700">{t.sessionInfoVal}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">{t.sessionInfo}</p>
+              <p className="mt-2 text-2xl font-extrabold text-text-primary">{t.sessionInfoVal}</p>
             </div>
-            <span className="text-2xl text-blue-500">💻</span>
+            <span className="text-2xl text-primary">💻</span>
           </div>
+        </div>
+      </div>
+
+      {/* 📋 ROLE & PERMISSION MATRIX */}
+      <div className="rounded-[32px] border border-border bg-surface p-6 shadow-sm relative overflow-hidden">
+        <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">📋 Bảng phân quyền hệ thống (Role Matrix)</h2>
+        <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">
+          Tra cứu quyền hạn thao tác dữ liệu được cấu hình cứng theo vai trò (Role-Based Access Control)
+        </p>
+
+        <div className="mt-6 overflow-x-auto border border-border rounded-2xl">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-accent/40 text-text-secondary border-b border-border">
+                <th className="p-3 font-semibold">Quyền hạn thao tác</th>
+                <th className="p-3 font-semibold text-center w-28">Admin (Quản trị)</th>
+                <th className="p-3 font-semibold text-center w-28">Manager (Quản lý)</th>
+                <th className="p-3 font-semibold text-center w-28">Employee (Nhân viên)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {[
+                { label: "Xem & Cấu hình Nhật ký Hệ thống (Audit Logs)", admin: true, manager: false, employee: false },
+                { label: "Thêm, Sửa, Xóa Nhân viên & Vai trò", admin: true, manager: false, employee: false },
+                { label: "Xóa Dự án (Projects)", admin: true, manager: false, employee: false },
+                { label: "Quản lý Phòng ban (Departments)", admin: true, manager: true, employee: false },
+                { label: "Khởi tạo & Sửa Dự án", admin: true, manager: true, employee: false },
+                { label: "Khởi tạo, Sửa & Xóa Task công việc", admin: true, manager: true, employee: false },
+                { label: "Tạo & Đăng ký đơn Nghỉ phép (Vacation)", admin: true, manager: true, employee: true },
+                { label: "Duyệt Đơn nghỉ phép của cấp dưới", admin: true, manager: true, employee: false },
+                { label: "Cập nhật trạng thái Task (assignee)", admin: true, manager: true, employee: true },
+              ].map((row, idx) => (
+                <tr key={idx} className="hover:bg-accent/20 transition-colors">
+                  <td className="p-3 text-text-primary font-medium">{row.label}</td>
+                  <td className="p-3 text-center">
+                    {row.admin ? (
+                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+                    ) : (
+                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-500 dark:text-rose-400 font-bold">✗</span>
+                    )}
+                  </td>
+                  <td className="p-3 text-center">
+                    {row.manager ? (
+                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+                    ) : (
+                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-500 dark:text-rose-400 font-bold">✗</span>
+                    )}
+                  </td>
+                  <td className="p-3 text-center">
+                    {row.employee ? (
+                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 font-bold">✓</span>
+                    ) : (
+                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-500 dark:text-rose-400 font-bold">✗</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

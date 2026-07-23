@@ -1,10 +1,36 @@
-# Changelog
+## [Unreleased] — Phase 4.5: Enterprise UI/UX Redesign and Workflow Integration
 
-All notable changes to TaskSyncEnterprise are documented in this file.
+### Added
+- Complete enterprise design system with CSS custom properties, typography tokens, spacing scale, and component primitives
+- ApplicationShell with domain-oriented sidebar navigation (Overview, Work Management, Collaboration, Employee Self-Service, Reports, Administration)
+- Keyboard-navigable global search modal (Cmd+K / Ctrl+K) with debounced task and project lookup
+- Notification bell popover in Navbar showing last 5 unread items with deep links to tasks or vacations
+- Notifications page with date-grouped sections (Today, Yesterday, Earlier) and mark-as-read controls
+- My Work page with tabbed sections: Today (due tasks + approved leaves), Assigned to Me (grouped by project), My Requests (leave timeline), Sprint (active tasks)
+- Teams administration page with department filter, team code search, and create/edit drawers
+- Read-only Role and Permission Matrix in Settings documenting hardcoded RBAC rules
+- AuditLogPage.tsx rewritten in TypeScript with action badges, login counter, and formula-safe CSV export
+- ReportsPage.tsx with computed project portfolio metrics, task distribution charts (Recharts), employee workload tables, and vacation summaries
+- Safe CSV export utility (csv.ts) with Excel formula injection mitigation
+- useTeams TanStack Query hooks for teams CRUD
+- `/teams` and `/audit` routes added to AppRouter
+- helpers.test.mjs unit tests for permission helpers, CSV escaping, and progress calculations
+- 14+ new frontend documentation files covering design system, components, navigation, responsive behavior, and feature modules
 
-This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+### Changed
+- Redesigned TaskDrawer into dual-column workspace with file queue, attachment manager, metadata attributes
+- ProjectDetailPage extended to 10 tabs: Overview, Tasks, Kanban, Backlog, Sprints, Calendar, Files, Discussions, Activity, Settings
+- CalendarPage separated from vacation management — leaves displayed as read-only calendar events
+- VacationPage handles all leave request creation and approval workflows
+- SettingsPage updated to design system tokens and extended with permission matrix
+
+### Fixed
+- Removed `AuditLogPage.jsx` legacy file after TypeScript migration
+
+---
 
 ## [1.0.0-rc1] — 2026-07-20
+
 
 ### Added — Phase 3.8.8: Final Release Preparation
 - Release pipeline with semantic version tag validation (`release.yml`).

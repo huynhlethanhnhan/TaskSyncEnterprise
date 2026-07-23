@@ -31,7 +31,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-modal flex items-center justify-center bg-background/80 backdrop-blur-xs">
+      <div className="fixed inset-0 z-modal flex items-center justify-center bg-background/85 backdrop-blur-sm">
         {spinnerContent}
       </div>
     );

@@ -10,7 +10,7 @@ import {
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Checkbox } from '../ui/Checkbox';
 import { SkeletonTable } from '../feedback/Skeleton';
-import { EmptyState } from '../feedback/EmptyState';
+import { EmptyState } from '../common/EmptyState';
 import { cn } from '../../utils/cn';
 
 export interface DataTableWrapperProps<TData, TValue> {
@@ -95,11 +95,11 @@ export function DataTableWrapper<TData, TValue>({
   }
 
   return (
-    <div className={cn('w-full border border-border rounded-lg overflow-hidden bg-surface shadow-xs', className)}>
+    <div className={cn('w-full border border-border rounded-xl overflow-hidden bg-surface shadow-xs', className)}>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs text-text-primary border-collapse">
           {/* Header */}
-          <thead className="bg-slate-50/80 dark:bg-slate-900/80 border-b border-border/80 text-text-muted font-semibold uppercase tracking-wider select-none sticky top-0 z-sticky backdrop-blur-xs">
+          <thead className="bg-slate-50/90 dark:bg-slate-900/90 border-b border-border/80 text-text-muted font-semibold uppercase tracking-wider select-none sticky top-0 z-sticky backdrop-blur-sm">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
@@ -144,7 +144,7 @@ export function DataTableWrapper<TData, TValue>({
                 key={row.id}
                 className={cn(
                   'transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/40',
-                  row.getIsSelected() && 'bg-accent/40 dark:bg-slate-800/80'
+                  row.getIsSelected() && 'bg-accent/40 dark:bg-slate-800/70'
                 )}
               >
                 {row.getVisibleCells().map((cell) => (

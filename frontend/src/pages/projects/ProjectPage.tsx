@@ -9,7 +9,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/common/Badge';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
-import { EmptyState } from '../../components/feedback/EmptyState';
+import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { ForbiddenState } from '../../components/feedback/ForbiddenState';
 import { Pagination } from '../../components/data-display/Pagination';

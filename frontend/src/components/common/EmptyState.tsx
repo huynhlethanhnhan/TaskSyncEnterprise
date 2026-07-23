@@ -16,6 +16,7 @@ export interface EmptyStateProps {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  action?: React.ReactNode;
   icon?: React.ReactNode;
   className?: string;
 }
@@ -26,6 +27,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   description,
   actionLabel,
   onAction,
+  action,
   icon,
   className,
 }) => {
@@ -77,7 +79,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         </p>
       </div>
 
-      {onAction && (
+      {action ? (
+        <div className="mt-1">{action}</div>
+      ) : onAction ? (
         <Button
           variant="outline"
           size="sm"
@@ -87,7 +91,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         >
           {actionLabel || 'Tải lại trang'}
         </Button>
-      )}
+      ) : null}
     </div>
   );
 };

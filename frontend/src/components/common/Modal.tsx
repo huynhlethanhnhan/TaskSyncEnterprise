@@ -67,7 +67,7 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-backdrop"
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-backdrop"
             aria-hidden="true"
           />
 
@@ -83,7 +83,7 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 6 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className={cn(
-              'relative z-modal w-full rounded-xl border border-border bg-surface shadow-2xl text-text-primary overflow-hidden flex flex-col my-auto',
+              'relative z-modal w-full rounded-2xl border border-border bg-surface shadow-2xl text-text-primary overflow-hidden flex flex-col my-auto',
               sizeClasses[size]
             )}
           >

@@ -533,7 +533,7 @@ export const DashboardPage: React.FC = () => {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] text-left text-xs">
-              <thead className="border-y border-border bg-muted/50 text-text-muted">
+              <thead className="border-b border-border/80 bg-slate-50/90 dark:bg-slate-900/90 text-text-muted select-none uppercase tracking-wider font-semibold">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Phòng ban</th>
                   <th className="px-4 py-3 text-right font-semibold">Nhân sự</th>
@@ -543,14 +543,14 @@ export const DashboardPage: React.FC = () => {
                   <th className="px-4 py-3 font-semibold">Tình trạng</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/70">
+              <tbody className="divide-y divide-border/60">
                 {employees_by_department.map((row: any) => {
                   const deptWorkload = workload_by_department.find((w: any) => w.department_name === row.department_name);
                   const totalTasks = deptWorkload?.total_tasks || 0;
                   const pendingTasks = deptWorkload?.pending_tasks || 0;
                   const overdueTasks = deptWorkload?.overdue_tasks || 0;
                   return (
-                    <tr key={row.department_name} className="hover:bg-accent/30">
+                    <tr key={row.department_name} className="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                       <td className="px-4 py-3 font-semibold text-text-primary">{row.department_name}</td>
                       <td className="px-4 py-3 text-right text-text-secondary">{row.employee_count}</td>
                       <td className="px-4 py-3 text-right text-text-secondary">{totalTasks}</td>

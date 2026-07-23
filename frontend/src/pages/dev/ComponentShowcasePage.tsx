@@ -27,7 +27,7 @@ import { Dropdown } from '../../components/common/Dropdown';
 import { Tabs } from '../../components/navigation/Tabs';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
-import { EmptyState } from '../../components/feedback/EmptyState';
+import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { Pagination } from '../../components/data-display/Pagination';
 import { DataTableWrapper } from '../../components/data-display/DataTableWrapper';

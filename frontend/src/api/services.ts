@@ -59,6 +59,9 @@ export interface TaskItem {
   created_by?: number | null;
   deadline?: string | null;
   created_at?: string;
+  progress_percent?: number;
+  story_points?: number;
+  attachments?: any[];
 }
 
 export interface EmployeeItem {
@@ -215,5 +218,37 @@ export const notificationsApi = {
   },
   markAllAsRead: async (): Promise<void> => {
     await api.patch('/notifications/read-all');
+  },
+};
+
+export interface TeamItem {
+  id: number;
+  department_id: number;
+  team_code: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export const teamsApi = {
+  getAll: async (params?: Record<string, any>): Promise<TeamItem[]> => {
+    const res = await api.get('/teams', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  getById: async (id: number): Promise<TeamItem> => {
+    const res = await api.get(`/teams/${id}`);
+    return res.data?.data || res.data;
+  },
+  create: async (payload: Partial<TeamItem>): Promise<TeamItem> => {
+    const res = await api.post('/teams', payload);
+    return res.data?.data || res.data;
+  },
+  update: async (id: number, payload: Partial<TeamItem>): Promise<TeamItem> => {
+    const res = await api.put(`/teams/${id}`, payload);
+    return res.data?.data || res.data;
+  },
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/teams/${id}`);
   },
 };

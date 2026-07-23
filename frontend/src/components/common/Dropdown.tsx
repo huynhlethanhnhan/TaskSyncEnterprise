@@ -69,14 +69,14 @@ export const Dropdown: React.FC<DropdownProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: -4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className={cn(
-              'absolute z-dropdown mt-1.5 w-56 rounded-md border border-border bg-surface p-1 shadow-lg text-text-primary focus:outline-none',
+              'absolute z-dropdown mt-1.5 w-56 rounded-lg border border-border bg-surface p-1 shadow-md text-text-primary focus:outline-none',
               align === 'right' ? 'right-0' : 'left-0',
               className
             )}
           >
             {items.map((item, index) => {
               if (item === 'separator') {
-                return <div key={`sep-${index}`} className="my-1 h-px bg-border/60" aria-hidden="true" />;
+                return <div key={`sep-${index}`} className="my-1.5 h-px bg-border/60" aria-hidden="true" />;
               }
 
               return (
@@ -91,15 +91,15 @@ export const Dropdown: React.FC<DropdownProps> = ({
                     setIsOpen(false);
                   }}
                   className={cn(
-                    'group flex w-full items-center justify-between rounded-sm px-2.5 py-1.5 text-xs font-medium transition-colors select-none text-left',
+                    'group flex w-full items-center justify-between rounded-md px-2.5 py-2 text-xs font-medium transition-colors select-none text-left cursor-pointer',
                     item.destructive
-                      ? 'text-destructive hover:bg-rose-50 dark:hover:bg-rose-950/50'
-                      : 'text-text-primary hover:bg-secondary hover:text-text-primary',
+                      ? 'text-destructive hover:bg-rose-50 dark:hover:bg-rose-950/30'
+                      : 'text-text-secondary hover:bg-secondary hover:text-text-primary',
                     item.disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent'
                   )}
                 >
                   <span className="flex items-center gap-2">
-                    {item.icon && <span className="text-text-muted group-hover:text-current">{item.icon}</span>}
+                    {item.icon && <span className="text-text-muted group-hover:text-text-primary">{item.icon}</span>}
                     {item.label}
                   </span>
                   {item.shortcut && (

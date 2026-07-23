@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/common/Badge';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
-import { EmptyState } from '../../components/feedback/EmptyState';
+import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { DepartmentDrawer } from '../../components/drawers/DepartmentDrawer';
 import {

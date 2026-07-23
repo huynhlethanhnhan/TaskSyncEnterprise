@@ -72,9 +72,9 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
                   checked={isChecked}
                   disabled={option.disabled}
                   onChange={() => handleChange(option.value)}
-                  className="peer h-4.5 w-4.5 appearance-none rounded-full border border-input bg-surface transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 checked:border-primary checked:bg-primary"
+                  className="peer h-4.5 w-4.5 appearance-none rounded-full border border-input bg-surface transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 checked:border-primary checked:bg-primary cursor-pointer hover:border-slate-400 dark:hover:border-slate-600"
                 />
-                <span className="pointer-events-none absolute h-2 w-2 rounded-full bg-primary-foreground opacity-0 peer-checked:opacity-100 transition-opacity" />
+                <span className="pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-primary-foreground opacity-0 peer-checked:opacity-100 transition-opacity" />
               </div>
               <div className="flex flex-col leading-none">
                 <span className="text-sm font-medium text-text-primary">{option.label}</span>

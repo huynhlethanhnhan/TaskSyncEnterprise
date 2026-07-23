@@ -55,7 +55,7 @@ export const Switch: React.FC<SwitchProps> = ({
         onClick={toggle}
         onKeyDown={handleKeyDown}
         className={cn(
-          'relative inline-flex shrink-0 rounded-full transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40',
+          'relative inline-flex shrink-0 rounded-full transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer',
           size === 'sm' ? 'h-5 w-9' : 'h-6 w-11',
           isChecked ? 'bg-primary' : 'bg-muted'
         )}

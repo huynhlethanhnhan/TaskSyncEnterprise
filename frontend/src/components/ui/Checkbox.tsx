@@ -34,17 +34,21 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
             onChange={onChange}
             aria-invalid={Boolean(error)}
             className={cn(
-              'peer h-4.5 w-4.5 shrink-0 appearance-none rounded-sm border border-input bg-surface transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40 checked:border-primary checked:bg-primary',
-              error && 'border-destructive',
+              'peer h-4.5 w-4.5 shrink-0 appearance-none rounded-md border border-input bg-surface transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40 checked:border-primary checked:bg-primary cursor-pointer hover:border-slate-400 dark:hover:border-slate-600',
+              indeterminate && 'border-primary bg-primary',
+              error && 'border-destructive focus-visible:ring-destructive',
               className
             )}
             {...props}
           />
-          <span className="pointer-events-none absolute text-primary-foreground opacity-0 peer-checked:opacity-100 flex items-center justify-center">
+          <span className={cn(
+            "pointer-events-none absolute text-primary-foreground flex items-center justify-center transition-opacity duration-150",
+            (checked || indeterminate) ? "opacity-100" : "opacity-0"
+          )}>
             {indeterminate ? (
-              <Minus className="h-3.5 w-3.5 stroke-[2.5]" aria-hidden="true" />
+              <Minus className="h-3 w-3 stroke-[3]" aria-hidden="true" />
             ) : (
-              <Check className="h-3.5 w-3.5 stroke-[2.5]" aria-hidden="true" />
+              <Check className="h-3 w-3 stroke-[3]" aria-hidden="true" />
             )}
           </span>
         </div>

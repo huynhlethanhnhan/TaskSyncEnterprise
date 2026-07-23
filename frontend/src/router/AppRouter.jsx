@@ -23,7 +23,17 @@ import VacationPage from "../pages/vacations/VacationPage";
 import VacationDetailPage from "../pages/vacations/VacationDetailPage";
 import SettingsPage from "../pages/settings/SettingsPage";
 import ProfilePage from "../pages/profile/ProfilePage.tsx";
-import AuditLogPage from "../pages/audit/AuditLogPage";
+import { AuditLogPage } from "../pages/audit/AuditLogPage.tsx";
+import { TeamPage } from "../pages/teams/TeamPage.tsx";
+
+// New Workspaces Redesign imports
+import MyWorkPage from "../pages/dashboard/MyWorkPage.tsx";
+import BacklogPage from "../pages/tasks/BacklogPage.tsx";
+import SprintsPage from "../pages/tasks/SprintsPage.tsx";
+import TopicsPage from "../pages/profile/TopicsPage.tsx";
+import FeedbackPage from "../pages/profile/FeedbackPage.tsx";
+import FilesPage from "../pages/profile/FilesPage.tsx";
+import ReportsPage from "../pages/profile/ReportsPage.tsx";
 
 export default function AppRouter() {
   return (
@@ -204,6 +214,94 @@ export default function AppRouter() {
             <ProtectedRoute>
               <ApplicationShell>
                 <AuditLogPage />
+              </ApplicationShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/teams"
+          element={
+            <ProtectedRoute>
+              <ApplicationShell>
+                <TeamPage />
+              </ApplicationShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-work"
+          element={
+            <ProtectedRoute>
+              <ApplicationShell>
+                <MyWorkPage />
+              </ApplicationShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/backlog"
+          element={
+            <ProtectedRoute>
+              <ApplicationShell>
+                <BacklogPage />
+              </ApplicationShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sprints"
+          element={
+            <ProtectedRoute>
+              <ApplicationShell>
+                <SprintsPage />
+              </ApplicationShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/topics"
+          element={
+            <ProtectedRoute>
+              <ApplicationShell>
+                <TopicsPage />
+              </ApplicationShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/feedback"
+          element={
+            <ProtectedRoute>
+              <ApplicationShell>
+                <FeedbackPage />
+              </ApplicationShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/files"
+          element={
+            <ProtectedRoute>
+              <ApplicationShell>
+                <FilesPage />
+              </ApplicationShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <ApplicationShell>
+                <ReportsPage />
               </ApplicationShell>
             </ProtectedRoute>
           }
