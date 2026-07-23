@@ -11,16 +11,20 @@ from app.core.request_context import get_request_context
 
 logger = logging.getLogger("idempotency")
 
+
 def serialize_response(status_code: int, headers: dict, body: bytes) -> str:
     """Serializes response components to a JSON string, base64 encoding the body."""
     encoded_body = base64.b64encode(body).decode("utf-8")
     header_list = [(k, v) for k, v in headers.items()]
-    return json.dumps({
-        "status": "COMPLETED",
-        "status_code": status_code,
-        "headers": header_list,
-        "body": encoded_body
-    })
+    return json.dumps(
+        {
+            "status": "COMPLETED",
+            "status_code": status_code,
+            "headers": header_list,
+            "body": encoded_body,
+        }
+    )
+
 
 def deserialize_response(cached_data_str: str) -> Response:
     """Reconstructs a Starlette Response from serialized cache data."""
@@ -28,22 +32,20 @@ def deserialize_response(cached_data_str: str) -> Response:
     status_code = data["status_code"]
     headers = data["headers"]
     body = base64.b64decode(data["body"])
-    
+
     reconstructed_headers = {}
     for k, v in headers:
         # Exclude dynamic or correlation headers
         if k.lower() in ("x-process-time", "date"):
             continue
         reconstructed_headers[k] = v
-        
+
     # Mark cache hit indicators
     reconstructed_headers["Idempotency-Cache"] = "HIT"
     reconstructed_headers["X-Idempotency-Cache"] = "HIT"
-    
+
     return Response(
-        content=body,
-        status_code=status_code,
-        headers=reconstructed_headers
+        content=body, status_code=status_code, headers=reconstructed_headers
     )
 
 
@@ -53,6 +55,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
     Utilizes Redis to lock requests in a PENDING state and cache responses
     for identical Idempotency-Key values over a 24-hour window.
     """
+
     def __init__(self, app):
         super().__init__(app)
         self.redis_client_mgr = RedisClient()
@@ -82,7 +85,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         # 3. Retrieve user scope from context
         ctx = get_request_context()
         user_id = ctx.get("user_id", "anonymous") if ctx else "anonymous"
-        
+
         # 4. Construct unique storage key
         redis_key = f"idempotency:{user_id}:{idempotency_key}"
         ttl = getattr(settings, "IDEMPOTENCY_TTL_SECONDS", 86400)  # Default 24 hours
@@ -94,7 +97,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         if is_new:
             try:
                 response = await call_next(request)
-                
+
                 # Delete key for server-side anomalies so the client can retry
                 if response.status_code >= 500:
                     client.delete(redis_key)
@@ -106,14 +109,16 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                     response_body += chunk
 
                 # Save execution result
-                serialized = serialize_response(response.status_code, response.headers, response_body)
+                serialized = serialize_response(
+                    response.status_code, response.headers, response_body
+                )
                 client.set(redis_key, serialized, ex=ttl)
 
                 # Return rebuilt response
                 return Response(
                     content=response_body,
                     status_code=response.status_code,
-                    headers=dict(response.headers)
+                    headers=dict(response.headers),
                 )
             except Exception as e:
                 client.delete(redis_key)
@@ -124,23 +129,27 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 val_bytes = client.get(redis_key)
                 if not val_bytes:
                     break
-                
-                val_str = val_bytes if isinstance(val_bytes, str) else val_bytes.decode("utf-8")
+
+                val_str = (
+                    val_bytes
+                    if isinstance(val_bytes, str)
+                    else val_bytes.decode("utf-8")
+                )
                 val_data = json.loads(val_str)
-                
+
                 if val_data.get("status") == "COMPLETED":
                     return deserialize_response(val_str)
                 elif val_data.get("status") == "PENDING":
                     await asyncio.sleep(0.1)
                 else:
                     break
-            
+
             # Timeout or broken state -> Conflict
             return JSONResponse(
                 status_code=409,
                 content={
                     "success": False,
                     "message": "A concurrent request is already processing this idempotency key.",
-                    "error_code": "CONCURRENT_REQUEST"
-                }
+                    "error_code": "CONCURRENT_REQUEST",
+                },
             )

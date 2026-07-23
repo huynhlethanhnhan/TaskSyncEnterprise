@@ -47,9 +47,7 @@ class TaskAttachmentResponse(BaseModel):
 
 
 class TaskResponse(TaskCreate):
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     progress_percent: float

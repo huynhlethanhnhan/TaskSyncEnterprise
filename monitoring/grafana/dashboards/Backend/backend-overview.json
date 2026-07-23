@@ -1,0 +1,1166 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "tasksync"
+      ],
+      "targetBlank": false,
+      "title": "TaskSync Navigation Menu",
+      "type": "dashboards"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "Service Health & Business Metrics",
+      "type": "row"
+    },
+    {
+      "title": "Backend Target Status",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "up{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Target Status",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22up%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
+    },
+    {
+      "title": "Uptime",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 2,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "app_uptime_seconds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Prometheus Scrape Status",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 3,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "scrape_samples_scraped{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Active Tasks",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 4,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "tasks_created_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Active Projects",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 5,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "projects_created_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Active Users",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 6,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "active_users_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 101,
+      "title": "HTTP Traffic Metrics",
+      "type": "row"
+    },
+    {
+      "title": "Request Rate (5m)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 10,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
+          "legendFormat": "Requests Rate",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Requests by HTTP Status",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 11,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (status_code)",
+          "legendFormat": "{{status_code}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Requests by Method",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "id": 12,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (method)",
+          "legendFormat": "{{method}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Requests by Path (Increase over last 5m)",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "id": 13,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (path)",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 102,
+      "title": "Latency & Performance",
+      "type": "row"
+    },
+    {
+      "title": "Average Request Latency",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "id": 20,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_request_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) / sum(rate(http_request_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))",
+          "legendFormat": "Avg Latency",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Latency Metrics",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22http_request_duration_seconds_bucket%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
+    },
+    {
+      "title": "P95 and P99 Latencies",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "id": 21,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (le))",
+          "legendFormat": "P95 Latency",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (le))",
+          "legendFormat": "P99 Latency",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Slowest Routes (Avg Latency by Path over last 5m)",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "id": 22,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_request_duration_seconds_sum{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (path) / sum(rate(http_request_duration_seconds_count{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (path)",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.2
+              },
+              {
+                "color": "red",
+                "value": 0.5
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "id": 103,
+      "title": "Errors & Reliability",
+      "type": "row"
+    },
+    {
+      "title": "Error Rate vs Percentage",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "id": 30,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\",status_code=~\"[45]..\"}[$rate_interval]))",
+          "legendFormat": "HTTP Errors Rate",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\",status_code=~\"[45]..\"}[$rate_interval])) / sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]))) * 100",
+          "legendFormat": "HTTP Error Percentage",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Error Metrics",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22http_requests_total%7Bjob%3D~%5C%22%24job%5C%22,status_code%3D~%5C%22%5B45%5D..%5C%22%7D%22%7D%5D"
+        }
+      ]
+    },
+    {
+      "title": "Error Breakdown by Path & Status (4xx/5xx)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "id": 31,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\",status_code=~\"[45]..\"}[$rate_interval])) by (path, status_code)",
+          "legendFormat": "{{path}} ({{status_code}})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 104,
+      "title": "Infrastructure & Runtime",
+      "type": "row"
+    },
+    {
+      "title": "CPU Usage (Process vs System)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 49
+      },
+      "id": 40,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "rate(process_cpu_seconds_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval]) * 100",
+          "legendFormat": "Backend Process CPU Usage",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "system_cpu_usage_ratio{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"} * 100",
+          "legendFormat": "System CPU Usage Ratio",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore CPU Metrics",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22process_cpu_seconds_total%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
+    },
+    {
+      "title": "Resident Memory Usage",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 49
+      },
+      "id": 41,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "process_resident_memory_bytes{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "legendFormat": "Resident Memory",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "system_memory_usage_bytes{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "legendFormat": "System Memory Usage",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      },
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Explore Memory Metrics",
+          "url": "/explore?left=%5B%22now-1h%22,%22now%22,%22%24%7Bdatasource%7D%22,%7B%22expr%22:%22process_resident_memory_bytes%7Bjob%3D~%5C%22%24job%5C%22%7D%22%7D%5D"
+        }
+      ]
+    },
+    {
+      "title": "Open File Descriptors",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 57
+      },
+      "id": 42,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "process_open_fds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "legendFormat": "Open FDs",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "process_max_fds{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}",
+          "legendFormat": "Max FDs",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Database Queries Rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 57
+      },
+      "id": 43,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(db_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (statement_type)",
+          "legendFormat": "{{statement_type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Redis Requests Rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 57
+      },
+      "id": 44,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(redis_requests_total{job=~\"$job\", instance=~\"$instance\", environment=~\"$environment\"}[$rate_interval])) by (command)",
+          "legendFormat": "{{command}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rps",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "tasksync",
+    "observability",
+    "backend"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "value": "prometheus",
+          "text": "prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up, environment)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Environment",
+        "multi": true,
+        "name": "environment",
+        "options": [],
+        "query": {
+          "query": "label_values(up, environment)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\"}, job)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Job",
+        "multi": true,
+        "name": "job",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\"}, job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": true,
+          "value": "5m",
+          "text": "5m"
+        },
+        "hide": 0,
+        "label": "Interval",
+        "name": "interval",
+        "options": [
+          {
+            "selected": false,
+            "value": "10s",
+            "text": "10s"
+          },
+          {
+            "selected": false,
+            "value": "30s",
+            "text": "30s"
+          },
+          {
+            "selected": false,
+            "value": "1m",
+            "text": "1m"
+          },
+          {
+            "selected": true,
+            "value": "5m",
+            "text": "5m"
+          },
+          {
+            "selected": false,
+            "value": "15m",
+            "text": "15m"
+          },
+          {
+            "selected": false,
+            "value": "30m",
+            "text": "30m"
+          },
+          {
+            "selected": false,
+            "value": "1h",
+            "text": "1h"
+          },
+          {
+            "selected": false,
+            "value": "2h",
+            "text": "2h"
+          },
+          {
+            "selected": false,
+            "value": "1d",
+            "text": "1d"
+          }
+        ],
+        "query": "10s,30s,1m,5m,15m,30m,1h,2h,1d",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": true,
+          "value": "5m",
+          "text": "5m"
+        },
+        "hide": 0,
+        "label": "Rate Interval",
+        "name": "rate_interval",
+        "options": [
+          {
+            "selected": false,
+            "value": "1m",
+            "text": "1m"
+          },
+          {
+            "selected": true,
+            "value": "5m",
+            "text": "5m"
+          },
+          {
+            "selected": false,
+            "value": "10m",
+            "text": "10m"
+          },
+          {
+            "selected": false,
+            "value": "15m",
+            "text": "15m"
+          }
+        ],
+        "query": "1m,5m,10m,15m",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "TaskSyncEnterprise Backend Overview",
+  "uid": "tasksync-backend-overview",
+  "version": 1,
+  "weekStart": ""
+}

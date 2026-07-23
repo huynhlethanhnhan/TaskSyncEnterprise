@@ -1,0 +1,14 @@
+{
+  "status": "ok",
+  "generatedAt": "2026-07-22T15:12:08.593Z",
+  "browser": "chrome",
+  "browserVersion": "150.0.7871.181",
+  "elapsedMs": 540,
+  "websocketPayload": {
+    "id": 1002,
+    "title": "Bạn có task mới",
+    "message": "Realtime multi-device 1784733127637",
+    "channel": "WEBSOCKET"
+  },
+  "matchingNotificationCount": 1
+}

@@ -3,12 +3,15 @@
 Centralized cache key generator functions to enforce consistent naming patterns.
 """
 
+
 def get_department_key(department_id: int) -> str:
     """Generates the cache key for a specific department."""
     return f"department:{department_id}"
 
 
-def get_department_list_key(skip: int = 0, limit: int = 20, search: str | None = None) -> str:
+def get_department_list_key(
+    skip: int = 0, limit: int = 20, search: str | None = None
+) -> str:
     """Generates cache key for department list with pagination and search parameters."""
     search_part = f":s_{search}" if search else ""
     return f"department:list:{skip}:{limit}{search_part}"
@@ -59,7 +62,12 @@ def get_dashboard_analytics_key() -> str:
     return "dashboard:analytics"
 
 
-def get_task_list_key(skip: int = 0, limit: int = 20, project_id: int | None = None, status: str | None = None) -> str:
+def get_task_list_key(
+    skip: int = 0,
+    limit: int = 20,
+    project_id: int | None = None,
+    status: str | None = None,
+) -> str:
     """Generates cache key for task list with pagination and filter options."""
     proj_part = f":p_{project_id}" if project_id else ""
     status_part = f":s_{status}" if status else ""
@@ -94,4 +102,3 @@ def get_project_list_pattern() -> str:
 def get_task_list_pattern() -> str:
     """Generates pattern for task list cache keys."""
     return "task:list:*"
-

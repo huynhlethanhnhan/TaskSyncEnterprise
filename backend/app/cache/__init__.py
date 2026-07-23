@@ -3,7 +3,11 @@ from app.cache.redis_client import RedisClient
 from app.cache.cache_service import CacheService
 from app.cache.cache_manager import CacheManager
 from app.cache.cache_invalidator import CacheInvalidator
-from app.cache.exceptions import CacheError, CacheConnectionError, CacheSerializationError
+from app.cache.exceptions import (
+    CacheError,
+    CacheConnectionError,
+    CacheSerializationError,
+)
 from app.cache.cache_keys import (
     get_department_key,
     get_department_list_key,
@@ -22,7 +26,7 @@ from app.cache.cache_keys import (
     get_employee_list_pattern,
     get_employee_search_pattern,
     get_project_list_pattern,
-    get_task_list_pattern
+    get_task_list_pattern,
 )
 
 # Global singleton CacheService & CacheManager instances for application reuse
@@ -56,6 +60,5 @@ __all__ = [
     "get_employee_list_pattern",
     "get_employee_search_pattern",
     "get_project_list_pattern",
-    "get_task_list_pattern"
+    "get_task_list_pattern",
 ]
-

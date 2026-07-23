@@ -1,0 +1,645 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Visualizes application errors, client/server failures (4xx/5xx), unhandled exceptions, validation issues, authorization/authentication failures, and timeouts.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": ["tasksync"],
+      "targetBlank": false,
+      "title": "TaskSync Navigation Menu",
+      "type": "dashboards"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "Overall Error Status",
+      "type": "row"
+    },
+    {
+      "title": "Total HTTP Errors",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(http_requests_total{status_code=~\"[45]..\", environment=~\"$environment\"}[$interval])) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "red", "value": 10}
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "HTTP Error Percentage",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 2,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(http_requests_total{status_code=~\"[45]..\", environment=~\"$environment\"}[$rate_interval])) / sum(rate(http_requests_total{environment=~\"$environment\"}[$rate_interval]))) * 100 or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1.0},
+              {"color": "red", "value": 5.0}
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Unhandled Exceptions",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 3,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(app_exceptions_total{environment=~\"$environment\"}[$interval])) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "red", "value": 5}
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Validation Failures",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 4,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(validation_errors_total{environment=~\"$environment\"}[$interval])) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 5},
+              {"color": "red", "value": 20}
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Authentication Failures",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 5,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(auth_errors_total{environment=~\"$environment\"}[$interval])) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "red", "value": 5}
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Timeout Errors",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 6,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(timeout_errors_total{environment=~\"$environment\"}[$interval])) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "red", "value": 5}
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 101,
+      "title": "Error Trends & Rates",
+      "type": "row"
+    },
+    {
+      "title": "HTTP Error Rates Trend (4xx vs 5xx)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 10,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{status_code=~\"4..\", environment=~\"$environment\"}[$rate_interval]))",
+          "legendFormat": "4xx Client Errors",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{status_code=~\"5..\", environment=~\"$environment\"}[$rate_interval]))",
+          "legendFormat": "5xx Server Errors",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "custom": {
+            "drawStyle": "line"
+          }
+        }
+      }
+    },
+    {
+      "title": "Exception Occurrence Trend by Exception Type",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 11,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(app_exceptions_total{environment=~\"$environment\"}[$rate_interval])) by (exception_type)",
+          "legendFormat": "{{exception_type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "custom": {
+            "drawStyle": "line"
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 102,
+      "title": "Breakdowns & Drill-Downs",
+      "type": "row"
+    },
+    {
+      "title": "Top Failing Endpoints (By total 4xx/5xx calls over selected range)",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "id": 20,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(http_requests_total{status_code=~\"[45]..\", environment=~\"$environment\"}[$interval])) by (path)",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": true
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 5},
+              {"color": "red", "value": 20}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Top Exception Types (By total exceptions raised over selected range)",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "id": 21,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(app_exceptions_total{environment=~\"$environment\"}[$interval])) by (exception_type)",
+          "legendFormat": "{{exception_type}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": true
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 5},
+              {"color": "red", "value": 20}
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["tasksync", "observability", "backend"],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "value": "prometheus",
+          "text": "prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up, environment)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Environment",
+        "multi": true,
+        "name": "environment",
+        "options": [],
+        "query": {
+          "query": "label_values(up, environment)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\"}, job)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Job",
+        "multi": true,
+        "name": "job",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\"}, job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": true,
+          "value": "5m",
+          "text": "5m"
+        },
+        "hide": 0,
+        "label": "Interval",
+        "name": "interval",
+        "options": [
+          {"selected": false, "value": "10s", "text": "10s"},
+          {"selected": false, "value": "30s", "text": "30s"},
+          {"selected": false, "value": "1m", "text": "1m"},
+          {"selected": true, "value": "5m", "text": "5m"},
+          {"selected": false, "value": "15m", "text": "15m"},
+          {"selected": false, "value": "30m", "text": "30m"},
+          {"selected": false, "value": "1h", "text": "1h"},
+          {"selected": false, "value": "2h", "text": "2h"},
+          {"selected": false, "value": "1d", "text": "1d"}
+        ],
+        "query": "10s,30s,1m,5m,15m,30m,1h,2h,1d",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": true,
+          "value": "5m",
+          "text": "5m"
+        },
+        "hide": 0,
+        "label": "Rate Interval",
+        "name": "rate_interval",
+        "options": [
+          {"selected": false, "value": "1m", "text": "1m"},
+          {"selected": true, "value": "5m", "text": "5m"},
+          {"selected": false, "value": "10m", "text": "10m"},
+          {"selected": false, "value": "15m", "text": "15m"}
+        ],
+        "query": "1m,5m,10m,15m",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "TaskSyncEnterprise Error Overview",
+  "uid": "tasksync-error-overview",
+  "version": 1,
+  "weekStart": ""
+}

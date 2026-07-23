@@ -1,15 +1,13 @@
-// 📂 FILE: src/router/ProtectedRoute.jsx
-import { Navigate } from "react-router-dom";
-import { tokenService } from "../services/tokenService";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../providers/AuthProvider";
 
 export default function ProtectedRoute({ children }) {
-  const token = tokenService.getAccessToken();
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
 
-  // Nếu không có token -> đá về login
-  if (!token) {
-    return <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // Nếu có token -> cho vào trang đích
   return children;
 }

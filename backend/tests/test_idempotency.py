@@ -4,8 +4,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.middleware.idempotency import IdempotencyMiddleware
 
+
 class StatefulMockRedis:
     """In-memory stateful mock for Redis client to test idempotency logic."""
+
     def __init__(self):
         self.store = {}
 
@@ -31,11 +33,13 @@ test_app.add_middleware(IdempotencyMiddleware)
 
 execution_counter = 0
 
+
 @test_app.post("/test-idempotent")
 def sample_post_endpoint():
     global execution_counter
     execution_counter += 1
     return {"counter": execution_counter}
+
 
 @test_app.get("/test-idempotent")
 def sample_get_endpoint():
@@ -48,7 +52,9 @@ def sample_get_endpoint():
 def stateful_redis():
     """Patches RedisClient.client with a stateful mock."""
     mock_db = StatefulMockRedis()
-    with patch("app.cache.redis_client.RedisClient.client", new_callable=PropertyMock) as mock_prop:
+    with patch(
+        "app.cache.redis_client.RedisClient.client", new_callable=PropertyMock
+    ) as mock_prop:
         mock_prop.return_value = mock_db
         yield mock_db
 
@@ -57,7 +63,7 @@ def test_idempotency_workflow(stateful_redis):
     """Verify that multiple POST requests with identical Idempotency-Key return cached response."""
     global execution_counter
     execution_counter = 0  # Reset counter
-    
+
     client = TestClient(test_app)
     headers = {"Idempotency-Key": "test-uuid-1234"}
 
@@ -80,7 +86,7 @@ def test_idempotency_ignored_on_get(stateful_redis):
     """Verify that GET requests ignore Idempotency-Key and are not cached."""
     global execution_counter
     execution_counter = 0
-    
+
     client = TestClient(test_app)
     headers = {"Idempotency-Key": "test-uuid-5678"}
 

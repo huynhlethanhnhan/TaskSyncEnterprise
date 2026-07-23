@@ -49,7 +49,7 @@ class SMTPProvider(EmailProvider):
                 reply_to=message.reply_to,
                 subject=message.subject,
                 body_text=message.body_text,
-                body_html=message.body_html
+                body_html=message.body_html,
             )
             duration = int((time.perf_counter() - start_time) * 1000)
             return EmailResult(
@@ -57,7 +57,7 @@ class SMTPProvider(EmailProvider):
                 provider=self.name,
                 retry_count=0,
                 duration_ms=duration,
-                provider_response=response
+                provider_response=response,
             )
         except Exception as e:
             duration = int((time.perf_counter() - start_time) * 1000)
@@ -67,7 +67,7 @@ class SMTPProvider(EmailProvider):
                 provider=self.name,
                 retry_count=0,
                 duration_ms=duration,
-                failure_reason=str(e)
+                failure_reason=str(e),
             )
 
     def shutdown(self) -> None:
@@ -78,6 +78,7 @@ class SMTPProvider(EmailProvider):
 # =========================================================================
 # Future Integration Stubs
 # =========================================================================
+
 
 class GmailSMTPProvider(EmailProvider):
     @property

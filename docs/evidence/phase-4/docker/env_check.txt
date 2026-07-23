@@ -1,0 +1,5 @@
+Generated: 2026-07-22T15:20:00Z
+Environment: local production Compose audit on Windows 11 / Docker Desktop
+Command: Test-Path .env.production
+Result: True
+Secret values inspected or recorded: No

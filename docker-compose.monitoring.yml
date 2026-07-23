@@ -1,0 +1,123 @@
+# TaskSyncEnterprise standalone monitoring stack.
+# Start this file independently; it observes the backend through host port 8000.
+
+services:
+  prometheus:
+    # Pin the reviewed BusyBox release so startup and health checks are reproducible.
+    image: prom/prometheus:v3.13.1
+    container_name: tasksync-prometheus
+
+    # Start Prometheus with an immutable config and a durable TSDB location.
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-15d}
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-10GB}
+      - --web.listen-address=0.0.0.0:9090
+
+    # Bind locally by default because this stack does not configure authentication.
+    # Override only when a protected deployment intentionally requires remote access.
+    ports:
+      - "${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}:9090:9090"
+
+    volumes:
+      # The configuration is mounted read-only to prevent runtime mutation.
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Named storage preserves time-series data across container recreation.
+      - prometheus_data:/prometheus
+
+    # Docker Desktop provides this name natively; host-gateway adds Linux support.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    networks:
+      - observability
+
+    # Report readiness through Prometheus's built-in health endpoint.
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+    # Reduce container privilege without preventing writes to the TSDB volume.
+    security_opt:
+      - no-new-privileges:true
+
+    # Recover automatically after host restarts and unexpected failures.
+    restart: unless-stopped
+
+  grafana:
+    # Stable Grafana release.
+    image: grafana/grafana:11.1.0
+    container_name: tasksync-grafana
+
+    ports:
+      - "${GRAFANA_BIND_ADDRESS:-127.0.0.1}:3000:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+    volumes:
+      # Mount configurations and dashboards read-only
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      # Named volume for state persistence
+      - grafana_data:/var/lib/grafana
+
+    networks:
+      - observability
+
+    # Report readiness through Grafana's built-in api health endpoint
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+    # Reduce container privilege
+    security_opt:
+      - no-new-privileges:true
+
+    # Recover automatically after host restarts and unexpected failures
+    restart: unless-stopped
+
+  cadvisor:
+    # Stable cAdvisor release for container-level resource statistics
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: tasksync-cadvisor
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "${CADVISOR_BIND_ADDRESS:-127.0.0.1}:8080:8080"
+    networks:
+      - observability
+    restart: unless-stopped
+
+volumes:
+  # Docker manages this volume; remove it only when metric history may be lost.
+  prometheus_data:
+    name: tasksync-prometheus-data
+  # Persist Grafana database and configurations
+  grafana_data:
+    name: tasksync-grafana-data
+
+networks:
+  # A stable bridge lets future Compose-managed observability services join this
+  # stack later without renaming or replacing the network.
+  observability:
+    name: tasksync-observability
+    driver: bridge
+    labels:
+      com.tasksync.purpose: observability

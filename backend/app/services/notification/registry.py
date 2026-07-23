@@ -29,7 +29,9 @@ class ChannelRegistry:
         """Retrieves a registered channel strategy adapter."""
         channel = self._channels.get(name)
         if not channel:
-            raise ValueError(f"Notification delivery channel strategy '{name}' is not registered.")
+            raise ValueError(
+                f"Notification delivery channel strategy '{name}' is not registered."
+            )
         return channel
 
 

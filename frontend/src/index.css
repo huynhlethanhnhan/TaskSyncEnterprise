@@ -1,63 +1,260 @@
 @import "tailwindcss";
 
-/* 🌙 GLOBAL DARK MODE STYLE OVERRIDES */
-html.dark {
-  /* Override main body and root containers */
-  body, #root, .bg-\[\#f8fafc\] {
-    background-color: #0f172a !important; /* slate-900 */
-    color: #e2e8f0 !important; /* slate-200 */
-  }
+/* 🎨 TASK SYNC ENTERPRISE - DESIGN TOKENS (HSL SYSTEM) */
 
-  /* Override white card backgrounds & layout panels */
-  .bg-white, 
-  .bg-slate-50\/20, 
-  .bg-slate-50\/30, 
-  .bg-slate-50\/50, 
-  .bg-slate-50\/80 {
-    background-color: #1e293b !important; /* slate-800 */
-    color: #f8fafc !important;
-    border-color: #334155 !important; /* slate-700 */
-  }
+:root {
+  /* Slate Primitive Scale (HSL) */
+  --slate-50: 210 40% 98%;
+  --slate-100: 210 40% 96.1%;
+  --slate-200: 214.3 31.8% 91.4%;
+  --slate-300: 212.7 26.8% 83.9%;
+  --slate-400: 215 20.2% 65.1%;
+  --slate-500: 215.4 16.3% 46.9%;
+  --slate-600: 215.3 19.3% 34.5%;
+  --slate-700: 215.3 25% 26.7%;
+  --slate-800: 217.2 32.6% 17.5%;
+  --slate-900: 222.2 47.4% 11.2%;
+  --slate-950: 222.2 84% 4.9%;
 
-  /* Override borders globally for cards, headers, tables, etc. */
-  .border-slate-100, 
-  .border-slate-200, 
-  .border-slate-50,
-  .border-slate-100\/80 {
-    border-color: #334155 !important; /* slate-700 */
-  }
+  /* Enterprise Blue Primitive Scale (Primary Accent) */
+  --blue-50: 214 100% 97%;
+  --blue-100: 214 95% 93%;
+  --blue-500: 217 91% 60%;
+  --blue-600: 221.2 83.2% 53.3%;
+  --blue-700: 224 76% 48%;
 
-  /* Text color overrides to ensure readability */
-  .text-slate-800, 
-  .text-slate-900, 
-  .text-slate-700, 
-  .text-slate-600 {
-    color: #f1f5f9 !important;
-  }
-  .text-slate-500, 
-  .text-slate-400 {
-    color: #94a3b8 !important; /* slate-400 */
-  }
+  /* Status Colors */
+  --emerald-50: 152 81% 96%;
+  --emerald-500: 160 84% 39%;
+  --emerald-600: 158 64% 52%;
+  --amber-50: 48 100% 96%;
+  --amber-500: 38 92% 50%;
+  --rose-50: 355 100% 97%;
+  --rose-500: 346 87% 59%;
+  --rose-600: 346 84% 61%;
+  --rose-700: 343 80% 48%;
+  --sky-50: 204 100% 97%;
+  --sky-500: 199 89% 48%;
 
-  /* Form inputs, dropdown select tags, and buttons */
-  input, 
-  select, 
-  textarea, 
-  .bg-slate-50,
-  .bg-slate-100 {
-    background-color: #334155 !important; /* slate-700 */
-    color: #f8fafc !important;
-    border-color: #475569 !important; /* slate-600 */
-  }
+  /* LIGHT THEME SEMANTIC TOKENS */
+  --background: var(--slate-50);
+  --surface: 0 0% 100%;
+  --surface-hover: var(--slate-100);
+  --popover: 0 0% 100%;
+  --popover-foreground: var(--slate-900);
 
-  /* Custom table hover classes in dark mode */
-  .hover\:bg-slate-50:hover {
-    background-color: #334155 !important;
-  }
+  --primary: var(--blue-600);
+  --primary-hover: var(--blue-700);
+  --primary-foreground: 0 0% 100%;
 
-  /* Sidebar active navigation styling */
-  .bg-blue-50\/70 {
-    background-color: #2563eb/20 !important;
-    color: #60a5fa !important;
+  --secondary: var(--slate-100);
+  --secondary-hover: var(--slate-200);
+  --secondary-foreground: var(--slate-900);
+
+  --accent: var(--blue-50);
+  --accent-foreground: var(--blue-700);
+
+  --muted: var(--slate-100);
+  --muted-foreground: var(--slate-500);
+
+  --destructive: var(--rose-600);
+  --destructive-hover: var(--rose-700);
+  --destructive-foreground: 0 0% 100%;
+
+  --success: var(--emerald-600);
+  --warning: var(--amber-500);
+  --info: var(--sky-500);
+
+  --border: var(--slate-200);
+  --input: var(--slate-200);
+  --ring: var(--blue-600);
+
+  --text-primary: var(--slate-900);
+  --text-secondary: var(--slate-600);
+  --text-muted: var(--slate-400);
+  --text-disabled: var(--slate-300);
+
+  /* Corner Radii */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* Ambient Shadows */
+  --shadow-el-1: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-el-2: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-el-3: 0 10px 15px -3px rgba(15, 23, 42, 0.10), 0 4px 6px -4px rgba(15, 23, 42, 0.05);
+  --shadow-el-4: 0 20px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  --shadow-el-5: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+}
+
+/* 🌙 DARK THEME SEMANTIC TOKENS */
+.dark {
+  --background: var(--slate-950);
+  --surface: var(--slate-900);
+  --surface-hover: var(--slate-800);
+  --popover: var(--slate-900);
+  --popover-foreground: var(--slate-50);
+
+  --primary: var(--blue-500);
+  --primary-hover: var(--blue-600);
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: var(--slate-800);
+  --secondary-hover: var(--slate-700);
+  --secondary-foreground: var(--slate-50);
+
+  --accent: var(--slate-800);
+  --accent-foreground: var(--blue-400);
+
+  --muted: var(--slate-800);
+  --muted-foreground: var(--slate-400);
+
+  --destructive: var(--rose-500);
+  --destructive-hover: var(--rose-600);
+  --destructive-foreground: 0 0% 100%;
+
+  --success: var(--emerald-500);
+  --warning: var(--amber-500);
+  --info: var(--sky-500);
+
+  --border: var(--slate-800);
+  --input: var(--slate-800);
+  --ring: var(--blue-500);
+
+  --text-primary: var(--slate-50);
+  --text-secondary: var(--slate-400);
+  --text-muted: var(--slate-500);
+  --text-disabled: var(--slate-600);
+
+  --shadow-el-1: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-el-2: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-el-3: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-el-4: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --shadow-el-5: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+}
+
+/* ⚡ TAILWIND CSS V4 THEME MAPPING */
+@theme {
+  --color-background: hsl(var(--background));
+  --color-surface: hsl(var(--surface));
+  --color-surface-hover: hsl(var(--surface-hover));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-hover: hsl(var(--primary-hover));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-hover: hsl(var(--secondary-hover));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-hover: hsl(var(--destructive-hover));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-info: hsl(var(--info));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-text-primary: hsl(var(--text-primary));
+  --color-text-secondary: hsl(var(--text-secondary));
+  --color-text-muted: hsl(var(--text-muted));
+  --color-text-disabled: hsl(var(--text-disabled));
+
+  --font-sans: 'Inter Variable', 'Segoe UI', Arial, sans-serif;
+  --font-display: 'Inter Variable', 'Segoe UI', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-full);
+
+  --shadow-sm: var(--shadow-el-1);
+  --shadow-md: var(--shadow-el-2);
+  --shadow-lg: var(--shadow-el-3);
+  --shadow-xl: var(--shadow-el-4);
+  --shadow-2xl: var(--shadow-el-5);
+}
+
+/* Base Body Styles */
+/* Base Body & Layout Standardization */
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--text-primary));
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 🎯 Focus Ring Accessibility Standardization */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* 🎨 Custom Scrollbars for Chrome, Edge, Firefox */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Firefox Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+}
+
+/* ⚡ Micro-Interactions & Animations */
+.transition-smooth {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+.hover-lift {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

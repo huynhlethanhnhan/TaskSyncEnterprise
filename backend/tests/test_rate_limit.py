@@ -4,8 +4,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.middleware.rate_limit import RateLimitMiddleware
 
+
 class MockRateLimitRedis:
     """Stateful mock for Redis Sorted Set (ZSET) commands."""
+
     def __init__(self):
         self.store = {}
 
@@ -38,7 +40,7 @@ class MockRateLimitRedis:
             return [("member", oldest_score)]
         return ["member"]
 
-    def pipeline(self):
+    def pipeline(self, *args, **kwargs):
         return MockPipeline(self)
 
 
@@ -83,6 +85,7 @@ class MockPipeline:
 test_app = FastAPI()
 test_app.add_middleware(RateLimitMiddleware)
 
+
 # Rename to avoid pytest collection warning
 @test_app.get("/api/v1/test-route")
 def sample_rate_limit_route():
@@ -92,7 +95,9 @@ def sample_rate_limit_route():
 @pytest.fixture
 def rate_limit_redis():
     mock_db = MockRateLimitRedis()
-    with patch("app.cache.redis_client.RedisClient.client", new_callable=PropertyMock) as mock_prop:
+    with patch(
+        "app.cache.redis_client.RedisClient.client", new_callable=PropertyMock
+    ) as mock_prop:
         mock_prop.return_value = mock_db
         yield mock_db
 
@@ -108,7 +113,7 @@ def test_rate_limiting_enforcement(rate_limit_redis):
 
     with patch("app.middleware.rate_limit.settings", mock_settings):
         client = TestClient(test_app)
-        
+
         # 1st request -> Success
         response = client.get("/api/v1/test-route")
         assert response.status_code == 200

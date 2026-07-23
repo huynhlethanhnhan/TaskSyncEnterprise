@@ -29,7 +29,7 @@ def test_employee(db):
         is_active=True,
         is_deleted=False,
         is_first_login=False,
-        login_count=0
+        login_count=0,
     )
     db.add(emp)
     db.commit()
@@ -45,8 +45,8 @@ async def test_task_assigned_flow(db, test_employee):
         recipient_ids=[test_employee.id],
         payload={
             "task_title": "Implement Notification Engine",
-            "actor_name": "Project Manager"
-        }
+            "actor_name": "Project Manager",
+        },
     )
 
     # Trigger synchronous routing
@@ -55,16 +55,23 @@ async def test_task_assigned_flow(db, test_employee):
     # 2. Verify record in notifications database table
     stmt = select(Notification).where(Notification.employee_id == test_employee.id)
     notifs = list(db.scalars(stmt).all())
-    
+
     # Defaults in resolve_channels fall back to IN_APP and EMAIL
     # So we should expect 2 notification records (one for IN_APP, one for EMAIL)
     assert len(notifs) == 2
-    
-    in_app_notif = next(n for n in notifs if n.channel == NotificationChannel.IN_APP.value)
-    email_notif = next(n for n in notifs if n.channel == NotificationChannel.EMAIL.value)
+
+    in_app_notif = next(
+        n for n in notifs if n.channel == NotificationChannel.IN_APP.value
+    )
+    email_notif = next(
+        n for n in notifs if n.channel == NotificationChannel.EMAIL.value
+    )
 
     assert in_app_notif.title == "Task Assigned: Implement Notification Engine"
-    assert in_app_notif.message == "You have been assigned to the task 'Implement Notification Engine' by Project Manager."
+    assert (
+        in_app_notif.message
+        == "You have been assigned to the task 'Implement Notification Engine' by Project Manager."
+    )
     assert in_app_notif.status == NotificationStatus.SENT.value
     assert in_app_notif.type == NotificationType.TASKS.value
 
@@ -74,7 +81,9 @@ async def test_task_assigned_flow(db, test_employee):
     assert payload_dict["actor_name"] == "Project Manager"
 
     # Verify delivery log was recorded
-    log_stmt = select(NotificationLog).where(NotificationLog.notification_id == in_app_notif.id)
+    log_stmt = select(NotificationLog).where(
+        NotificationLog.notification_id == in_app_notif.id
+    )
     logs = list(db.scalars(log_stmt).all())
     assert len(logs) == 1
     assert logs[0].channel == NotificationChannel.IN_APP.value
@@ -88,14 +97,14 @@ async def test_vacation_approved_flow(db, test_employee):
         employee_id=test_employee.id,
         notification_type=NotificationType.VACATION.value,
         channel=NotificationChannel.EMAIL.value,
-        enabled=True
+        enabled=True,
     )
     # Explicitly disable IN_APP for VACATION
     pref_in_app = NotificationPreference(
         employee_id=test_employee.id,
         notification_type=NotificationType.VACATION.value,
         channel=NotificationChannel.IN_APP.value,
-        enabled=False
+        enabled=False,
     )
     db.add(pref)
     db.add(pref_in_app)
@@ -108,8 +117,8 @@ async def test_vacation_approved_flow(db, test_employee):
         payload={
             "start_date": "2026-07-20",
             "end_date": "2026-07-25",
-            "status": "APPROVED"
-        }
+            "status": "APPROVED",
+        },
     )
 
     notification_service.trigger_event(db, event)
@@ -117,7 +126,7 @@ async def test_vacation_approved_flow(db, test_employee):
     # Check notification records
     stmt = select(Notification).where(
         Notification.employee_id == test_employee.id,
-        Notification.type == NotificationType.VACATION.value
+        Notification.type == NotificationType.VACATION.value,
     )
     notifs = list(db.scalars(stmt).all())
     # Should only create 1 notification record since IN_APP is disabled and EMAIL is enabled
@@ -136,15 +145,15 @@ async def test_comment_added_flow(db, test_employee):
         payload={
             "task_title": "Fix Database Bug",
             "comment_body": "This issue is critical.",
-            "actor_name": "QA Lead"
-        }
+            "actor_name": "QA Lead",
+        },
     )
 
     notification_service.trigger_event(db, event)
 
     stmt = select(Notification).where(
         Notification.employee_id == test_employee.id,
-        Notification.type == NotificationType.COMMENTS.value
+        Notification.type == NotificationType.COMMENTS.value,
     )
     notifs = list(db.scalars(stmt).all())
     # Default fallbacks: IN_APP & EMAIL
@@ -164,8 +173,8 @@ async def test_async_background_execution(db, test_employee):
         recipient_ids=[test_employee.id],
         payload={
             "subject": "System Shutdown",
-            "body": "Server maintenance starting in 10 minutes."
-        }
+            "body": "Server maintenance starting in 10 minutes.",
+        },
     )
 
     notification_service.trigger_event_async(bg_service, event)
@@ -179,7 +188,7 @@ async def test_async_background_execution(db, test_employee):
     # Verify db records were persisted
     stmt = select(Notification).where(
         Notification.employee_id == test_employee.id,
-        Notification.type == NotificationType.SYSTEM.value
+        Notification.type == NotificationType.SYSTEM.value,
     )
     notifs = list(db.scalars(stmt).all())
     assert len(notifs) == 2  # default: IN_APP & EMAIL

@@ -7,34 +7,17 @@ class BaseRepository:
     def __init__(self, model):
         self.model = model
 
-    def get_all(
-            self,
-            db: Session,
-            skip=0,
-            limit=20):
+    def get_all(self, db: Session, skip=0, limit=20):
 
-        stmt = (
-            select(self.model)
-            .offset(skip)
-            .limit(limit)
-        )
+        stmt = select(self.model).offset(skip).limit(limit)
 
         return db.scalars(stmt).all()
 
-    def get_by_id(
-            self,
-            db: Session,
-            obj_id: int):
+    def get_by_id(self, db: Session, obj_id: int):
 
-        return db.get(
-            self.model,
-            obj_id
-        )
+        return db.get(self.model, obj_id)
 
-    def create(
-            self,
-            db: Session,
-            obj):
+    def create(self, db: Session, obj):
 
         db.add(obj)
         db.commit()
@@ -42,10 +25,7 @@ class BaseRepository:
 
         return obj
 
-    def delete(
-            self,
-            db: Session,
-            obj):
+    def delete(self, db: Session, obj):
 
         db.delete(obj)
         db.commit()

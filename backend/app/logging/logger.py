@@ -1,10 +1,32 @@
 # 📂 FILE: app/logging/logger.py
-import logging
-from logging.handlers import RotatingFileHandler
-from app.config import settings
-from app.logging.formatter import StructuredFormatter
+"""
+Centralized Enterprise Logging System for TaskSyncEnterprise.
 
-# Centralized Logger Instances
+Initialises and exposes the canonical logger instances used throughout the
+application.  Delegates handler / formatter construction to the config module
+so that this file remains a pure "wiring" layer.
+
+Logger hierarchy
+  root                   → catches everything not caught by named loggers
+  ├── app                → general application events
+  ├── error              → warnings, errors, criticals
+  ├── access             → HTTP access log (isolated: propagate=False)
+  ├── audit              → compliance & audit trail (isolated: propagate=False)
+  ├── security           → security events (auth failures, brute-force, …)
+  └── database           → SQLAlchemy / database activity
+"""
+
+import logging
+from app.config import settings
+from app.logging.config import (
+    build_console_handler,
+    build_rotating_file_handler,
+    configure_third_party_loggers,
+)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Canonical logger instances – import these everywhere in the application
+# ──────────────────────────────────────────────────────────────────────────────
 app_logger = logging.getLogger("app")
 error_logger = logging.getLogger("error")
 audit_logger = logging.getLogger("audit")
@@ -13,112 +35,150 @@ security_logger = logging.getLogger("security")
 db_logger = logging.getLogger("database")
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Setup function
+# ──────────────────────────────────────────────────────────────────────────────
+
+
 def setup_logging() -> None:
     """
-    Initializes the centralized enterprise logging system.
-    Sets up StructuredFormatter across all registered application loggers.
+    Initialises the centralized enterprise structured logging system.
+
+    Behaviour:
+      - Development  → pretty console + JSON file handlers
+      - Production   → JSON-only console + JSON file handlers
+      - Testing      → minimal console output (JSON)
+
+    Can be called multiple times safely; handlers are cleared before re-adding.
     """
-    # 1. Create log folder if file logging is enabled
+    level = settings.LOG_LEVEL
+    is_production = settings.ENVIRONMENT == "production"
+    use_json_console = is_production or settings.ENVIRONMENT == "testing"
+    fmt = settings.LOG_FORMAT  # used only for pretty-print formatter
+
+    # ── 1. Root logger ─────────────────────────────────────────────────────
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.setLevel(level)
+
+    if settings.ENABLE_CONSOLE_LOGGING:
+        root.addHandler(
+            build_console_handler(level=level, use_json=use_json_console, fmt=fmt)
+        )
+
     if settings.ENABLE_FILE_LOGGING:
         log_dir = settings.LOG_DIR_PATH
         log_dir.mkdir(parents=True, exist_ok=True)
 
-    # 2. Build structured formatting
-    formatter = StructuredFormatter(settings.LOG_FORMAT, use_json=False)
-
-    # 3. Configure root logger
-    root_logger = logging.getLogger()
-    root_logger.handlers.clear()
-    root_logger.setLevel(settings.LOG_LEVEL)
-
-    # 4. Console Handler
-    if settings.ENABLE_CONSOLE_LOGGING:
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(settings.LOG_LEVEL)
-        console_handler.setFormatter(formatter)
-        root_logger.addHandler(console_handler)
-
-    # 5. File Handlers (if enabled)
-    if settings.ENABLE_FILE_LOGGING:
-        # app.log: Captures general application activities
-        app_handler = RotatingFileHandler(
-            settings.LOG_DIR_PATH / "app.log",
-            maxBytes=settings.LOG_ROTATION_SIZE,
-            backupCount=settings.LOG_BACKUP_COUNT,
-            encoding="utf-8"
+        # app.log – general application activity
+        root.addHandler(
+            build_rotating_file_handler(
+                file_path=log_dir / "application.log",
+                level=level,
+                max_bytes=settings.LOG_ROTATION_SIZE,
+                backup_count=settings.LOG_BACKUP_COUNT,
+            )
         )
-        app_handler.setLevel(settings.LOG_LEVEL)
-        app_handler.setFormatter(formatter)
-        root_logger.addHandler(app_handler)
-
-        # error.log: Captures warnings, errors, and system faults
-        error_handler = RotatingFileHandler(
-            settings.LOG_DIR_PATH / "error.log",
-            maxBytes=settings.LOG_ROTATION_SIZE,
-            backupCount=settings.LOG_BACKUP_COUNT,
-            encoding="utf-8"
+        # Backward compat alias
+        root.addHandler(
+            build_rotating_file_handler(
+                file_path=log_dir / "app.log",
+                level=level,
+                max_bytes=settings.LOG_ROTATION_SIZE,
+                backup_count=settings.LOG_BACKUP_COUNT,
+            )
         )
-        error_handler.setLevel(logging.WARNING)
-        error_handler.setFormatter(formatter)
-        root_logger.addHandler(error_handler)
 
-        # access.log: Captures API access logs separately
-        access_handler = RotatingFileHandler(
-            settings.LOG_DIR_PATH / "access.log",
-            maxBytes=settings.LOG_ROTATION_SIZE,
-            backupCount=settings.LOG_BACKUP_COUNT,
-            encoding="utf-8"
+        # error.log – warnings and above
+        root.addHandler(
+            build_rotating_file_handler(
+                file_path=log_dir / "error.log",
+                level="WARNING",
+                max_bytes=settings.LOG_ROTATION_SIZE,
+                backup_count=settings.LOG_BACKUP_COUNT,
+            )
         )
-        access_handler.setLevel(settings.LOG_LEVEL)
-        access_handler.setFormatter(formatter)
-        
-        access_logger.setLevel(settings.LOG_LEVEL)
-        access_logger.handlers.clear()
-        access_logger.addHandler(access_handler)
-        if settings.ENABLE_CONSOLE_LOGGING:
-            access_console = logging.StreamHandler()
-            access_console.setLevel(settings.LOG_LEVEL)
-            access_console.setFormatter(formatter)
-            access_logger.addHandler(access_console)
-        access_logger.propagate = False
 
-        # audit.log: Dedicated compliance & audit event log file
-        audit_handler = RotatingFileHandler(
-            settings.LOG_DIR_PATH / "audit.log",
-            maxBytes=settings.LOG_ROTATION_SIZE,
-            backupCount=settings.LOG_BACKUP_COUNT,
-            encoding="utf-8"
+    # ── 2. Isolated access logger ───────────────────────────────────────────
+    _configure_isolated_logger(
+        logger=access_logger,
+        level=level,
+        log_file=(
+            settings.LOG_DIR_PATH / "access.log"
+            if settings.ENABLE_FILE_LOGGING
+            else None
+        ),
+        max_bytes=settings.LOG_ROTATION_SIZE,
+        backup_count=settings.LOG_BACKUP_COUNT,
+        console=settings.ENABLE_CONSOLE_LOGGING,
+        use_json_console=use_json_console,
+        fmt=fmt,
+    )
+
+    # ── 3. Isolated audit logger ────────────────────────────────────────────
+    _configure_isolated_logger(
+        logger=audit_logger,
+        level="INFO",
+        log_file=(
+            settings.LOG_DIR_PATH / "audit.log"
+            if settings.ENABLE_FILE_LOGGING
+            else None
+        ),
+        max_bytes=settings.LOG_ROTATION_SIZE,
+        backup_count=settings.LOG_BACKUP_COUNT,
+        console=settings.ENABLE_CONSOLE_LOGGING,
+        use_json_console=use_json_console,
+        fmt=fmt,
+    )
+
+    # ── 4. Named logger levels ──────────────────────────────────────────────
+    for lgr in (app_logger, error_logger, security_logger, db_logger):
+        lgr.setLevel(level)
+    error_logger.setLevel("WARNING")
+
+    # ── 5. Silence / redirect noisy third-party loggers ─────────────────────
+    configure_third_party_loggers(level)
+
+    app_logger.info(
+        "Enterprise structured logging system initialised (Phase 3.7.3).",
+        extra={"event": "logging_initialized", "environment": settings.ENVIRONMENT},
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Internal helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _configure_isolated_logger(
+    logger: logging.Logger,
+    level: str,
+    log_file,
+    max_bytes: int,
+    backup_count: int,
+    console: bool,
+    use_json_console: bool,
+    fmt: str | None,
+) -> None:
+    """
+    Configures a logger in isolated mode (propagate=False) with dedicated
+    handlers so its records do NOT bleed into the root logger.
+    """
+    logger.handlers.clear()
+    logger.setLevel(level)
+    logger.propagate = False
+
+    if console:
+        logger.addHandler(
+            build_console_handler(level=level, use_json=use_json_console, fmt=fmt)
         )
-        audit_handler.setLevel(logging.INFO)
-        audit_handler.setFormatter(formatter)
-        
-        # Configure isolated audit logger
-        audit_logger.setLevel(logging.INFO)
-        audit_logger.handlers.clear()
-        audit_logger.addHandler(audit_handler)
-        if settings.ENABLE_CONSOLE_LOGGING:
-            audit_console = logging.StreamHandler()
-            audit_console.setLevel(logging.INFO)
-            audit_console.setFormatter(formatter)
-            audit_logger.addHandler(audit_console)
-        audit_logger.propagate = False
 
-    # 6. Align internal FastAPI/Uvicorn log streams with the centralized root logger
-    for name in ("uvicorn", "uvicorn.error", "fastapi"):
-        l = logging.getLogger(name)
-        l.handlers.clear()
-        l.propagate = True
-
-    # Disable uvicorn access logs since we have enterprise access_logger
-    uv_access = logging.getLogger("uvicorn.access")
-    uv_access.handlers.clear()
-    uv_access.propagate = False
-
-    # 7. Configure logger levels
-    app_logger.setLevel(settings.LOG_LEVEL)
-    error_logger.setLevel(settings.LOG_LEVEL)
-    access_logger.setLevel(settings.LOG_LEVEL)
-    security_logger.setLevel(settings.LOG_LEVEL)
-    db_logger.setLevel(settings.LOG_LEVEL)
-    
-    app_logger.info("Enterprise logging system successfully initialized (P3.2-004).")
+    if log_file is not None:
+        logger.addHandler(
+            build_rotating_file_handler(
+                file_path=log_file,
+                level=level,
+                max_bytes=max_bytes,
+                backup_count=backup_count,
+            )
+        )

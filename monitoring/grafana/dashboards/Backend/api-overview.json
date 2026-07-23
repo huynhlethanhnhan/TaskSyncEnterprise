@@ -1,0 +1,698 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Visualizes API request rates, durations, latencies, methods, status codes, and throughput trends.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": ["tasksync"],
+      "targetBlank": false,
+      "title": "TaskSync Navigation Menu",
+      "type": "dashboards"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "Overall API Performance",
+      "type": "row"
+    },
+    {
+      "title": "HTTP Requests/sec",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{environment=~\"$environment\"}[$rate_interval]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Total Requests",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "id": 2,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(http_requests_total{environment=~\"$environment\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Active Requests",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "id": 3,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(http_requests_in_progress{environment=~\"$environment\"}) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "title": "Average Latency",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "id": 4,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_request_duration_seconds_sum{environment=~\"$environment\"}[$rate_interval])) / sum(rate(http_request_duration_seconds_count{environment=~\"$environment\"}[$rate_interval]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 1.5
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 101,
+      "title": "Traffic & Volumetric Trends",
+      "type": "row"
+    },
+    {
+      "title": "Request Rate Trend by Path",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 10,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{environment=~\"$environment\"}[$rate_interval])) by (path)",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Top Endpoints (By total calls over selected range)",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 11,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(http_requests_total{environment=~\"$environment\"}[$interval])) by (path)",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": true
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "title": "Requests by HTTP Method",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "id": 12,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{environment=~\"$environment\"}[$rate_interval])) by (method)",
+          "legendFormat": "{{method}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": true
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps"
+        }
+      }
+    },
+    {
+      "title": "Requests by Status Code",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "id": 13,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_requests_total{environment=~\"$environment\"}[$rate_interval])) by (status_code)",
+          "legendFormat": "HTTP {{status_code}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": true
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 400},
+              {"color": "red", "value": 500}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 102,
+      "title": "Latency & Response Time Trends",
+      "type": "row"
+    },
+    {
+      "title": "Response Time Trend by Path (Avg Latency)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "id": 20,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_request_duration_seconds_sum{environment=~\"$environment\"}[$rate_interval])) by (path) / sum(rate(http_request_duration_seconds_count{environment=~\"$environment\"}[$rate_interval])) by (path)",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Latency Percentiles (p50, p95, p99)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "id": 21,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{environment=~\"$environment\"}[$rate_interval])) by (le))",
+          "legendFormat": "p50 Median",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{environment=~\"$environment\"}[$rate_interval])) by (le))",
+          "legendFormat": "p95 Percentile",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{environment=~\"$environment\"}[$rate_interval])) by (le))",
+          "legendFormat": "p99 Percentile",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          }
+        }
+      }
+    },
+    {
+      "title": "Slowest Endpoints (Avg Latency by Path over selected range)",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 22,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(http_request_duration_seconds_sum{environment=~\"$environment\"}[$rate_interval])) by (path) / sum(rate(http_request_duration_seconds_count{environment=~\"$environment\"}[$rate_interval])) by (path)",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "values": true
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.5},
+              {"color": "red", "value": 1.0}
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["tasksync", "observability", "backend"],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "value": "prometheus",
+          "text": "prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up, environment)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Environment",
+        "multi": true,
+        "name": "environment",
+        "options": [],
+        "query": {
+          "query": "label_values(up, environment)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\"}, job)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Job",
+        "multi": true,
+        "name": "job",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\"}, job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(up{environment=~\"$environment\", job=~\"$job\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": true,
+          "value": "5m",
+          "text": "5m"
+        },
+        "hide": 0,
+        "label": "Interval",
+        "name": "interval",
+        "options": [
+          {"selected": false, "value": "10s", "text": "10s"},
+          {"selected": false, "value": "30s", "text": "30s"},
+          {"selected": false, "value": "1m", "text": "1m"},
+          {"selected": true, "value": "5m", "text": "5m"},
+          {"selected": false, "value": "15m", "text": "15m"},
+          {"selected": false, "value": "30m", "text": "30m"},
+          {"selected": false, "value": "1h", "text": "1h"},
+          {"selected": false, "value": "2h", "text": "2h"},
+          {"selected": false, "value": "1d", "text": "1d"}
+        ],
+        "query": "10s,30s,1m,5m,15m,30m,1h,2h,1d",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": true,
+          "value": "5m",
+          "text": "5m"
+        },
+        "hide": 0,
+        "label": "Rate Interval",
+        "name": "rate_interval",
+        "options": [
+          {"selected": false, "value": "1m", "text": "1m"},
+          {"selected": true, "value": "5m", "text": "5m"},
+          {"selected": false, "value": "10m", "text": "10m"},
+          {"selected": false, "value": "15m", "text": "15m"}
+        ],
+        "query": "1m,5m,10m,15m",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "TaskSyncEnterprise API Overview",
+  "uid": "tasksync-api-overview",
+  "version": 1,
+  "weekStart": ""
+}

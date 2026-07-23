@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-07-22T17:03:54.932Z",
+  "marker": "PHASE4-CLOSURE-1784739720495",
+  "error": "Expected values to be strictly equal:\n\n1 !== 0\n",
+  "completedResults": {
+    "rbac": {
+      "adminAudit": 200,
+      "managerAudit": 403,
+      "employeeAudit": 403,
+      "managerEmployees": 200,
+      "employeeEmployees": 403,
+      "managerDeleteEmployee": 403,
+      "employeeCreateProject": 403,
+      "roleUi": {
+        "admin": {
+          "auditVisible": true,
+          "createTaskVisible": true
+        },
+        "manager": {
+          "auditVisible": false,
+          "createTaskVisible": true
+        },
+        "employee": {
+          "auditVisible": false,
+          "createTaskVisible": false
+        }
+      },
+      "result": "Pass"
+    },
+    "profile": {
+      "persistedPhone": true,
+      "toastVisible": true,
+      "jobTitleReadOnly": true,
+      "result": "Pass"
+    },
+    "password": {
+      "strongMeter": true,
+      "changedLoginSucceeded": true,
+      "restoredLoginSucceeded": true,
+      "result": "Pass"
+    },
+    "avatar": {
+      "validUpload": 200,
+      "invalidMime": 400,
+      "oversized": 400,
+      "replacement": true,
+      "propagation": true,
+      "result": "Pass pending restarts"
+    },
+    "projectsTasks": {
+      "projectCreatedViaDrawer": true,
+      "projectStatus": "Planning",
+      "taskCreatedViaDrawer": true,
+      "kanbanInteraction": "Status select (Outcome B)",
+      "taskFinalStatus": "In Progress",
+      "unassignedEmployeeRejected": true,
+      "tableSearch": true,
+      "result": "Pass"
+    },
+    "employees": {
+      "search": true,
+      "departmentFilterRendered": true,
+      "detailTabs": 6,
+      "result": "Pass"
+    },
+    "leave": {
+      "requestCreated": true,
+      "statuses": [
+        "Pending",
+        "Manager Approved",
+        "HR Approved"
+      ],
+      "invalidEmployeeFinalTransition": 409,
+      "finalVisibleToEmployee": true,
+      "notificationCount": 2,
+      "markRead": true,
+      "result": "Pass pending cleanup"
+    },
+    "dashboard": {
+      "kpiExpected": [
+        6,
+        62,
+        37,
+        7,
+        5,
+        12
+      ],
+      "kpiRendered": [
+        6,
+        62,
+        37,
+        7,
+        5,
+        12
+      ],
+      "chartCount": 3,
+      "taskStatusSeries": [
+        {
+          "status": "Done",
+          "count": 14
+        },
+        {
+          "status": "In Progress",
+          "count": 26
+        },
+        {
+          "status": "To Do",
+          "count": 36
+        }
+      ],
+      "workloadSeriesCount": 7,
+      "monthlySeriesCount": 1,
+      "workforceRows": 7,
+      "result": "Pass (API/UI); SQL cross-check recorded separately"
+    }
+  },
+  "result": "Fail"
+}

@@ -1,7 +1,12 @@
-// 📂 FILE: src/App.jsx
 import AppRouter from "./router/AppRouter";
+import { AppProviders } from "./app/AppProviders";
 
 function App() {
-  return <AppRouter />;
+  return (
+    <AppProviders>
+      <AppRouter />
+    </AppProviders>
+  );
 }
+
 export default App;

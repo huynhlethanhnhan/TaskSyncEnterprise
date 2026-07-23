@@ -1,0 +1,473 @@
+{
+  "browser": "edge",
+  "browserVersion": "150.0.4078.83",
+  "executablePath": "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+  "baseUrl": "http://127.0.0.1",
+  "generatedAt": "2026-07-22T15:02:36.190Z",
+  "results": [
+    {
+      "page": "/dashboard",
+      "viewport": {
+        "width": 1584,
+        "height": 900
+      },
+      "screenshot": "docs/evidence/phase-4/edge/dashboard_1584x900.png",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "fonts": {
+        "body": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        },
+        "heading": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "24px",
+          "fontWeight": "700",
+          "lineHeight": "32px"
+        },
+        "main": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        }
+      },
+      "interLoaded": true,
+      "body": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 2076
+      },
+      "document": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 2076
+      },
+      "hasDocumentHorizontalOverflow": false,
+      "horizontalOverflow": [
+        {
+          "tag": "a",
+          "className": "sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-toast px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md shadow-lg",
+          "clientWidth": 32,
+          "scrollWidth": 188
+        },
+        {
+          "tag": "p",
+          "className": "max-w-32 truncate text-xs font-semibold text-text-primary",
+          "clientWidth": 128,
+          "scrollWidth": 130
+        }
+      ],
+      "nestedVerticalScrollers": [],
+      "pass": true
+    },
+    {
+      "page": "/profile",
+      "viewport": {
+        "width": 1584,
+        "height": 900
+      },
+      "screenshot": "docs/evidence/phase-4/edge/profile_1584x900.png",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "fonts": {
+        "body": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        },
+        "heading": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "24px",
+          "fontWeight": "700",
+          "lineHeight": "32px"
+        },
+        "main": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        }
+      },
+      "interLoaded": true,
+      "body": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 900
+      },
+      "document": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 900
+      },
+      "hasDocumentHorizontalOverflow": false,
+      "horizontalOverflow": [
+        {
+          "tag": "a",
+          "className": "sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-toast px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md shadow-lg",
+          "clientWidth": 32,
+          "scrollWidth": 188
+        },
+        {
+          "tag": "p",
+          "className": "max-w-32 truncate text-xs font-semibold text-text-primary",
+          "clientWidth": 128,
+          "scrollWidth": 130
+        }
+      ],
+      "nestedVerticalScrollers": [],
+      "pass": true
+    },
+    {
+      "page": "/employees",
+      "viewport": {
+        "width": 1584,
+        "height": 900
+      },
+      "screenshot": "docs/evidence/phase-4/edge/employees_1584x900.png",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "fonts": {
+        "body": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        },
+        "heading": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "24px",
+          "fontWeight": "700",
+          "lineHeight": "32px"
+        },
+        "main": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        }
+      },
+      "interLoaded": true,
+      "body": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 1150
+      },
+      "document": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 1150
+      },
+      "hasDocumentHorizontalOverflow": false,
+      "horizontalOverflow": [
+        {
+          "tag": "a",
+          "className": "sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-toast px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md shadow-lg",
+          "clientWidth": 32,
+          "scrollWidth": 188
+        },
+        {
+          "tag": "p",
+          "className": "max-w-32 truncate text-xs font-semibold text-text-primary",
+          "clientWidth": 128,
+          "scrollWidth": 130
+        }
+      ],
+      "nestedVerticalScrollers": [],
+      "pass": true
+    },
+    {
+      "page": "/projects",
+      "viewport": {
+        "width": 1584,
+        "height": 900
+      },
+      "screenshot": "docs/evidence/phase-4/edge/projects_1584x900.png",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "fonts": {
+        "body": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        },
+        "heading": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "24px",
+          "fontWeight": "700",
+          "lineHeight": "32px"
+        },
+        "main": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        }
+      },
+      "interLoaded": true,
+      "body": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 1322
+      },
+      "document": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 1322
+      },
+      "hasDocumentHorizontalOverflow": false,
+      "horizontalOverflow": [
+        {
+          "tag": "a",
+          "className": "sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-toast px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md shadow-lg",
+          "clientWidth": 32,
+          "scrollWidth": 188
+        },
+        {
+          "tag": "p",
+          "className": "max-w-32 truncate text-xs font-semibold text-text-primary",
+          "clientWidth": 128,
+          "scrollWidth": 130
+        }
+      ],
+      "nestedVerticalScrollers": [],
+      "pass": true
+    },
+    {
+      "page": "/tasks",
+      "viewport": {
+        "width": 1584,
+        "height": 900
+      },
+      "screenshot": "docs/evidence/phase-4/edge/tasks_1584x900.png",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "fonts": {
+        "body": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        },
+        "heading": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "24px",
+          "fontWeight": "700",
+          "lineHeight": "32px"
+        },
+        "main": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        }
+      },
+      "interLoaded": true,
+      "body": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 2004
+      },
+      "document": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 2004
+      },
+      "hasDocumentHorizontalOverflow": false,
+      "horizontalOverflow": [
+        {
+          "tag": "a",
+          "className": "sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-toast px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md shadow-lg",
+          "clientWidth": 32,
+          "scrollWidth": 188
+        },
+        {
+          "tag": "p",
+          "className": "max-w-32 truncate text-xs font-semibold text-text-primary",
+          "clientWidth": 128,
+          "scrollWidth": 130
+        }
+      ],
+      "nestedVerticalScrollers": [],
+      "pass": true
+    },
+    {
+      "page": "/departments",
+      "viewport": {
+        "width": 1584,
+        "height": 900
+      },
+      "screenshot": "docs/evidence/phase-4/edge/departments_1584x900.png",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "fonts": {
+        "body": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        },
+        "heading": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "24px",
+          "fontWeight": "700",
+          "lineHeight": "32px"
+        },
+        "main": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        }
+      },
+      "interLoaded": true,
+      "body": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 1241
+      },
+      "document": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 1241
+      },
+      "hasDocumentHorizontalOverflow": false,
+      "horizontalOverflow": [
+        {
+          "tag": "a",
+          "className": "sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-toast px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md shadow-lg",
+          "clientWidth": 32,
+          "scrollWidth": 188
+        },
+        {
+          "tag": "p",
+          "className": "max-w-32 truncate text-xs font-semibold text-text-primary",
+          "clientWidth": 128,
+          "scrollWidth": 130
+        }
+      ],
+      "nestedVerticalScrollers": [],
+      "pass": true
+    },
+    {
+      "page": "/vacations",
+      "viewport": {
+        "width": 1584,
+        "height": 900
+      },
+      "screenshot": "docs/evidence/phase-4/edge/vacations_1584x900.png",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "fonts": {
+        "body": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        },
+        "heading": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "30px",
+          "fontWeight": "700",
+          "lineHeight": "36px"
+        },
+        "main": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        }
+      },
+      "interLoaded": true,
+      "body": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 1266
+      },
+      "document": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 1266
+      },
+      "hasDocumentHorizontalOverflow": false,
+      "horizontalOverflow": [
+        {
+          "tag": "a",
+          "className": "sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-toast px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md shadow-lg",
+          "clientWidth": 32,
+          "scrollWidth": 188
+        },
+        {
+          "tag": "p",
+          "className": "max-w-32 truncate text-xs font-semibold text-text-primary",
+          "clientWidth": 128,
+          "scrollWidth": 130
+        }
+      ],
+      "nestedVerticalScrollers": [],
+      "pass": true
+    },
+    {
+      "page": "/notifications",
+      "viewport": {
+        "width": 1584,
+        "height": 900
+      },
+      "screenshot": "docs/evidence/phase-4/edge/notifications_1584x900.png",
+      "consoleErrors": [],
+      "failedRequests": [],
+      "fonts": {
+        "body": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        },
+        "heading": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "24px",
+          "fontWeight": "700",
+          "lineHeight": "32px"
+        },
+        "main": {
+          "fontFamily": "\"Inter Variable\", \"Segoe UI\", Arial, sans-serif",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        }
+      },
+      "interLoaded": true,
+      "body": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 900
+      },
+      "document": {
+        "clientWidth": 1584,
+        "scrollWidth": 1584,
+        "scrollHeight": 900
+      },
+      "hasDocumentHorizontalOverflow": false,
+      "horizontalOverflow": [
+        {
+          "tag": "a",
+          "className": "sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-toast px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md shadow-lg",
+          "clientWidth": 32,
+          "scrollWidth": 188
+        },
+        {
+          "tag": "p",
+          "className": "max-w-32 truncate text-xs font-semibold text-text-primary",
+          "clientWidth": 128,
+          "scrollWidth": 130
+        }
+      ],
+      "nestedVerticalScrollers": [],
+      "pass": true
+    }
+  ]
+}

@@ -3,13 +3,13 @@ from pydantic import BaseModel
 
 class LoginRequest(BaseModel):
 
-    email:str
+    email: str
 
-    password:str
+    password: str
 
 
 class TokenResponse(BaseModel):
 
-    access_token:str
+    access_token: str
 
-    token_type:str="bearer"
+    token_type: str = "bearer"

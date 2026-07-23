@@ -20,6 +20,7 @@ failure_count = 0
 latencies = []
 lock = threading.Lock()
 
+
 def make_request(token, path):
     global success_count, failure_count
     start_time = time.time()
@@ -27,13 +28,13 @@ def make_request(token, path):
         conn = http.client.HTTPConnection(HOST, PORT, timeout=5)
         headers = {
             "Authorization": f"Bearer {token}",
-            "Content-type": "application/json"
+            "Content-type": "application/json",
         }
         conn.request("GET", path, headers=headers)
         response = conn.getresponse()
         data = response.read()
         latency = time.time() - start_time
-        
+
         with lock:
             latencies.append(latency)
             if response.status == 200:
@@ -47,9 +48,11 @@ def make_request(token, path):
             latencies.append(latency)
             failure_count += 1
 
+
 def worker_thread(token, path):
     for _ in range(REQUESTS_PER_USER):
         make_request(token, path)
+
 
 def run_stress_test(token, path="/api/v1/dashboard/progress"):
     print("======================================================================")
@@ -78,7 +81,7 @@ def run_stress_test(token, path="/api/v1/dashboard/progress"):
     print(f"  Successful (200 OK): {success_count}")
     print(f"  Failed / Timeout:    {failure_count}")
     print(f"  Total Elapsed Time:  {total_test_time:.2f} seconds")
-    
+
     if latencies:
         avg_latency = sum(latencies) / len(latencies)
         min_latency = min(latencies)
@@ -88,6 +91,7 @@ def run_stress_test(token, path="/api/v1/dashboard/progress"):
         print(f"  Max Latency:         {max_latency:.4f} seconds")
         print(f"  Throughput:          {total_requests / total_test_time:.2f} req/sec")
     print("\n======================================================================")
+
 
 if __name__ == "__main__":
     # Standard fallback mock token for manual validation

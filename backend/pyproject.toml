@@ -1,0 +1,60 @@
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+# Exclude standard directories
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "alembic",
+]
+
+[tool.ruff.lint]
+# Select common rule groups (E: pycodestyle errors, W: pycodestyle warnings, F: Pyflakes)
+select = ["E", "F", "W"]
+
+# Minimal ignore list for legacy violations that cannot be safely resolved without massive code churn:
+# F401: unused-import (96 occurrences)
+# E712: true-false-comparison (30 occurrences) - SQLAlchemy requires Model.column == True
+# E402: module-import-not-at-top-of-file (17 occurrences)
+# E501: line-too-long (1170 occurrences)
+# W: all pycodestyle warnings (whitespace/formatting - 450 occurrences)
+ignore = [
+    "F401",
+    "E712",
+    "E402",
+    "E501",
+    "W",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore unused variables in tests since variables are often created to trigger database inserts but not referenced directly.
+"tests/**/*.py" = ["F841"]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+exclude = '''
+(
+  /(
+      \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+    | alembic
+  )/
+)
+'''
+
+[tool.bandit]
+targets = ["app"]
+exclude_dirs = ["tests", ".venv", "alembic"]

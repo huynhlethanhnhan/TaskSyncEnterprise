@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     Uses Pydantic Settings V2 to load configuration variables from environment or a .env file.
     This configuration is frozen (read-only) at runtime to prevent accidental modifications.
     """
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -24,7 +25,7 @@ class Settings(BaseSettings):
     # =========================================================================
     # 🧱 1. APPLICATION SETTINGS
     # =========================================================================
-    
+
     APP_NAME: str = Field(
         default="TaskSyncEnterprise",
         description=(
@@ -33,9 +34,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Leave as default or customize to match corporate branding.\n"
             "Development Recommendation: Leave as default.\n"
             "Security Consideration: None."
-        )
+        ),
     )
-    
+
     ENVIRONMENT: Literal["development", "production", "testing"] = Field(
         default="development",
         description=(
@@ -44,9 +45,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Set to 'production' to enforce strict security validations (e.g. strong SECRET_KEY).\n"
             "Development Recommendation: Set to 'development' or 'testing'.\n"
             "Security Consideration: Influences security logic like default keys checks and debug page exposures."
-        )
+        ),
     )
-    
+
     API_V1_STR: str = Field(
         default="/api/v1",
         description=(
@@ -55,13 +56,13 @@ class Settings(BaseSettings):
             "Production Recommendation: Keep default or update if API routing changes.\n"
             "Development Recommendation: Keep default.\n"
             "Security Consideration: Keep consistent to avoid endpoint bypass issues."
-        )
+        ),
     )
 
     # =========================================================================
     # 🔒 2. SECURITY & JWT SETTINGS
     # =========================================================================
-    
+
     SECRET_KEY: SecretStr = Field(
         default="task_sync_enterprise_secret_key_chuandry_2026",
         description=(
@@ -70,9 +71,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Replace with a cryptographically strong, unique secret key (e.g., generated via openssl rand -hex 32).\n"
             "Development Recommendation: Can use default or a mock development key.\n"
             "Security Consideration: CRITICAL. A weak or compromised key allows attackers to forge tokens and gain full admin access."
-        )
+        ),
     )
-    
+
     ALGORITHM: str = Field(
         default="HS256",
         description=(
@@ -81,9 +82,9 @@ class Settings(BaseSettings):
             "Production Recommendation: 'HS256' is standard. Can change to asymmetric algorithms like RS256 if integrated with OIDC.\n"
             "Development Recommendation: Keep 'HS256'.\n"
             "Security Consideration: Use modern cryptographically sound algorithms."
-        )
+        ),
     )
-    
+
     ACCESS_TOKEN_EXPIRE_MINUTES: PositiveInt = Field(
         default=60,
         description=(
@@ -92,9 +93,9 @@ class Settings(BaseSettings):
             "Production Recommendation: 15 to 30 minutes to minimize access duration in case of token leakage.\n"
             "Development Recommendation: 60 minutes or longer to avoid frequent re-authentications during debugging.\n"
             "Security Consideration: Shorter token lifetimes improve system security against intercepted token attacks."
-        )
+        ),
     )
-    
+
     REFRESH_TOKEN_EXPIRE_DAYS: PositiveInt = Field(
         default=7,
         description=(
@@ -103,9 +104,9 @@ class Settings(BaseSettings):
             "Production Recommendation: 7 to 30 days depending on corporate compliance. Ensure token blacklist rotation is in place.\n"
             "Development Recommendation: 7 days is fine.\n"
             "Security Consideration: Refresh tokens must be kept highly secure and revoked immediately upon user logout."
-        )
+        ),
     )
-    
+
     MSSQL_CLIENT_ID: str = Field(
         default="tasksync_spa_react_prod_2026",
         description=(
@@ -114,9 +115,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Reconfigure to a unique string defined by environment secrets.\n"
             "Development Recommendation: Leave as default.\n"
             "Security Consideration: Used to prevent unauthorized third-party clients from invoking client auth endpoints."
-        )
+        ),
     )
-    
+
     MSSQL_CLIENT_SECRET: SecretStr = Field(
         default="default_fallback_secret_if_env_missing",
         description=(
@@ -125,24 +126,24 @@ class Settings(BaseSettings):
             "Production Recommendation: Enforce a cryptographically secure value defined in environment variables.\n"
             "Development Recommendation: Leave as default.\n"
             "Security Consideration: Guard this secret carefully. Do not commit actual secrets to source control."
-        )
+        ),
     )
 
     # =========================================================================
     # 💾 3. DATABASE SETTINGS (MS SQL SERVER)
     # =========================================================================
-    
+
     MSSQL_HOST: str = Field(
-        default="JINDOU_ITSUKI",
+        default="127.0.0.1",
         description=(
             "Purpose: SQL Server hostname or network address.\n"
-            "Default: 'JINDOU_ITSUKI'\n"
+            "Default: '127.0.0.1'\n"
             "Production Recommendation: Point to the production DB server or cluster instance.\n"
             "Development Recommendation: Local SQL Server hostname, IP address, or '127.0.0.1'.\n"
             "Security Consideration: None directly, but should be isolated in private subnets in production."
-        )
+        ),
     )
-    
+
     MSSQL_PORT: PositiveInt = Field(
         default=1433,
         description=(
@@ -151,9 +152,9 @@ class Settings(BaseSettings):
             "Production Recommendation: 1433 or custom secure port.\n"
             "Development Recommendation: 1433.\n"
             "Security Consideration: Restrict port access through firewalls to authorized app servers only."
-        )
+        ),
     )
-    
+
     MSSQL_DATABASE: str = Field(
         default="TaskSyncEnterprise",
         description=(
@@ -162,9 +163,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Production-specific database name.\n"
             "Development Recommendation: 'TaskSyncEnterprise' or development DB variant.\n"
             "Security Consideration: None."
-        )
+        ),
     )
-    
+
     MSSQL_USER: str | None = Field(
         default=None,
         description=(
@@ -173,9 +174,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Specify a dedicated, least-privileged application user account.\n"
             "Development Recommendation: Keep empty for Windows Auth, or set local DB username.\n"
             "Security Consideration: Do not use 'sa' superuser account in production."
-        )
+        ),
     )
-    
+
     MSSQL_PASSWORD: SecretStr | None = Field(
         default=None,
         description=(
@@ -184,9 +185,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Set to a strong password via env variables.\n"
             "Development Recommendation: Keep empty or set local DB password.\n"
             "Security Consideration: Keep confidential, and supply strictly via runtime environments."
-        )
+        ),
     )
-    
+
     SQL_ECHO: bool = Field(
         default=False,
         description=(
@@ -195,9 +196,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Set to False to avoid logging sensitive user details and straining disk I/O.\n"
             "Development Recommendation: Set to True when debugging query performance.\n"
             "Security Consideration: SQL log logs might leak personal/sensitive values query parameters in plaintext."
-        )
+        ),
     )
-    
+
     DATABASE_URL: str | None = Field(
         default=None,
         description=(
@@ -206,7 +207,7 @@ class Settings(BaseSettings):
             "Production Recommendation: Use this parameter to inject full, validated production connection string.\n"
             "Development Recommendation: Leave empty to allow automatic host/credentials construction.\n"
             "Security Consideration: Password will be embedded in this URL. Must be supplied securely at runtime."
-        )
+        ),
     )
 
     @property
@@ -217,24 +218,25 @@ class Settings(BaseSettings):
         """
         if self.DATABASE_URL:
             return self.DATABASE_URL
-        
+
         # Build pymssql connection string: mssql+pymssql://[user:[password]@]host[:port]/database[?key=value]
         if self.MSSQL_USER and self.MSSQL_PASSWORD:
             import urllib.parse
+
             user = urllib.parse.quote_plus(self.MSSQL_USER)
             password = urllib.parse.quote_plus(self.MSSQL_PASSWORD.get_secret_value())
             return f"mssql+pymssql://{user}:{password}@{self.MSSQL_HOST}:{self.MSSQL_PORT}/{self.MSSQL_DATABASE}?charset=utf8"
-        
+
         # Exact backward compatibility default loopback check
-        if self.MSSQL_HOST == "JINDOU_ITSUKI" or self.MSSQL_HOST == "127.0.0.1":
+        if self.MSSQL_HOST in ("localhost", "127.0.0.1"):
             return f"mssql+pymssql://127.0.0.1:{self.MSSQL_PORT}/{self.MSSQL_DATABASE}?charset=utf8"
-            
+
         return f"mssql+pymssql://{self.MSSQL_HOST}:{self.MSSQL_PORT}/{self.MSSQL_DATABASE}?charset=utf8"
 
     # =========================================================================
     # 📦 4. PAGINATION SETTINGS
     # =========================================================================
-    
+
     DEFAULT_PAGE_SIZE: PositiveInt = Field(
         default=20,
         description=(
@@ -243,9 +245,9 @@ class Settings(BaseSettings):
             "Production Recommendation: 20 or 50 based on client performance requirements.\n"
             "Development Recommendation: Keep at 20.\n"
             "Security Consideration: Helps prevent excessive memory consumption on query responses."
-        )
+        ),
     )
-    
+
     MAX_PAGE_SIZE: PositiveInt = Field(
         default=100,
         description=(
@@ -254,13 +256,13 @@ class Settings(BaseSettings):
             "Production Recommendation: Enforce a strict ceiling (e.g. 100 or 250) to prevent abuse.\n"
             "Development Recommendation: 100.\n"
             "Security Consideration: Mitigates Denial of Service (DoS) risks where clients request millions of rows."
-        )
+        ),
     )
 
     # =========================================================================
     # 📡 5. CORS SETTINGS
     # =========================================================================
-    
+
     BACKEND_CORS_ORIGINS: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173"],
         description=(
@@ -269,13 +271,13 @@ class Settings(BaseSettings):
             "Production Recommendation: Declare specific origin URLs matching target web application domains. DO NOT use '*' in production.\n"
             "Development Recommendation: Allow localhost development port origins (5173/3000).\n"
             "Security Consideration: Restricting origins prevents unauthorized browser-based requests to the API."
-        )
+        ),
     )
 
     # =========================================================================
     # 📁 6. STORAGE & FILE UPLOAD SETTINGS
     # =========================================================================
-    
+
     STORAGE_UPLOAD_DIR: str = Field(
         default="uploads",
         description=(
@@ -284,9 +286,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Absolute path to standard persistent storage volume or mount.\n"
             "Development Recommendation: Relative path 'uploads'.\n"
             "Security Consideration: Files should be stored outside the source code tree, and executed execution permissions should be blocked."
-        )
+        ),
     )
-    
+
     STORAGE_AVATAR_SUBDIR: str = Field(
         default="avatars",
         description=(
@@ -295,9 +297,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Keep as subfolder.\n"
             "Development Recommendation: 'avatars'.\n"
             "Security Consideration: Ensure files in avatars cannot trigger arbitrary system execution."
-        )
+        ),
     )
-    
+
     STORAGE_ATTACHMENT_SUBDIR: str = Field(
         default="attachments",
         description=(
@@ -306,9 +308,9 @@ class Settings(BaseSettings):
             "Production Recommendation: Keep as subfolder.\n"
             "Development Recommendation: 'attachments'.\n"
             "Security Consideration: Attachments contain arbitrary documents; strict sandboxing should be applied."
-        )
+        ),
     )
-    
+
     STORAGE_MAX_AVATAR_SIZE: PositiveInt = Field(
         default=5 * 1024 * 1024,
         description=(
@@ -317,9 +319,9 @@ class Settings(BaseSettings):
             "Production Recommendation: 2MB to 5MB depending on format optimization rules.\n"
             "Development Recommendation: 5MB.\n"
             "Security Consideration: Limits disk storage depletion attacks through huge file uploads."
-        )
+        ),
     )
-    
+
     STORAGE_MAX_ATTACHMENT_SIZE: PositiveInt = Field(
         default=20 * 1024 * 1024,
         description=(
@@ -328,9 +330,9 @@ class Settings(BaseSettings):
             "Production Recommendation: 20MB or higher based on business requirements.\n"
             "Development Recommendation: 20MB.\n"
             "Security Consideration: Limits resource exhaustion vulnerabilities."
-        )
+        ),
     )
-    
+
     STORAGE_ALLOWED_AVATAR_EXTENSIONS: list[str] = Field(
         default_factory=lambda: [".jpg", ".jpeg", ".png", ".webp"],
         description=(
@@ -339,13 +341,26 @@ class Settings(BaseSettings):
             "Production Recommendation: Limit strictly to web-optimized image formats.\n"
             "Development Recommendation: Keep default.\n"
             "Security Consideration: Restricting image formats prevents upload of scripts disguised as images."
-        )
+        ),
     )
-    
+
     STORAGE_ALLOWED_ATTACHMENT_EXTENSIONS: list[str] = Field(
         default_factory=lambda: [
-            ".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv",
-            ".ppt", ".pptx", ".zip", ".rar", ".jpg", ".jpeg", ".png", ".webp"
+            ".txt",
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".csv",
+            ".ppt",
+            ".pptx",
+            ".zip",
+            ".rar",
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp",
         ],
         description=(
             "Purpose: Allowed file formats/extensions for task attachments.\n"
@@ -353,13 +368,13 @@ class Settings(BaseSettings):
             "Production Recommendation: Exclude dangerous executable types (.exe, .msi, .bat, .sh).\n"
             "Development Recommendation: Keep standard documentation types.\n"
             "Security Consideration: Blocking executables prevents users from uploading files that could compromise other machines."
-        )
+        ),
     )
 
     # =========================================================================
     # 📝 7. LOGGING SETTINGS
     # =========================================================================
-    
+
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO",
         description=(
@@ -368,7 +383,7 @@ class Settings(BaseSettings):
             "Production Recommendation: 'INFO' or 'WARNING' to balance disk I/O and trace data.\n"
             "Development Recommendation: 'DEBUG' or 'INFO' for verbose debugging details.\n"
             "Security Consideration: None."
-        )
+        ),
     )
 
     LOG_FORMAT: str = Field(
@@ -379,7 +394,7 @@ class Settings(BaseSettings):
             "Production Recommendation: Keep default or adapt to JSON formats for log aggregation systems.\n"
             "Development Recommendation: Keep default.\n"
             "Security Consideration: Ensure formatted output is sanitized."
-        )
+        ),
     )
 
     LOG_DIRECTORY: str = Field(
@@ -390,7 +405,7 @@ class Settings(BaseSettings):
             "Production Recommendation: Point to dedicated, high-speed persistent storage volumes.\n"
             "Development Recommendation: Relative path 'logs'.\n"
             "Security Consideration: Restrict folder read permission strictly to administrators."
-        )
+        ),
     )
 
     LOG_ROTATION_SIZE: PositiveInt = Field(
@@ -401,7 +416,7 @@ class Settings(BaseSettings):
             "Production Recommendation: 10MB to 50MB depending on disk capabilities.\n"
             "Development Recommendation: 10MB.\n"
             "Security Consideration: Prevents denial-of-service due to full system disks."
-        )
+        ),
     )
 
     LOG_BACKUP_COUNT: PositiveInt = Field(
@@ -412,7 +427,7 @@ class Settings(BaseSettings):
             "Production Recommendation: 5 to 14 days depending on audit log storage rules.\n"
             "Development Recommendation: 5.\n"
             "Security Consideration: Essential to control overall logging space consumption."
-        )
+        ),
     )
 
     ENABLE_FILE_LOGGING: bool = Field(
@@ -423,7 +438,7 @@ class Settings(BaseSettings):
             "Production Recommendation: True (enables offline diagnostics and auditing).\n"
             "Development Recommendation: True.\n"
             "Security Consideration: Files must be secured against user reads."
-        )
+        ),
     )
 
     ENABLE_CONSOLE_LOGGING: bool = Field(
@@ -433,13 +448,13 @@ class Settings(BaseSettings):
             "Default: True\n"
             "Production Recommendation: True for container environments (Docker/Kubernetes stdout tracking), False otherwise.\n"
             "Development Recommendation: True (allows live tracking inside IDE terminals).\n"
-        )
+        ),
     )
 
     # =========================================================================
     # 🩺 8. HEALTH CHECK & MONITORING SETTINGS
     # =========================================================================
-    
+
     ENABLE_HEALTH_ENDPOINTS: bool = Field(
         default=True,
         description=(
@@ -448,7 +463,7 @@ class Settings(BaseSettings):
             "Production Recommendation: True (enables orchestrator monitoring probes).\n"
             "Development Recommendation: True.\n"
             "Security Consideration: None directly, but endpoints should exclude detailed internals."
-        )
+        ),
     )
 
     ENABLE_RUNTIME_DIAGNOSTICS: bool = Field(
@@ -459,7 +474,7 @@ class Settings(BaseSettings):
             "Production Recommendation: True (improves monitoring), or False if strict security rules block platform footprint disclosures.\n"
             "Development Recommendation: True.\n"
             "Security Consideration: Ensure absolute server paths and environment credentials are never exposed."
-        )
+        ),
     )
 
     HEALTH_TIMEOUT: PositiveInt = Field(
@@ -470,7 +485,18 @@ class Settings(BaseSettings):
             "Production Recommendation: 3 or 5 seconds to fail quickly if database server lags.\n"
             "Development Recommendation: 3.\n"
             "Security Consideration: None."
-        )
+        ),
+    )
+
+    ENABLE_METRICS: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Toggle Prometheus metrics collection and /metrics endpoint.\n"
+            "Default: True\n"
+            "Production Recommendation: True (enables application metrics collection for prometheus scraping).\n"
+            "Development Recommendation: True.\n"
+            "Security Consideration: None."
+        ),
     )
 
     SHOW_VERSION: bool = Field(
@@ -481,7 +507,7 @@ class Settings(BaseSettings):
             "Production Recommendation: True.\n"
             "Development Recommendation: True.\n"
             "Security Consideration: Minimally exposes system version information."
-        )
+        ),
     )
 
     SHOW_ENVIRONMENT: bool = Field(
@@ -492,7 +518,7 @@ class Settings(BaseSettings):
             "Production Recommendation: True.\n"
             "Development Recommendation: True.\n"
             "Security Consideration: None."
-        )
+        ),
     )
 
     SHOW_UPTIME: bool = Field(
@@ -503,7 +529,7 @@ class Settings(BaseSettings):
             "Production Recommendation: True.\n"
             "Development Recommendation: True.\n"
             "Security Consideration: None."
-        )
+        ),
     )
 
     ALLOWED_HOSTS: list[str] = Field(
@@ -513,7 +539,7 @@ class Settings(BaseSettings):
             "Default: ['*'] (allows all for local development compatibility).\n"
             "Production Recommendation: Set to specific domains or IP addresses mapping application endpoints.\n"
             "Security Consideration: Restricting host headers prevents server side cache poisoning and redirects hijacking."
-        )
+        ),
     )
 
     # =========================================================================
@@ -521,127 +547,96 @@ class Settings(BaseSettings):
     # =========================================================================
     EMAIL_PROVIDER: str = Field(
         default="SMTP",
-        description="Active email provider strategy (e.g. SMTP, GMAIL, OUTLOOK, AWS_SES, SENDGRID, MAILGUN)."
+        description="Active email provider strategy (e.g. SMTP, GMAIL, OUTLOOK, AWS_SES, SENDGRID, MAILGUN).",
     )
 
-    SMTP_HOST: str = Field(
-        default="localhost",
-        description="SMTP server host address."
-    )
+    SMTP_HOST: str = Field(default="localhost", description="SMTP server host address.")
 
-    SMTP_PORT: int = Field(
-        default=587,
-        description="SMTP server port."
-    )
+    SMTP_PORT: int = Field(default=587, description="SMTP server port.")
 
     SMTP_USERNAME: Optional[str] = Field(
-        default=None,
-        description="SMTP credentials username."
+        default=None, description="SMTP credentials username."
     )
 
     SMTP_PASSWORD: Optional[SecretStr] = Field(
-        default=None,
-        description="SMTP credentials password."
+        default=None, description="SMTP credentials password."
     )
 
     SMTP_USE_TLS: bool = Field(
-        default=True,
-        description="Enable TLS for SMTP connection."
+        default=True, description="Enable TLS for SMTP connection."
     )
 
     SMTP_USE_SSL: bool = Field(
-        default=False,
-        description="Enable SSL for SMTP connection."
+        default=False, description="Enable SSL for SMTP connection."
     )
 
     SMTP_TIMEOUT: int = Field(
-        default=10,
-        description="Timeout for SMTP operations in seconds."
+        default=10, description="Timeout for SMTP operations in seconds."
     )
 
     EMAIL_SENDER_NAME: str = Field(
-        default="TaskSync Enterprise",
-        description="Default sender display name."
+        default="TaskSync Enterprise", description="Default sender display name."
     )
 
     EMAIL_SENDER_ADDRESS: str = Field(
         default="noreply@tasksync.enterprise",
-        description="Default sender email address."
+        description="Default sender email address.",
     )
 
     # =========================================================================
     # 🔄 7. REDIS CACHE SETTINGS
     # =========================================================================
-    
-    REDIS_HOST: str = Field(
-        default="localhost",
-        description="Redis host address."
-    )
-    
-    REDIS_PORT: int = Field(
-        default=6379,
-        description="Redis port."
-    )
-    
-    REDIS_DB: int = Field(
-        default=0,
-        description="Redis database index."
-    )
-    
+
+    REDIS_HOST: str = Field(default="localhost", description="Redis host address.")
+
+    REDIS_PORT: int = Field(default=6379, description="Redis port.")
+
+    REDIS_DB: int = Field(default=0, description="Redis database index.")
+
     REDIS_PASSWORD: Optional[SecretStr] = Field(
-        default=None,
-        description="Redis connection password."
+        default=None, description="Redis connection password."
     )
-    
+
     REDIS_URL: Optional[str] = Field(
         default=None,
-        description="Redis connection URL (overrides host, port, db, password)."
+        description="Redis connection URL (overrides host, port, db, password).",
     )
-    
+
     REDIS_MAX_CONNECTIONS: int = Field(
-        default=50,
-        description="Maximum connections in Redis pool."
+        default=50, description="Maximum connections in Redis pool."
     )
-    
+
     REDIS_TIMEOUT: int = Field(
-        default=5,
-        description="Redis connection and socket timeout in seconds."
+        default=5, description="Redis connection and socket timeout in seconds."
     )
-    
+
     REDIS_RETRY_ATTEMPTS: int = Field(
-        default=3,
-        description="Redis operation retry attempts."
+        default=3, description="Redis operation retry attempts."
     )
 
     # TTL Settings
     CACHE_TTL_DEFAULT: int = Field(
-        default=3600,
-        description="Default Cache TTL in seconds."
+        default=3600, description="Default Cache TTL in seconds."
     )
-    
+
     CACHE_TTL_DEPARTMENT: int = Field(
-        default=3600,
-        description="Cache TTL for department detail queries."
+        default=3600, description="Cache TTL for department detail queries."
     )
-    
+
     CACHE_TTL_EMPLOYEE: int = Field(
-        default=3600,
-        description="Cache TTL for employee profile queries."
+        default=3600, description="Cache TTL for employee profile queries."
     )
-    
+
     CACHE_TTL_DASHBOARD: int = Field(
-        default=600,
-        description="Cache TTL for dashboard aggregate counts."
+        default=600, description="Cache TTL for dashboard aggregate counts."
     )
-    
+
     CACHE_TTL_PROJECT: int = Field(
-        default=1800,
-        description="Cache TTL for project list responses."
+        default=1800, description="Cache TTL for project list responses."
     )
-    
+
     CACHE_TTL_TASK: int = Field(
-        default=1800,
-        description="Cache TTL for task list responses."
+        default=1800, description="Cache TTL for task list responses."
     )
 
     # =========================================================================
@@ -649,27 +644,92 @@ class Settings(BaseSettings):
     # =========================================================================
     SUPPORTED_API_VERSIONS: list[str] = Field(
         default_factory=lambda: ["v1"],
-        description="List of supported API version prefixes."
+        description="List of supported API version prefixes.",
     )
 
     RATE_LIMIT_ENABLED: bool = Field(
-        default=True,
-        description="Toggle rate limiting middleware functionality."
+        default=True, description="Toggle rate limiting middleware functionality."
     )
 
     RATE_LIMIT_DEFAULT_LIMIT: int = Field(
-        default=100,
-        description="Default number of allowed requests in window."
+        default=100, description="Default number of allowed requests in window."
     )
 
     RATE_LIMIT_DEFAULT_WINDOW: int = Field(
-        default=60,
-        description="Default time window size in seconds."
+        default=60, description="Default time window size in seconds."
     )
 
     IDEMPOTENCY_TTL_SECONDS: int = Field(
         default=86400,
-        description="Default TTL expiration for idempotency response cache."
+        description="Default TTL expiration for idempotency response cache.",
+    )
+
+    # =========================================================================
+    # 🔭 9. OPENTELEMETRY TRACING SETTINGS  (Phase 3.7.4)
+    # =========================================================================
+
+    ENABLE_TRACING: bool = Field(
+        default=True,
+        description=(
+            "Purpose: Toggle OpenTelemetry distributed tracing.\n"
+            "Default: True\n"
+            "Production Recommendation: True.\n"
+            "Development Recommendation: True (use console exporter).\n"
+            "Security Consideration: Trace data may contain request metadata."
+        ),
+    )
+
+    OTEL_SERVICE_NAME: str = Field(
+        default="TaskSyncEnterprise",
+        description="OTel service name reported in all spans and the Resource block.",
+    )
+
+    OTEL_ENVIRONMENT: str = Field(
+        default="development",
+        description="Deployment environment tag attached to every span as a Resource attribute.",
+    )
+
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = Field(
+        default="http://localhost:4317",
+        description="OTLP receiver endpoint URL for the gRPC or HTTP exporter.",
+    )
+
+    OTEL_EXPORTER_TYPE: Literal["otlp_grpc", "otlp_http", "console", "none"] = Field(
+        default="console",
+        description=(
+            "Selects the OTel span exporter backend.\n"
+            "  'console'   -> prints spans to stdout (development/CI).\n"
+            "  'otlp_grpc' -> ships spans to OTLP gRPC collector (Jaeger, Tempo).\n"
+            "  'otlp_http' -> ships spans to OTLP HTTP collector.\n"
+            "  'none'      -> discards all spans (testing)."
+        ),
+    )
+
+    OTEL_SAMPLING_RATE: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of requests to sample (0.0=none, 1.0=all). Default: 1.0.",
+    )
+
+    OTEL_EXCLUDED_PATHS: list[str] = Field(
+        default_factory=lambda: [
+            "/metrics",
+            "/health",
+            "/health/live",
+            "/health/ready",
+            "/health/details",
+            "/health/detailed",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/favicon.ico",
+        ],
+        description="URL paths excluded from automatic FastAPI span creation.",
+    )
+
+    OTEL_MAX_ATTRIBUTE_LENGTH: int = Field(
+        default=256, description="Maximum character length for span attribute values."
     )
 
     @property
@@ -691,6 +751,30 @@ class Settings(BaseSettings):
     def ATTACHMENT_DIR_PATH(self) -> Path:
         """Resolves the absolute Path to the attachments subfolder."""
         return self.UPLOAD_DIR_PATH / self.STORAGE_ATTACHMENT_SUBDIR
+
+
+# Compatibility shims for the tracing test suite and older import patterns.
+# These class attributes allow patch.object(settings.__class__, "ENABLE_TRACING", new=False)
+# to work even though the values are defined as Pydantic fields on the model.
+Settings.ENABLE_TRACING = True
+Settings.OTEL_SERVICE_NAME = "TaskSyncEnterprise"
+Settings.OTEL_ENVIRONMENT = "development"
+Settings.OTEL_EXPORTER_OTLP_ENDPOINT = "http://localhost:4317"
+Settings.OTEL_EXPORTER_TYPE = "console"
+Settings.OTEL_SAMPLING_RATE = 1.0
+Settings.OTEL_EXCLUDED_PATHS = [
+    "/metrics",
+    "/health",
+    "/health/live",
+    "/health/ready",
+    "/health/details",
+    "/health/detailed",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+    "/favicon.ico",
+]
+Settings.OTEL_MAX_ATTRIBUTE_LENGTH = 256
 
 
 @lru_cache

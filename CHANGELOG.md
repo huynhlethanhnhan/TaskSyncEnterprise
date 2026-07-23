@@ -1,48 +1,138 @@
-# Changelog
+## [Unreleased] — Phase 4.5: Enterprise UI/UX Redesign and Workflow Integration
 
-All notable changes to this project will be documented in this file.
+### Added
+- Complete enterprise design system with CSS custom properties, typography tokens, spacing scale, and component primitives
+- ApplicationShell with domain-oriented sidebar navigation (Overview, Work Management, Collaboration, Employee Self-Service, Reports, Administration)
+- Keyboard-navigable global search modal (Cmd+K / Ctrl+K) with debounced task and project lookup
+- Notification bell popover in Navbar showing last 5 unread items with deep links to tasks or vacations
+- Notifications page with date-grouped sections (Today, Yesterday, Earlier) and mark-as-read controls
+- My Work page with tabbed sections: Today (due tasks + approved leaves), Assigned to Me (grouped by project), My Requests (leave timeline), Sprint (active tasks)
+- Teams administration page with department filter, team code search, and create/edit drawers
+- Read-only Role and Permission Matrix in Settings documenting hardcoded RBAC rules
+- AuditLogPage.tsx rewritten in TypeScript with action badges, login counter, and formula-safe CSV export
+- ReportsPage.tsx with computed project portfolio metrics, task distribution charts (Recharts), employee workload tables, and vacation summaries
+- Safe CSV export utility (csv.ts) with Excel formula injection mitigation
+- useTeams TanStack Query hooks for teams CRUD
+- `/teams` and `/audit` routes added to AppRouter
+- helpers.test.mjs unit tests for permission helpers, CSV escaping, and progress calculations
+- 14+ new frontend documentation files covering design system, components, navigation, responsive behavior, and feature modules
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Changed
+- Redesigned TaskDrawer into dual-column workspace with file queue, attachment manager, metadata attributes
+- ProjectDetailPage extended to 10 tabs: Overview, Tasks, Kanban, Backlog, Sprints, Calendar, Files, Discussions, Activity, Settings
+- CalendarPage separated from vacation management — leaves displayed as read-only calendar events
+- VacationPage handles all leave request creation and approval workflows
+- SettingsPage updated to design system tokens and extended with permission matrix
+
+### Fixed
+- Removed `AuditLogPage.jsx` legacy file after TypeScript migration
 
 ---
 
-## [3.9.0] - 2026-07-11
+## [1.0.0-rc1] — 2026-07-20
 
-### Added
-* **Multi-Stage Docker Packaging**: Production-grade multi-stage Dockerfile and docker-compose.yml to containerize the FastAPI app, Redis, and SQL Server.
-* **Requirements Consolidation**: Consolidated python dependencies by declaring missing python-jose requirements.
 
-### Hardened
-* **Structured Logging**: Hardened application logs by replacing all raw print statements with structured app_logger telemetries.
-* **Logout Endpoint Auth**: Secured the logout route by validating access tokens before blacklisting.
+### Added — Phase 3.8.8: Final Release Preparation
+- Release pipeline with semantic version tag validation (`release.yml`).
+- Docker Compose syntax validation in CI for all 3 compose files.
+- Final production audit report (`docs/reports/final/FINAL_PRODUCTION_AUDIT.md`).
+- Formal release candidate certification (`docs/releases/RELEASE_CANDIDATE_RC1.md`).
+- Root-level `CHANGELOG.md` and `RELEASE_NOTES.md`.
+- Version badge in README.
 
-## [3.6.0] - 2026-07-11
+### Added — Phase 3.8.7: Backup, Restore & Disaster Recovery
+- SQL Server full and differential backup automation.
+- User uploads archive (tar.gz) with atomic staging restore.
+- Redis RDB snapshot backup and guarded restore.
+- JSON Schema–validated manifest generation.
+- SHA-256 checksum generation and verification.
+- Production overwrite dual controls (flag + environment variable).
+- Path traversal, archive bomb, and secret leakage protections.
+- 61 automated tests across 4 test suites.
 
-### Added
-* **API Versioning validation middleware**: Prevents requests to unsupported api versions (e.g. `/api/v9/`) by returning structured 404 responses.
-* **Enterprise Idempotency middleware**: Supports `Idempotency-Key` headers on mutative requests (`POST`, `PUT`, `PATCH`) with atomic lock acquisition, response caching in Redis, and concurrency collision safety.
-* **API Deprecation framework**: Reusable `@deprecate_endpoint` decorator and `APIDeprecationMiddleware` automatically injecting `Deprecation`, `Sunset`, and `Link` headers into HTTP responses.
-* **Redis sliding window Rate Limiter**: High-performance middleware using Redis ZSET logs to enforce rolling request limit quotas on API paths per user/IP.
+### Added — Phase 3.8.6: Nginx, Reverse Proxy & HTTPS Preparation
+- Nginx as single entry point (ports 80/443).
+- Backend and frontend ports hidden from host.
+- SPA routing with `try_files` fallback.
+- API reverse proxy (`/api/v1` → backend).
+- Swagger UI passthrough (`/docs`, `/openapi.json`).
+- Static asset caching and gzip compression.
+- Security-focused access log format (excludes Auth/Cookie headers).
+- SSL/HTTPS stub ready for certificate mounting.
 
-## [3.4.0] - 2026-07-11
+### Added — Phase 3.8.5: Environment & Secret Runtime Hardening
+- Required secret enforcement with Docker Compose `?` syntax.
+- `SecretStr` usage for sensitive Pydantic settings.
+- `.env.production.example` template with documentation.
+- Startup validation rejecting weak/default secrets in production.
 
-### Added
-* **Multiple Channel Notification delivery (Strategy Pattern)**: Refactored delivery logic to isolate channels (`EMAIL`, `IN_APP`, `WEBSOCKET`, `PUSH`, `SYSTEM`) using Strategy Pattern strategies with zero dispatcher if/else branches.
-* **Enterprise WebSocket Notifications Gateway**: Real-time push server mounted at root `/ws/notifications`. Supports JWT authentication, query-string validation, private multi-tab recipient queues, heartbeat, and disconnect cleans.
-* **Background Email Retry Poller**: Database-backed daemon poller thread retrying failed emails up to a threshold of 5 attempts.
+### Added — Phase 3.8.4: Production Docker Compose
+- Multi-service production orchestration with 8 containers.
+- Three-tier network isolation (frontend, backend internal, monitoring).
+- Resource limits and reservations for all services.
+- Health checks for all application and infrastructure services.
+- Named volumes for persistent data.
 
-## [3.3.0] - 2026-07-10
+### Added — Phase 3.8.3: Production Docker Image Hardening
+- Multi-stage Dockerfile (builder + runner).
+- Non-root user with explicit UID/GID (10001).
+- Read-only filesystem with tmpfs for temp data.
+- `no-new-privileges` and `cap_drop: ALL` enforcement.
+- Hadolint integration in CI.
 
-### Added
-*   **Enterprise Response Framework**: Uniform envelopes (`ApiResponse[T]`, `PagedResponse[T]`) encapsulating all success and pagination structures with correlation IDs.
-*   **Enterprise Global Exception Framework**: Centralized `unified_exception_handler` middleware translating HTTP, validation, database, and system errors into standard error payloads while masking sensitive schema data.
-*   **Enterprise Logging Middleware**: Custom correlation context tracking request lifecycles and stamping Rotating File logs with `X-Request-ID`.
-*   **Enterprise Query Engine & Search Engine**: Reusable SQLAlchemy pipelines automating dynamic filtering, column sorting, pagination, and case-insensitive, multi-column search rules.
-*   **Enterprise Dashboard Analytics**: High-performance API aggregating multi-table widget counters in a single database round-trip using SQL scalar subqueries.
-*   **Enterprise Background Job Framework**: Extensible asynchronous worker execution facade implementing FastAPI BackgroundTasks and local `ThreadPoolExecutor` fallback.
-*   **Enterprise Notification Center**: Reusable in-app notification module with unread counts and read-state management integrated with the background job framework.
-*   **Integration Tests**: Comprehensive E2E test suites in `tests/test_background_jobs.py`, `tests/test_dashboard.py`, and `tests/test_notifications.py` verifying full infrastructure integration.
+### Added — Phase 3.8.2: GitHub Actions CI & Security Scan
+- Ruff linting, Black formatting checks.
+- Pytest with coverage report upload.
+- Bandit SAST and pip-audit SCA scanning.
+- Docker image build validation.
+- Concurrency groups with cancel-in-progress.
 
-### Fixed
-*   **SQLite Dialect Compatibility**: Dynamically checks database engine names (`db.bind.dialect.name`) to fallback from MS SQL Server `sysutcdatetime()` to timezone-aware UTC datetime values in test environments, resolving local test failures.
+### Added — Phase 3.8.1: Docker Packaging
+- Initial multi-stage Docker build.
+- Development Docker Compose with SQL Server and Redis.
+
+### Added — Phase 3.7: Monitoring, Health & Observability
+- Prometheus `v3.13.1` metrics collection with auto-scrape.
+- Grafana `11.1.0` dashboards with provisioned datasources.
+- cAdvisor container resource monitoring.
+- OpenTelemetry auto-instrumentation (FastAPI, SQLAlchemy, Redis).
+- Custom `PrometheusMetricsMiddleware` at `/metrics`.
+- Structured JSON logging with request context and correlation IDs.
+- SRE health endpoints (`/health/live`, `/health/ready`, `/health/details`).
+
+### Added — Phase 3.6: Production Readiness
+- Startup bootstrap validations.
+- Graceful shutdown with lifecycle hooks.
+- Background email retry poller.
+
+### Added — Phase 3.5: Performance Optimization
+- Redis caching layer with invalidation strategies.
+- Rate limiting middleware with Redis backend.
+- Idempotency middleware for safe request retries.
+- Cache manager with TTL and pattern-based invalidation.
+
+### Added — Phase 3.4: Notification & Email
+- WebSocket real-time notification system.
+- Email service with retry mechanism.
+- Notification repository and engine.
+- Email HTML template rendering.
+
+### Added — Phase 3.3: Backend Completion
+- Full CRUD operations for all entities.
+- Dashboard analytics API.
+- API deprecation middleware.
+- API versioning middleware.
+- Centralized error codes and exception handlers.
+
+### Added — Phase 3.2: Authentication & Authorization
+- JWT access and refresh token authentication.
+- Role-based access control (RBAC).
+- Password hashing with bcrypt.
+- Client credential validation.
+
+### Added — Phase 3.1: Production Hardening
+- TrustedHostMiddleware for Host header protection.
+- SecurityHeadersMiddleware (OWASP-aligned).
+- CORS configuration with strict origins.
+- Structured logging middleware.
+- Request context propagation.

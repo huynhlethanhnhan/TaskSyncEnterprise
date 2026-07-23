@@ -15,12 +15,13 @@ class QueryEngine:
         query: Query,
         model: Type[ModelT],
         filters: BaseFilterParams,
-        search_fields: List[str] | None = None
+        search_fields: List[str] | None = None,
     ) -> Query:
         """Applies common filters and search keywords to the query."""
         # 1. Keyword search (delegated to SearchEngine)
         if filters.keyword and search_fields:
             from app.utils.search_engine import SearchEngine
+
             query = SearchEngine.search(query, model, filters.keyword, search_fields)
 
         # 2. Status filter
@@ -52,11 +53,15 @@ class QueryEngine:
         sort_params: SortParams,
         allowed_fields: List[str],
         default_sort_by: str = "id",
-        default_sort_order: str = "asc"
+        default_sort_order: str = "asc",
     ) -> Query:
         """Applies validated sorting to the query."""
-        sort_by = sort_params.sort_by or default_sort_by
-        sort_order = sort_params.sort_order or default_sort_order
+        if sort_params.sort_by:
+            sort_by = sort_params.sort_by
+            sort_order = sort_params.sort_order
+        else:
+            sort_by = default_sort_by
+            sort_order = default_sort_order
 
         # Fallback to default if field is not allowed
         if sort_by not in allowed_fields:
@@ -72,16 +77,15 @@ class QueryEngine:
 
     @classmethod
     def paginate_query(
-        cls,
-        query: Query,
-        model: Type[ModelT],
-        pagination_params: PaginationParams
+        cls, query: Query, model: Type[ModelT], pagination_params: PaginationParams
     ) -> Tuple[List[ModelT], int]:
         """
         Paginates the query using a count check followed by limit/offset.
         """
         total = query.count()
-        items = query.offset(pagination_params.offset).limit(pagination_params.size).all()
+        items = (
+            query.offset(pagination_params.offset).limit(pagination_params.size).all()
+        )
         return items, total
 
     @classmethod
@@ -95,7 +99,7 @@ class QueryEngine:
         search_fields: List[str] | None = None,
         allowed_sort_fields: List[str] | None = None,
         default_sort_by: str = "id",
-        default_sort_order: str = "asc"
+        default_sort_order: str = "asc",
     ) -> Tuple[List[ModelT], int]:
         """
         Runs the full standardized query pipeline:
@@ -118,7 +122,7 @@ class QueryEngine:
                 sort_params,
                 allowed_sort_fields,
                 default_sort_by,
-                default_sort_order
+                default_sort_order,
             )
 
         # 4. Pagination

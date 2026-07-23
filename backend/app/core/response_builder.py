@@ -9,7 +9,7 @@ from app.schemas.response import (
     DeletedResponse,
     ResponseMeta,
     PagedResponse,
-    PaginationMeta
+    PaginationMeta,
 )
 from app.core.logger import request_id_ctx
 
@@ -28,10 +28,7 @@ class ResponseBuilder:
 
     @classmethod
     def success(
-        cls,
-        data: Any = None,
-        message: str = "Success",
-        meta: Any = None
+        cls, data: Any = None, message: str = "Success", meta: Any = None
     ) -> SuccessResponse[Any]:
         """Constructs a SuccessResponse with status code 200."""
         meta_obj = None
@@ -41,10 +38,7 @@ class ResponseBuilder:
             else:
                 meta_obj = meta
         return SuccessResponse(
-            success=True,
-            message=message,
-            data=data,
-            meta=meta_obj or ResponseMeta()
+            success=True, message=message, data=data, meta=meta_obj or ResponseMeta()
         )
 
     @classmethod
@@ -52,7 +46,7 @@ class ResponseBuilder:
         cls,
         data: Any = None,
         message: str = "Resource created successfully",
-        meta: Any = None
+        meta: Any = None,
     ) -> CreatedResponse[Any]:
         """Constructs a CreatedResponse representing newly created resources."""
         meta_obj = None
@@ -62,10 +56,7 @@ class ResponseBuilder:
             else:
                 meta_obj = meta
         return CreatedResponse(
-            success=True,
-            message=message,
-            data=data,
-            meta=meta_obj or ResponseMeta()
+            success=True, message=message, data=data, meta=meta_obj or ResponseMeta()
         )
 
     @classmethod
@@ -73,7 +64,7 @@ class ResponseBuilder:
         cls,
         data: Any = None,
         message: str = "Resource updated successfully",
-        meta: Any = None
+        meta: Any = None,
     ) -> UpdatedResponse[Any]:
         """Constructs an UpdatedResponse representing modified resources."""
         meta_obj = None
@@ -83,17 +74,12 @@ class ResponseBuilder:
             else:
                 meta_obj = meta
         return UpdatedResponse(
-            success=True,
-            message=message,
-            data=data,
-            meta=meta_obj or ResponseMeta()
+            success=True, message=message, data=data, meta=meta_obj or ResponseMeta()
         )
 
     @classmethod
     def deleted(
-        cls,
-        message: str = "Resource deleted successfully",
-        meta: Any = None
+        cls, message: str = "Resource deleted successfully", meta: Any = None
     ) -> DeletedResponse:
         """Constructs a DeletedResponse indicating a successful deletion operation."""
         meta_obj = None
@@ -103,10 +89,7 @@ class ResponseBuilder:
             else:
                 meta_obj = meta
         return DeletedResponse(
-            success=True,
-            message=message,
-            data=None,
-            meta=meta_obj or ResponseMeta()
+            success=True, message=message, data=None, meta=meta_obj or ResponseMeta()
         )
 
     @classmethod
@@ -125,7 +108,7 @@ class ResponseBuilder:
         page: int,
         size: int,
         total: int,
-        message: str = "Success"
+        message: str = "Success",
     ) -> PagedResponse[Any]:
         """Constructs a PagedResponse with computed metadata bounds."""
         pages = math.ceil(total / size) if size > 0 else 0
@@ -133,10 +116,5 @@ class ResponseBuilder:
             success=True,
             message=message,
             data=items,
-            meta=PaginationMeta(
-                page=page,
-                size=size,
-                total=total,
-                pages=pages
-            )
+            meta=PaginationMeta(page=page, size=size, total=total, pages=pages),
         )

@@ -7,10 +7,7 @@ from app.schemas.role import RoleCreate, RoleUpdate
 
 def get_all(db: Session):
 
-    stmt = (
-        select(Role)
-        .order_by(Role.id.desc())
-    )
+    stmt = select(Role).order_by(Role.id.desc())
 
     return db.scalars(stmt).all()
 
@@ -31,10 +28,7 @@ def create(db: Session, data: RoleCreate):
     return obj
 
 
-def update(
-        db: Session,
-        obj: Role,
-        data: RoleUpdate):
+def update(db: Session, obj: Role, data: RoleUpdate):
 
     values = data.model_dump(exclude_unset=True)
 

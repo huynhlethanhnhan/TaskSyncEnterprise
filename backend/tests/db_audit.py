@@ -8,18 +8,19 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy import create_engine, text
 from app.config import settings
 
+
 def run_database_audit():
     print("======================================================================")
     print("[AUDIT] DATABASE CONSISTENCY & INTEGRITY SCANNER")
     print("======================================================================\n")
-    
+
     engine = create_engine(settings.SQLALCHEMY_DATABASE_URI)
-    
+
     orphan_assignments = []
     orphan_tasks = []
     duplicate_assignments = []
     invalid_roles = []
-    
+
     try:
         with engine.connect() as conn:
             # 1. Scan for orphaned task assignments (missing task or employee)
@@ -32,7 +33,7 @@ def run_database_audit():
                 WHERE t.id IS NULL OR e.id IS NULL
             """)).fetchall()
             orphan_assignments = [dict(r._mapping) for r in q_orphans]
-            
+
             # 2. Scan for duplicate task assignments
             print("Scanning for duplicate task_assignments...")
             q_duplicates = conn.execute(text("""
@@ -42,7 +43,7 @@ def run_database_audit():
                 HAVING COUNT(*) > 1
             """)).fetchall()
             duplicate_assignments = [dict(r._mapping) for r in q_duplicates]
-            
+
             # 3. Scan for tasks referencing non-existent projects
             print("Scanning for orphan tasks...")
             q_tasks = conn.execute(text("""
@@ -52,7 +53,7 @@ def run_database_audit():
                 WHERE p.id IS NULL
             """)).fetchall()
             orphan_tasks = [dict(r._mapping) for r in q_tasks]
-            
+
             # 4. Scan for employees with invalid role references
             print("Scanning for invalid role references in employees...")
             q_roles = conn.execute(text("""
@@ -71,23 +72,29 @@ def run_database_audit():
     print("\n----------------------------------------------------------------------")
     print("AUDIT FINDINGS:")
     print("----------------------------------------------------------------------")
-    
+
     clean_sql = []
-    
+
     # 1. Orphan assignments
     if orphan_assignments:
         print(f"  [FAIL] Found {len(orphan_assignments)} orphan task_assignments:")
         for r in orphan_assignments:
-            print(f"         Assignment ID {r['id']} references task_id {r['task_id']}, employee_id {r['employee_id']}")
+            print(
+                f"         Assignment ID {r['id']} references task_id {r['task_id']}, employee_id {r['employee_id']}"
+            )
             clean_sql.append(f"DELETE FROM task_assignments WHERE id = {r['id']};")
     else:
         print("  [PASS] No orphan task_assignments detected.")
 
     # 2. Duplicate assignments
     if duplicate_assignments:
-        print(f"  [FAIL] Found {len(duplicate_assignments)} duplicate task_assignments:")
+        print(
+            f"  [FAIL] Found {len(duplicate_assignments)} duplicate task_assignments:"
+        )
         for r in duplicate_assignments:
-            print(f"         Task ID {r['task_id']} assigned to Employee ID {r['employee_id']} {r['cnt']} times.")
+            print(
+                f"         Task ID {r['task_id']} assigned to Employee ID {r['employee_id']} {r['cnt']} times."
+            )
             # Keep only one record, delete duplicates (SQL Server CTE expression)
             clean_sql.append(f"""
 WITH CTE AS (
@@ -101,9 +108,13 @@ DELETE FROM CTE WHERE RN > 1;""")
 
     # 3. Orphan tasks
     if orphan_tasks:
-        print(f"  [FAIL] Found {len(orphan_tasks)} tasks referencing non-existent projects:")
+        print(
+            f"  [FAIL] Found {len(orphan_tasks)} tasks referencing non-existent projects:"
+        )
         for r in orphan_tasks:
-            print(f"         Task ID {r['id']} ('{r['title']}') references project_id {r['project_id']}")
+            print(
+                f"         Task ID {r['id']} ('{r['title']}') references project_id {r['project_id']}"
+            )
             clean_sql.append(f"DELETE FROM tasks WHERE id = {r['id']};")
     else:
         print("  [PASS] No orphan tasks detected.")
@@ -112,7 +123,9 @@ DELETE FROM CTE WHERE RN > 1;""")
     if invalid_roles:
         print(f"  [FAIL] Found {len(invalid_roles)} employees with invalid roles:")
         for r in invalid_roles:
-            print(f"         Employee ID {r['id']} ('{r['email']}') references role_id {r['role_id']}")
+            print(
+                f"         Employee ID {r['id']} ('{r['email']}') references role_id {r['role_id']}"
+            )
             # Set default role Employee (3) for safety
             clean_sql.append(f"UPDATE employees SET role_id = 3 WHERE id = {r['id']};")
     else:
@@ -128,8 +141,9 @@ DELETE FROM CTE WHERE RN > 1;""")
             print(sql)
     else:
         print("-- Database is fully consistent. No cleanup script needed!")
-        
+
     print("\n======================================================================")
+
 
 if __name__ == "__main__":
     run_database_audit()

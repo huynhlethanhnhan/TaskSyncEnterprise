@@ -13,14 +13,23 @@ class InAppChannel(BaseChannel):
     def name(self) -> NotificationChannel:
         return NotificationChannel.IN_APP
 
-    def send(self, db: Session, recipient_id: int, title: str, message: str, notification_id: int) -> bool:
-        app_logger.info(f"Delivering In-App notification (ID: {notification_id}) to employee {recipient_id}")
-        
+    def send(
+        self,
+        db: Session,
+        recipient_id: int,
+        title: str,
+        message: str,
+        notification_id: int,
+    ) -> bool:
+        app_logger.info(
+            f"Delivering In-App notification (ID: {notification_id}) to employee {recipient_id}"
+        )
+
         notif = notification_repo.get_by_id(db, notification_id)
         if notif:
             notif.status = NotificationStatus.SENT.value
             db.commit()
-            
+
             # Log the successful delivery attempt
             notification_repo.log_delivery_attempt(
                 db=db,
@@ -28,9 +37,11 @@ class InAppChannel(BaseChannel):
                 channel=self.name.value,
                 status=NotificationStatus.SENT.value,
                 retry_count=0,
-                provider_response="In-App notification successfully processed and state set to SENT"
+                provider_response="In-App notification successfully processed and state set to SENT",
             )
             return True
-            
-        app_logger.error(f"InAppChannel failed: Notification ID {notification_id} was not found in the database.")
+
+        app_logger.error(
+            f"InAppChannel failed: Notification ID {notification_id} was not found in the database."
+        )
         return False

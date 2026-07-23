@@ -11,6 +11,7 @@ from app.core.enums import NotificationType, NotificationPriority
 def async_dispatch_notification_task(event_dict: dict) -> None:
     """Entry point task executed by the background worker thread pool."""
     from app.database import SessionLocal
+
     db = SessionLocal()
     try:
         event = NotificationEvent(**event_dict)
@@ -31,9 +32,7 @@ class NotificationService:
         self.dispatcher.dispatch(db, event)
 
     def trigger_event_async(
-        self,
-        bg_service: BackgroundJobService,
-        event: NotificationEvent
+        self, bg_service: BackgroundJobService, event: NotificationEvent
     ) -> None:
         """Asynchronously schedules the notification event execution on the BackgroundJobService."""
         bg_service.enqueue(async_dispatch_notification_task, event.model_dump())
@@ -44,7 +43,7 @@ class NotificationService:
         recipient_ids: List[int],
         payload: Dict[str, Any],
         actor_id: int | None = None,
-        priority: NotificationPriority = NotificationPriority.NORMAL
+        priority: NotificationPriority = NotificationPriority.NORMAL,
     ) -> NotificationEvent:
         """Helper function to create a validated NotificationEvent instance."""
         return NotificationEvent(
@@ -53,7 +52,7 @@ class NotificationService:
             actor_id=actor_id,
             recipient_ids=recipient_ids,
             payload=payload,
-            priority=priority
+            priority=priority,
         )
 
 

@@ -2,16 +2,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.project import Project
-from app.schemas.project import (
-    ProjectCreate,
-    ProjectUpdate
-)
+from app.schemas.project import ProjectCreate, ProjectUpdate
 
 
-def get_all(
-        db: Session,
-        skip=0,
-        limit=20):
+def get_all(db: Session, skip=0, limit=20):
 
     stmt = (
         select(Project)
@@ -24,23 +18,14 @@ def get_all(
     return db.scalars(stmt).all()
 
 
-def get_by_id(
-        db: Session,
-        project_id: int):
+def get_by_id(db: Session, project_id: int):
 
-    return db.get(
-        Project,
-        project_id
-    )
+    return db.get(Project, project_id)
 
 
-def create(
-        db: Session,
-        data: ProjectCreate):
+def create(db: Session, data: ProjectCreate):
 
-    obj = Project(
-        **data.model_dump()
-    )
+    obj = Project(**data.model_dump())
 
     db.add(obj)
     db.commit()
@@ -49,14 +34,9 @@ def create(
     return obj
 
 
-def update(
-        db: Session,
-        obj: Project,
-        data: ProjectUpdate):
+def update(db: Session, obj: Project, data: ProjectUpdate):
 
-    values = data.model_dump(
-        exclude_unset=True
-    )
+    values = data.model_dump(exclude_unset=True)
 
     for k, v in values.items():
         setattr(obj, k, v)
@@ -67,9 +47,7 @@ def update(
     return obj
 
 
-def delete(
-        db: Session,
-        obj: Project):
+def delete(db: Session, obj: Project):
 
     obj.is_deleted = True
 

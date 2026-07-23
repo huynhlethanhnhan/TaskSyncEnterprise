@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-07-22T14:56:01.282Z",
+  "health": {
+    "http://127.0.0.1/healthz": {
+      "status": 200,
+      "body": "healthy\n"
+    },
+    "http://127.0.0.1/health": {
+      "status": 200,
+      "body": "{\"status\":\"healthy\"}"
+    },
+    "http://127.0.0.1/api/v1/health/ready": {
+      "status": 200,
+      "body": "{\"status\":\"ready\",\"database\":\"connected\",\"redis\":\"connected\"}"
+    }
+  }
+}

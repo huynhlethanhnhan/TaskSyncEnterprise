@@ -1,4 +1,4 @@
-from logging.config import fileConfig
+import logging.config
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -21,7 +21,7 @@ config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    logging.config.fileConfig(config.config_file_name)
 
 # Thay bằng import Base từ app của bạn
 from app.database import Base
@@ -37,7 +37,9 @@ def include_object(object, name, type, reflected, compare_to):
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
-    url = config.get_main_option("sqlalchemy.url")
+    from app.config import settings
+
+    url = settings.SQLALCHEMY_DATABASE_URI
     context.configure(
         url=url,
         target_metadata=target_metadata,

@@ -15,26 +15,41 @@ class EmailChannel(BaseChannel):
     def name(self) -> NotificationChannel:
         return NotificationChannel.EMAIL
 
-    def send(self, db: Session, recipient_id: int, title: str, message: str, notification_id: int) -> bool:
+    def send(
+        self,
+        db: Session,
+        recipient_id: int,
+        title: str,
+        message: str,
+        notification_id: int,
+    ) -> bool:
         employee = db.get(Employee, recipient_id)
         if not employee or not employee.email:
-            app_logger.error(f"EmailChannel failed: Employee ID {recipient_id} not found or email is empty.")
+            app_logger.error(
+                f"EmailChannel failed: Employee ID {recipient_id} not found or email is empty."
+            )
             self._mark_failed(db, notification_id, "Target employee email not found.")
             return False
 
-        app_logger.info(f"Routing notification {notification_id} to EmailService for delivery to {employee.email}")
-        
+        app_logger.info(
+            f"Routing notification {notification_id} to EmailService for delivery to {employee.email}"
+        )
+
         success = email_service.send_notification_email(
             db=db,
             notification_id=notification_id,
             recipient_email=employee.email,
             subject=title,
-            message_body=message
+            message_body=message,
         )
 
         notif = notification_repo.get_by_id(db, notification_id)
         if notif:
-            notif.status = NotificationStatus.SENT.value if success else NotificationStatus.FAILED.value
+            notif.status = (
+                NotificationStatus.SENT.value
+                if success
+                else NotificationStatus.FAILED.value
+            )
             db.commit()
             return success
 
@@ -51,5 +66,5 @@ class EmailChannel(BaseChannel):
                 channel=self.name.value,
                 status=NotificationStatus.FAILED.value,
                 retry_count=0,
-                provider_response=reason
+                provider_response=reason,
             )

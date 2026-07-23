@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tasksync.enterprise/schemas/backup-manifest-v1.schema.json",
+  "title": "TaskSyncEnterprise Backup Manifest Schema",
+  "type": "object",
+  "required": [
+    "manifest_version",
+    "backup_id",
+    "application",
+    "environment",
+    "timestamps",
+    "backup_type",
+    "status",
+    "artifacts",
+    "integrity",
+    "encryption",
+    "compatibility"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "manifest_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "backup_id": {
+      "type": "string",
+      "pattern": "^backup_[0-9]{8}T[0-9]{6}Z_[a-f0-9]{8}$"
+    },
+    "application": {
+      "type": "object",
+      "required": ["name", "version", "git_commit"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "TaskSyncEnterprise"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "git_commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{7,40}$"
+        }
+      }
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["development", "staging", "production", "test"]
+    },
+    "timestamps": {
+      "type": "object",
+      "required": ["started_at"],
+      "additionalProperties": false,
+      "properties": {
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completed_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "duration_seconds": {
+          "type": ["integer", "number", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "backup_type": {
+      "type": "string",
+      "enum": ["full", "differential"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["in_progress", "completed", "failed"]
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "required": ["algorithm", "checksum_file", "verified"],
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "const": "sha256"
+        },
+        "checksum_file": {
+          "type": "string",
+          "const": "checksums.sha256"
+        },
+        "verified": {
+          "type": "boolean"
+        }
+      }
+    },
+    "encryption": {
+      "type": "object",
+      "required": ["enabled", "provider"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["none", "aes-256-gcm", "age", "cloud_sse"]
+        },
+        "algorithm": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "required": ["database_engine", "database_major_version"],
+      "additionalProperties": false,
+      "properties": {
+        "database_engine": {
+          "type": "string",
+          "const": "Microsoft SQL Server"
+        },
+        "database_major_version": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "required": [
+        "component",
+        "relative_path",
+        "media_type",
+        "size_bytes",
+        "sha256",
+        "required"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "type": "string",
+          "enum": ["database", "uploads", "redis", "configuration"]
+        },
+        "relative_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!\\\\)(?!.*\\.\\.)(?!.*[A-Za-z]:).*$"
+        },
+        "media_type": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

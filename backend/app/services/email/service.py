@@ -15,7 +15,7 @@ from app.services.email.provider import (
     AWSSESProvider,
     SendGridProvider,
     MailgunProvider,
-    SMTPConfig
+    SMTPConfig,
 )
 from app.repositories.notification_repository import notification_repo
 from app.services.email.engine import EmailTemplateEngine
@@ -34,9 +34,9 @@ class EmailService:
             password=settings.SMTP_PASSWORD,
             use_tls=settings.SMTP_USE_TLS,
             use_ssl=settings.SMTP_USE_SSL,
-            timeout=settings.SMTP_TIMEOUT
+            timeout=settings.SMTP_TIMEOUT,
         )
-        
+
         # Registry of provider strategies
         self._providers: Dict[str, EmailProvider] = {
             "SMTP": SMTPProvider(self.smtp_config),
@@ -44,23 +44,22 @@ class EmailService:
             "OUTLOOK": OutlookSMTPProvider(),
             "AWS_SES": AWSSESProvider(),
             "SENDGRID": SendGridProvider(),
-            "MAILGUN": MailgunProvider()
+            "MAILGUN": MailgunProvider(),
         }
 
         # Resolve active provider strategy
         active_name = (provider_override or settings.EMAIL_PROVIDER).upper()
         self.active_provider = self._providers.get(active_name)
         if not self.active_provider:
-            raise ValueError(f"Configured Email Provider '{active_name}' is not supported.")
+            raise ValueError(
+                f"Configured Email Provider '{active_name}' is not supported."
+            )
 
         # Initialize the email template rendering engine
         self.template_engine = EmailTemplateEngine()
 
     def send_email_with_retry(
-        self,
-        message: EmailMessage,
-        max_retries: int = 3,
-        backoff_base: float = 2.0
+        self, message: EmailMessage, max_retries: int = 3, backoff_base: float = 2.0
     ) -> EmailResult:
         """Sends an email with exponential backoff on transient network failures."""
         attempt = 0
@@ -74,7 +73,9 @@ class EmailService:
 
         while attempt <= max_retries:
             start_time = time.perf_counter()
-            result = self.active_provider.send_email(message, timeout=settings.SMTP_TIMEOUT)
+            result = self.active_provider.send_email(
+                message, timeout=settings.SMTP_TIMEOUT
+            )
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Record retry context
@@ -94,7 +95,7 @@ class EmailService:
 
             attempt += 1
             if attempt <= max_retries:
-                sleep_duration = backoff_base ** attempt
+                sleep_duration = backoff_base**attempt
                 app_logger.warning(
                     f"Transient email delivery failure. Retrying attempt {attempt}/{max_retries} "
                     f"in {sleep_duration:.2f}s... Reason: {result.failure_reason}"
@@ -110,7 +111,7 @@ class EmailService:
         notification_id: int,
         recipient_email: str,
         subject: str,
-        message_body: str
+        message_body: str,
     ) -> bool:
         """
         Public facade called by Notification Engine. Formulates EmailMessage,
@@ -120,25 +121,25 @@ class EmailService:
         context = {
             "subject": subject,
             "body": message_body,
-            "employee_name": "Team Member"
+            "employee_name": "Team Member",
         }
-        
+
         template_name = "system_alert"
-        
+
         # 2. Fetch parent notification metadata to map template contexts
         notif = notification_repo.get_by_id(db, notification_id)
         if notif:
             employee = db.get(Employee, notif.employee_id)
             if employee:
                 context["employee_name"] = employee.full_name
-                
+
             if notif.context_json:
                 try:
                     payload = json.loads(notif.context_json)
                     context.update(payload)
                 except Exception:
                     pass
-            
+
             # Map notification types to specific templates
             if notif.type == "TASKS":
                 template_name = "task_assigned"
@@ -172,7 +173,7 @@ class EmailService:
             recipients=[recipient_email],
             subject=subject,
             body_text=body_text,
-            body_html=body_html
+            body_html=body_html,
         )
 
         result = self.send_email_with_retry(message)
@@ -188,7 +189,7 @@ class EmailService:
             status=status_str,
             retry_count=result.retry_count,
             provider_response=response_str,
-            duration_ms=result.duration_ms
+            duration_ms=result.duration_ms,
         )
 
         return result.success
@@ -197,7 +198,7 @@ class EmailService:
         """Determines if the failure is un-retryable (invalid credential/recipient/argument)."""
         if not error_message:
             return False
-        
+
         permanent_keywords = [
             "SMTPAuthenticationError",
             "SMTPRecipientsRefused",
@@ -205,9 +206,12 @@ class EmailService:
             "NotImplementedError",
             "ValueError",
             "bad credentials",
-            "authentication failed"
+            "authentication failed",
         ]
-        return any(kw in error_message or kw.lower() in error_message.lower() for kw in permanent_keywords)
+        return any(
+            kw in error_message or kw.lower() in error_message.lower()
+            for kw in permanent_keywords
+        )
 
     def shutdown(self) -> None:
         """Closes any active cached provider client connections."""

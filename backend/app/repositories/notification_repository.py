@@ -29,7 +29,7 @@ class NotificationRepository(BaseRepository):
         status: str = "PENDING",
         channel: str = "IN_APP",
         event_id: Optional[str] = None,
-        context_json: Optional[str] = None
+        context_json: Optional[str] = None,
     ) -> Notification:
         """Creates and persists a new Notification database record."""
         notification = Notification(
@@ -41,43 +41,41 @@ class NotificationRepository(BaseRepository):
             status=status,
             channel=channel,
             event_id=event_id,
-            context_json=context_json
+            context_json=context_json,
         )
         db.add(notification)
         db.commit()
         db.refresh(notification)
         return notification
 
-    def get_by_event_id(self, db: Session, event_id: str, channel: str) -> Optional[Notification]:
+    def get_by_event_id(
+        self, db: Session, event_id: str, channel: str
+    ) -> Optional[Notification]:
         """Retrieves a notification record by event_id and channel to support idempotency checks."""
         stmt = select(Notification).where(
-            and_(
-                Notification.event_id == event_id,
-                Notification.channel == channel
-            )
+            and_(Notification.event_id == event_id, Notification.channel == channel)
         )
         return db.scalar(stmt)
 
     def get_unread_count(self, db: Session, employee_id: int) -> int:
         """Retrieves count of unread notifications for a specific employee."""
-        stmt = (
-            select(func.count(Notification.id))
-            .where(
-                and_(
-                    Notification.employee_id == employee_id,
-                    Notification.is_read == False,
-                    Notification.channel == "IN_APP"
-                )
+        stmt = select(func.count(Notification.id)).where(
+            and_(
+                Notification.employee_id == employee_id,
+                Notification.is_read == False,
+                Notification.channel == "IN_APP",
             )
         )
         return db.scalar(stmt) or 0
 
-    def mark_as_read(self, db: Session, notification_id: int, employee_id: int) -> Optional[Notification]:
+    def mark_as_read(
+        self, db: Session, notification_id: int, employee_id: int
+    ) -> Optional[Notification]:
         """Marks a notification as read and updates read_at timestamp."""
         stmt = select(Notification).where(
             and_(
                 Notification.id == notification_id,
-                Notification.employee_id == employee_id
+                Notification.employee_id == employee_id,
             )
         )
         notification = db.scalar(stmt)
@@ -96,10 +94,12 @@ class NotificationRepository(BaseRepository):
                 and_(
                     Notification.employee_id == employee_id,
                     Notification.is_read == False,
-                    Notification.channel == "IN_APP"
+                    Notification.channel == "IN_APP",
                 )
             )
-            .values(is_read=True, read_at=datetime.now(timezone.utc).replace(tzinfo=None))
+            .values(
+                is_read=True, read_at=datetime.now(timezone.utc).replace(tzinfo=None)
+            )
         )
         result = db.execute(stmt)
         db.commit()
@@ -117,16 +117,15 @@ class NotificationRepository(BaseRepository):
         priority: Optional[str] = None,
         type: Optional[str] = None,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
     ) -> Tuple[List[Notification], int]:
         """Retrieves paginated, filtered, and sorted notifications for a specific employee."""
         query = db.query(Notification).filter(
             and_(
-                Notification.employee_id == employee_id,
-                Notification.channel == channel
+                Notification.employee_id == employee_id, Notification.channel == channel
             )
         )
-        
+
         if unread_only is not None:
             query = query.filter(Notification.is_read == (not unread_only))
         if priority:
@@ -148,7 +147,7 @@ class NotificationRepository(BaseRepository):
             search_fields=search_fields,
             allowed_sort_fields=["id", "created_at", "title", "priority", "status"],
             default_sort_by="created_at",
-            default_sort_order="desc"
+            default_sort_order="desc",
         )
         return items, total
 
@@ -156,7 +155,9 @@ class NotificationRepository(BaseRepository):
     # Preference CRUD Operations
     # =========================================================================
 
-    def get_user_preferences(self, db: Session, employee_id: int) -> List[NotificationPreference]:
+    def get_user_preferences(
+        self, db: Session, employee_id: int
+    ) -> List[NotificationPreference]:
         """Retrieves all channel preferences configured by a specific employee."""
         stmt = select(NotificationPreference).where(
             NotificationPreference.employee_id == employee_id
@@ -164,18 +165,14 @@ class NotificationRepository(BaseRepository):
         return list(db.scalars(stmt).all())
 
     def get_user_preference(
-        self,
-        db: Session,
-        employee_id: int,
-        notification_type: str,
-        channel: str
+        self, db: Session, employee_id: int, notification_type: str, channel: str
     ) -> Optional[NotificationPreference]:
         """Retrieves a specific notification preference setting for an employee."""
         stmt = select(NotificationPreference).where(
             and_(
                 NotificationPreference.employee_id == employee_id,
                 NotificationPreference.notification_type == notification_type,
-                NotificationPreference.channel == channel
+                NotificationPreference.channel == channel,
             )
         )
         return db.scalar(stmt)
@@ -186,7 +183,7 @@ class NotificationRepository(BaseRepository):
         employee_id: int,
         notification_type: str,
         channel: str,
-        enabled: bool
+        enabled: bool,
     ) -> NotificationPreference:
         """Creates or updates a specific notification channel setting for an employee."""
         pref = self.get_user_preference(db, employee_id, notification_type, channel)
@@ -195,7 +192,7 @@ class NotificationRepository(BaseRepository):
                 employee_id=employee_id,
                 notification_type=notification_type,
                 channel=channel,
-                enabled=enabled
+                enabled=enabled,
             )
             db.add(pref)
         else:
@@ -205,11 +202,7 @@ class NotificationRepository(BaseRepository):
         return pref
 
     def delete_user_preference(
-        self,
-        db: Session,
-        employee_id: int,
-        notification_type: str,
-        channel: str
+        self, db: Session, employee_id: int, notification_type: str, channel: str
     ) -> bool:
         """Deletes a specific user notification preference record."""
         pref = self.get_user_preference(db, employee_id, notification_type, channel)
@@ -231,7 +224,7 @@ class NotificationRepository(BaseRepository):
         status: str,
         retry_count: int = 0,
         provider_response: Optional[str] = None,
-        duration_ms: Optional[int] = None
+        duration_ms: Optional[int] = None,
     ) -> NotificationLog:
         """Creates a delivery attempt entry in the notification logs table."""
         log = NotificationLog(
@@ -240,18 +233,22 @@ class NotificationRepository(BaseRepository):
             delivery_status=status,
             retry_count=retry_count,
             provider_response=provider_response,
-            duration_ms=duration_ms
+            duration_ms=duration_ms,
         )
         db.add(log)
         db.commit()
         db.refresh(log)
         return log
 
-    def get_notification_logs(self, db: Session, notification_id: int) -> List[NotificationLog]:
+    def get_notification_logs(
+        self, db: Session, notification_id: int
+    ) -> List[NotificationLog]:
         """Retrieves all delivery logs associated with a notification."""
-        stmt = select(NotificationLog).where(
-            NotificationLog.notification_id == notification_id
-        ).order_by(NotificationLog.created_at.desc(), NotificationLog.id.desc())
+        stmt = (
+            select(NotificationLog)
+            .where(NotificationLog.notification_id == notification_id)
+            .order_by(NotificationLog.created_at.desc(), NotificationLog.id.desc())
+        )
         return list(db.scalars(stmt).all())
 
     def get_log_by_id(self, db: Session, log_id: int) -> Optional[NotificationLog]:

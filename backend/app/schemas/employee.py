@@ -47,9 +47,7 @@ class EmployeeUpdate(BaseModel):
 
 class EmployeeResponse(EmployeeBase):
 
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     avatar_url: str | None

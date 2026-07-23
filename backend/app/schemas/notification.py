@@ -1,21 +1,41 @@
 # 📂 FILE: app/schemas/notification.py
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
-from app.core.enums import NotificationType, NotificationPriority, NotificationStatus, NotificationChannel
+from pydantic import BaseModel, Field, ConfigDict, field_serializer
+from app.core.enums import (
+    NotificationType,
+    NotificationPriority,
+    NotificationStatus,
+    NotificationChannel,
+)
 
 
 class NotificationCreateRequest(BaseModel):
     """Schema to request creation of a new notification."""
+
     employee_id: int = Field(..., description="ID of employee to receive notification")
     type: NotificationType = Field(..., description="Type/category of notification")
-    title: str = Field(..., max_length=200, description="Brief subject of the notification")
-    message: str = Field(..., max_length=1000, description="Detailed body of the notification")
-    priority: NotificationPriority = Field(default=NotificationPriority.NORMAL, description="Priority level")
-    status: NotificationStatus = Field(default=NotificationStatus.PENDING, description="Initial delivery status")
-    channel: NotificationChannel = Field(default=NotificationChannel.IN_APP, description="Initial delivery channel")
-    event_id: Optional[str] = Field(None, max_length=50, description="Correlation UUID event ID")
-    context_json: Optional[str] = Field(None, description="Serialized JSON context payload metadata")
+    title: str = Field(
+        ..., max_length=200, description="Brief subject of the notification"
+    )
+    message: str = Field(
+        ..., max_length=1000, description="Detailed body of the notification"
+    )
+    priority: NotificationPriority = Field(
+        default=NotificationPriority.NORMAL, description="Priority level"
+    )
+    status: NotificationStatus = Field(
+        default=NotificationStatus.PENDING, description="Initial delivery status"
+    )
+    channel: NotificationChannel = Field(
+        default=NotificationChannel.IN_APP, description="Initial delivery channel"
+    )
+    event_id: Optional[str] = Field(
+        None, max_length=50, description="Correlation UUID event ID"
+    )
+    context_json: Optional[str] = Field(
+        None, description="Serialized JSON context payload metadata"
+    )
 
 
 # Alias for CreateRequest as requested
@@ -25,16 +45,26 @@ CreateRequest = NotificationCreateRequest
 # Backwards compatibility alias for CreateNotificationRequest
 class CreateNotificationRequest(BaseModel):
     """Old Schema to request creation of a new in-app notification."""
+
     employee_id: int = Field(..., description="ID of employee to receive notification")
-    title: str = Field(..., max_length=200, description="Brief subject of the notification")
-    message: str = Field(..., max_length=1000, description="Detailed body of the notification")
+    title: str = Field(
+        ..., max_length=200, description="Brief subject of the notification"
+    )
+    message: str = Field(
+        ..., max_length=1000, description="Detailed body of the notification"
+    )
 
 
 class NotificationUpdateRequest(BaseModel):
     """Schema to update an existing notification."""
-    status: Optional[NotificationStatus] = Field(None, description="Delivery status of the notification")
+
+    status: Optional[NotificationStatus] = Field(
+        None, description="Delivery status of the notification"
+    )
     is_read: Optional[bool] = Field(None, description="Mark as read status")
-    read_at: Optional[datetime] = Field(None, description="Timestamp when notification was read")
+    read_at: Optional[datetime] = Field(
+        None, description="Timestamp when notification was read"
+    )
 
 
 # Alias for UpdateRequest as requested
@@ -43,6 +73,7 @@ UpdateRequest = NotificationUpdateRequest
 
 class NotificationResponse(BaseModel):
     """Schema representing a notification detail."""
+
     id: int
     employee_id: int
     type: str
@@ -60,6 +91,14 @@ class NotificationResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    @field_serializer("read_at", "created_at", "updated_at")
+    def serialize_utc_datetime(self, value: Optional[datetime]) -> Optional[str]:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
 
 # Alias for Response as requested
 Response = NotificationResponse
@@ -67,6 +106,7 @@ Response = NotificationResponse
 
 class NotificationPreferenceResponse(BaseModel):
     """Schema representing user notification preferences settings."""
+
     employee_id: int
     notification_type: str
     channel: str
@@ -81,6 +121,7 @@ PreferenceResponse = NotificationPreferenceResponse
 
 class NotificationLogResponse(BaseModel):
     """Schema representing a delivery log of a notification."""
+
     id: int
     notification_id: int
     channel: str
@@ -99,17 +140,24 @@ LogResponse = NotificationLogResponse
 
 class NotificationSummaryResponse(BaseModel):
     """Schema representing summary count overview of notifications."""
+
     total: int
     unread_count: int
 
 
 class UnreadCountResponse(BaseModel):
     """Schema representing count of unread notifications."""
+
     unread_count: int
 
 
 class UpdatePreferencesRequest(BaseModel):
     """Schema to update a user notification preference."""
-    notification_type: str = Field(..., description="Notification type category (e.g. TASKS, VACATION)")
-    channel: str = Field(..., description="Target delivery channel (e.g. EMAIL, IN_APP)")
+
+    notification_type: str = Field(
+        ..., description="Notification type category (e.g. TASKS, VACATION)"
+    )
+    channel: str = Field(
+        ..., description="Target delivery channel (e.g. EMAIL, IN_APP)"
+    )
     enabled: bool = Field(..., description="Enable or disable delivery")

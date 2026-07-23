@@ -1,0 +1,226 @@
+name: CI Foundation
+
+on:
+  push:
+    branches:
+      - develop
+
+  pull_request:
+    branches:
+      - develop
+      - master
+
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend CI (Python 3.12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-dev.txt
+
+      - name: Run Ruff check
+        working-directory: backend
+        run: |
+          ruff check .
+
+      - name: Get changed Python files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: |
+            backend/**/*.py
+          json: "true"
+          escape_json: "false"
+
+      - name: Run Black check
+        if: steps.changed-files.outputs.any_changed == 'true'
+        env:
+          CHANGED_FILES_JSON: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          python <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+
+          try:
+              files = json.loads(
+                  os.environ.get("CHANGED_FILES_JSON", "[]")
+              )
+          except json.JSONDecodeError as exc:
+              print(f"Invalid changed-files JSON: {exc}")
+              sys.exit(1)
+
+          existing_files = [
+              file
+              for file in files
+              if file.endswith(".py") and os.path.isfile(file)
+          ]
+
+          if not existing_files:
+              print("No existing Python files changed.")
+              sys.exit(0)
+
+          cmd = [
+              sys.executable,
+              "-m",
+              "black",
+              "--check",
+              *existing_files,
+          ]
+
+          print("Running:", " ".join(cmd))
+          subprocess.run(cmd, check=True)
+          PY
+
+      - name: Skip Black check
+        if: steps.changed-files.outputs.any_changed != 'true'
+        run: |
+          echo "No changed Python files found."
+
+      - name: Run Pytest with coverage
+        working-directory: backend
+        env:
+          PYTHONPATH: .
+          ENVIRONMENT: testing
+        run: |
+          pytest \
+            --cov=app \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term \
+            tests/
+
+      - name: Verify coverage report
+        run: |
+          test -f backend/coverage.xml
+          echo "Coverage report successfully generated."
+
+      - name: Upload backend coverage report
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Run Bandit check
+        working-directory: backend
+        timeout-minutes: 5
+        run: |
+          bandit -c pyproject.toml -r . -f json -o bandit-report.json --exit-zero
+          bandit -c pyproject.toml -r . -lll
+
+      - name: Run pip-audit check
+        working-directory: backend
+        timeout-minutes: 5
+        run: |
+          pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325 -f json -o pip-audit-report.json
+
+      - name: Upload Bandit security report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-bandit-report
+          path: backend/bandit-report.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload pip-audit security report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-pip-audit-report
+          path: backend/pip-audit-report.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+
+  frontend:
+    name: Frontend CI (Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+ 
+      - name: Verify frontend production build
+        working-directory: frontend
+        run: |
+          npm run build
+
+  docker:
+    name: Docker Production Hardening Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run Hadolint Dockerfile Linter
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: backend/Dockerfile
+          failure-threshold: error
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: tasksync-backend:prod
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Validate docker-compose.yml syntax
+        run: docker compose -f docker-compose.yml config --quiet
+
+      - name: Validate docker-compose.production.yml syntax
+        run: docker compose --env-file .env.production.example -f docker-compose.production.yml config --quiet
+
+      - name: Validate docker-compose.monitoring.yml syntax
+        run: docker compose -f docker-compose.monitoring.yml config --quiet

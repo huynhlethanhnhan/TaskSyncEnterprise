@@ -49,3 +49,48 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+
+# Test Coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.production.example
+!.env.development.example
+!.env.test.example
+
+# Secret keys / credentials
+*.secret
+credentials.json
+
+# SSL / TLS Certificates and Private Keys
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+nginx/ssl/*
+!nginx/ssl/.gitkeep
+!nginx/ssl/generate_self_signed_cert.ps1
+
+# Documentation Demo & Reference Assets
+docs/image/
+docs/images/
+docs/reference_images/
+
+# Log files
+backend/logs/*.log
+backend/logs/*.log.*
+!backend/logs/.gitkeep
+
+# Backup & DR Storage (Phase 3.8.7)
+/backups/
+/infrastructure/backup/runtime/
+*.bak
+*.rdb
+/backups/**/*.tar.gz
+/infrastructure/backup/runtime/**/*.tar.gz
