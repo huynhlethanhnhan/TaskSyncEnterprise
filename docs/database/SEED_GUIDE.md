@@ -1,82 +1,86 @@
-# Hướng Dẫn Sử Dụng Dữ Liệu Mẫu (Seed Data Guide)
+# Hướng dẫn dữ liệu mẫu `Seed_Example`
 
-Tài liệu này hướng dẫn chi tiết cách chạy và quản lý dữ liệu mẫu (Seed Data) phục vụ cho quá trình phát triển (development) và kiểm thử (testing) dự án `TaskSyncEnterprise`.
+Nguồn dữ liệu demo chuẩn nằm tại `backend/Seed_Example.py`. `backend/seed_v2.py` chỉ là entry point tương thích cho workflow cũ và luôn gọi seed ở chế độ reset.
 
----
+## Dataset hiện tại
 
-## 🚀 1. Hướng Dẫn Chạy Seed Script (How to Run)
+| Nhóm dữ liệu | Số lượng |
+|---|---:|
+| Vai trò | 3 |
+| Phòng ban | 7 |
+| Team | 14 |
+| Nhân viên | 37 |
+| Admin | 2 |
+| Manager | 7 |
+| Employee | 28 |
+| Dự án | 12 |
+| Task | 72 |
+| Notification | 111 |
+| Đơn nghỉ | 14 |
 
-Dự án sử dụng script seed tập trung tại [backend/seed_v2.py](file:///e:/TaskSyncEnterprise/backend/seed_v2.py). Script này sẽ tự động xóa sạch dữ liệu cũ và chèn dữ liệu mẫu chuẩn hóa theo đúng trình tự phụ thuộc ràng buộc khóa ngoại (Foreign Key Constraints).
+Dataset có tên và nội dung tiếng Việt, deadline quá hạn/còn hạn, ba trạng thái task, project membership, assignment, checklist, comment, notification preference và notification timestamps tương đối theo UTC lúc chạy seed.
 
-### Bước chuẩn bị bắt buộc (Prerequisites)
-Trước khi chạy script seed, đảm bảo:
-1.  **Cơ sở dữ liệu trống đã được tạo** trên SQL Server (Ví dụ tên DB: `TaskSyncEnterprise`).
-2.  **Cấu trúc bảng đã được khởi tạo đầy đủ** bằng cách chạy migrations Alembic:
-    ```powershell
-    # Nếu chạy Docker:
-    docker compose exec backend alembic upgrade head
+## Tài khoản đại diện
 
-    # Nếu chạy cục bộ:
-    alembic upgrade head
-    ```
+Tất cả dùng mật khẩu demo `TaskSync@2026`.
 
-### Luồng A — Khởi chạy trong môi trường Docker (Khuyến nghị)
-Thực thi lệnh sau trực tiếp từ thư mục gốc của repository:
+| Vai trò | Email |
+|---|---|
+| Admin | `admin@tasksync.example.com` |
+| Admin vận hành | `operations.admin@tasksync.example.com` |
+| Manager IT | `manager.it@tasksync.example.com` |
+| Employee — Huỳnh Lê Thành Nhân | `employee001@tasksync.example.com` |
+
+Các email dùng miền `example.com` hợp lệ với Pydantic `EmailStr` nhưng không gửi mail ra người thật.
+
+## Chạy với Docker production
+
+Tạo database và chạy migration trước. Từ thư mục gốc repository:
+
 ```powershell
-docker compose exec backend python seed_v2.py
+docker compose --env-file .env.production -f docker-compose.production.yml run --rm --no-deps --entrypoint alembic backend upgrade head
+docker compose --env-file .env.production -f docker-compose.production.yml run --rm --no-deps --entrypoint python backend Seed_Example.py
 ```
 
-### Luồng B — Khởi chạy cục bộ (Local Environment)
-Kích hoạt môi trường ảo Python trong thư mục `backend/` và thực thi:
+Nếu database demo đã có dữ liệu và bạn thực sự muốn thay toàn bộ dữ liệu ứng dụng:
+
+```powershell
+docker compose --env-file .env.production -f docker-compose.production.yml run --rm --no-deps --entrypoint python backend Seed_Example.py --reset
+```
+
+## Chạy local
+
 ```powershell
 cd backend
 .\.venv\Scripts\Activate.ps1
-python seed_v2.py
+alembic upgrade head
+python Seed_Example.py
 ```
 
----
+Các biến `DATABASE_URL` và `REDIS_URL` phải trỏ đúng môi trường cần seed. Script không tự chọn database.
 
-## 🧬 2. Phân Tích Chiến Lược Seed Dữ Liệu (Seed Strategy & Dependency Order)
+## Cơ chế an toàn
 
-Microsoft SQL Server kiểm soát nghiêm ngặt tính toàn vẹn của dữ liệu thông qua các ràng buộc khóa ngoại. Do đó, script seed thực hiện thao tác xóa dữ liệu cũ và chèn dữ liệu mới theo thứ tự cực kỳ chi tiết:
+- Mặc định script dừng nếu bảng `employees` đã có dữ liệu.
+- `--reset` xóa dữ liệu ứng dụng theo dependency metadata rồi nạp lại toàn bộ dataset.
+- `--reset` không drop database, không xóa Alembic history và không xóa Docker volume.
+- Không chạy `--reset` trên production có dữ liệu người dùng.
+- Mọi thay đổi schema phải đi qua migration; seed chỉ tạo dữ liệu.
 
-### Thứ tự xóa dữ liệu cũ (Cleanup Order - Từ bảng con đến bảng cha)
-Để tránh lỗi `FK Violation`, dữ liệu cũ được dọn dẹp theo thứ tự từ bảng chứa khóa ngoại phụ thuộc nhiều nhất ngược dần lên:
-1.  `TaskAssignment` & `TaskChecklist` & `TaskComment` (Bảng con của Task)
-2.  `Task` (Bảng con của Project)
-3.  `ProjectMember` (Bảng liên kết nhiều-nhiều giữa Project và Employee)
-4.  `Project` (Bảng con của Employee)
-5.  `Vacation` (Bảng con của Employee)
-6.  `Notification` & `AuditLog` (Bảng con của Employee)
-7.  `Employee` (Bảng con của Role/Department/Manager)
-8.  `Team` (Bảng con của Department)
-9.  `Department` (Bảng độc lập)
-10. `Role` (Bảng hệ thống)
+## Kiểm tra dataset
 
-### Thứ tự chèn dữ liệu mới (Seeding Order - Từ bảng cha đến bảng con)
-Sau khi dọn sạch cơ sở dữ liệu, script sẽ lần lượt chèn dữ liệu mới:
-1.  **Roles (Vai trò hệ thống):** Cung cấp 3 vai trò chính với ID tĩnh:
-    *   `admin` (ID: 1) - Quyền quản trị tối cao.
-    *   `manager` (ID: 2) - Trưởng bộ phận, quản lý dự án.
-    *   `employee` (ID: 3) - Nhân viên bình thường.
-2.  **Departments (Phòng ban):** Khởi tạo phòng ban `Information Technology` (Mã: `IT`).
-3.  **Employees (Nhân sự mẫu):** Khởi tạo 3 tài khoản đại diện:
-    *   *System Admin:* Email `admin@gmail.com` (Role ID 1).
-    *   *Project Manager:* Email `manager@gmail.com` (Role ID 2, phòng ban IT, quản lý trực tiếp bởi Admin).
-    *   *Huỳnh Lê Thành Nhân:* Email `demo1@gmail.com` (Role ID 3, phòng ban IT, quản lý trực tiếp bởi Manager).
-    *   *Mật khẩu mặc định:* Tất cả tài khoản sử dụng mật khẩu `123456` (được băm bcrypt bảo mật trước khi lưu).
-4.  **Projects (Dự án):** Khởi tạo dự án `IT Project V2` (Mã: `PRJ_IT_001`), gán người tạo là Admin.
-5.  **Project Members:** Đăng ký cả Project Manager và Employee (Huỳnh Lê Thành Nhân) vào dự án này.
-6.  **Tasks (Công việc & Trạng thái):** Tạo ra 3 công việc mẫu đại diện cho 3 trạng thái của quy trình Kanban doanh nghiệp:
-    *   *Task 1 (Done):* "Tích hợp luồng xác thực JWT" - Gán cho Employee.
-    *   *Task 2 (In Progress):* "Tái cấu trúc UI Dashboard Figma" - Gán cho Employee, có kèm checklist con đang hoàn thành dở dang (40%).
-    *   *Task 3 (To Do):* "Xác minh lược đồ cơ sở dữ liệu SQL Server" - Gán cho Manager.
+```powershell
+cd backend
+python tests/test_seed_example_contract.py
+python tests/test_query_engine_default_sort.py
+```
 
----
+Kiểm tra runtime qua API sau khi đăng nhập:
 
-## 📈 3. Đề Xuất Phát Triển Seed Strategy (Future Recommendations)
+- `/api/v1/dashboard/analytics` phải trả 37 nhân viên, 72 task, 7 phòng ban và 7 hàng workload.
+- `/api/v1/notifications` phải trả notification mới nhất trước và timestamp có hậu tố UTC `Z`.
+- Employee không được đọc notification của người khác; admin được phép override.
 
-Để nâng cấp hệ thống seed trong các phase tiếp theo, chúng ta nên cân nhắc:
-1.  **Dynamic Date Generation:** Thay vì sử dụng ngày cứng nhắc, hãy sử dụng các khoảng thời gian tương đối (ví dụ: `now() - 3 days`, `now() + 7 days`) để dữ liệu kiểm thử luôn "tươi" và không bị hết hạn (đặc biệt là đơn nghỉ phép Vacation).
-2.  **Seeding Scale (Dữ liệu lớn):** Phát triển thêm flag `--scale [small|medium|large]` sử dụng thư viện sinh dữ liệu giả như `Faker` để sinh hàng ngàn bản ghi phục vụ cho việc kiểm thử hiệu năng (Performance load tests) và phân trang.
-3.  **Environment Guards:** Tích hợp kiểm tra bảo vệ môi trường: Chỉ cho phép chạy seed nếu `ENVIRONMENT` trong `.env` là `development` hoặc `testing`. Ngăn chặn hoàn toàn việc vô tình chạy seed xóa sạch database trên môi trường `production`.
+## Khi cần mở rộng dữ liệu
+
+Chỉnh các hằng `DEPARTMENTS`, `MANAGERS`, `STAFF_BY_DEPARTMENT`, `PROJECT_NAMES` hoặc `TASK_TEMPLATES` trong `Seed_Example.py`, sau đó cập nhật `EXPECTED_COUNTS` thông qua cấu trúc hiện có và chạy contract test. Không hard-code số giả ở React; Dashboard phải lấy aggregation từ API/SQL.

@@ -1,73 +1,83 @@
-# Mục Lục Tài Liệu Hướng Dẫn (Master Documentation Index)
+# TaskSyncEnterprise Documentation Index
 
-Chào mừng bạn đến với trung tâm tài liệu kỹ thuật của dự án `TaskSyncEnterprise`. Dưới đây là mục lục liên kết đến các hướng dẫn vận hành và học tập chi tiết trong repository.
+## 🏆 Phase 4 Final Certification & Acceptance
 
----
-
-## 📖 1. Tài Liệu Hướng Dẫn Vận Hành & Khắc Phục Sự Cố (Operational & Troubleshooting Guides)
-
-*   **[Hướng Dẫn Quản Trị API (docs/api/GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/api/GUIDE.md)**:
-    *   Phân chia phiên bản API URL `/api/v1/`.
-    *   Cơ chế chống trùng lắp dữ liệu giao dịch bằng `Idempotency-Key` kết hợp Redis lock.
-    *   Quản lý vòng đời khấu hao API thông qua các `@deprecate_endpoint` decorator.
-*   **[Hướng Dẫn Kiến Trúc Hệ Thống (docs/architecture/GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/architecture/GUIDE.md)**:
-    *   Cấu trúc phân lớp thư mục Clean Architecture (Router -> Service -> Repository/CRUD).
-    *   Định dạng thời gian và chuỗi ký tự unicode an toàn cho MS SQL Server.
-    *   Cơ chế Xóa Mềm (Soft Delete) và Tự động ghi vết hoạt động (Audit log listener).
-    *   Quy trình đính kèm Request correlation ID context (`X-Request-ID`).
-*   **[Hướng Dẫn Triển Khai & Đóng Gói (docs/deployment/GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/deployment/GUIDE.md)**:
-    *   Đóng gói Dockerfile đa tầng tối ưu dung lượng và bảo mật (Production Hardening).
-    *   Cấu hình docker-compose mạng nội bộ và vùng đĩa volumes.
-    *   Chốt chặn kiểm tra sức khỏe của container (SRE health check probes).
-    *   Danh sách kiểm tra triển khai sản xuất (Production Checklist).
-*   **[Hướng Dẫn Vận Hành Sao Lưu & Phục Hồi (docs/operations/BACKUP_OPERATIONS_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/operations/BACKUP_OPERATIONS_GUIDE.md)**:
-    *   Hướng dẫn chạy script sao lưu tự động Full & Differential.
-    *   Cấu trúc bundle backup, manifest JSON và SHA-256 checksums.
-*   **[Hướng Dẫn Phục Hồi Dữ Liệu An Toàn (docs/operations/RESTORE_OPERATIONS_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/operations/RESTORE_OPERATIONS_GUIDE.md)**:
-    *   Hướng dẫn phục hồi cơ sở dữ liệu isolated test DB mặc định và production dual controls.
-    *   Dynamic `RESTORE FILELISTONLY` MOVE mapping, upload staging/rollback và Redis restore.
-
-
-*   **[Hướng Dẫn Vận Hành CI (docs/deployment/CI_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/deployment/CI_GUIDE.md)**:
-    *   Quy trình kiểm thử và kiểm tra chất lượng tự động qua GitHub Actions.
-    *   Hướng dẫn chạy Ruff, Black check và Pytest cục bộ.
-    *   Xử lý lỗi CI thường gặp và cấu hình bảo vệ nhánh (Branch Protection).
-*   **[Hướng Dẫn Vận Hành Quét Bảo Mật (docs/deployment/SECURITY_SCAN_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/deployment/SECURITY_SCAN_GUIDE.md)**:
-    *   Hướng dẫn chạy quét bảo mật Bandit (SAST) và pip-audit (SCA) cục bộ.
-    *   Hướng dẫn cấu hình, xử lý false positive và cập nhật các vulnerabilities trong dependencies.
-*   **[Hướng Dẫn Hạ Tầng Thông Báo (docs/notification/GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/notification/GUIDE.md)**:
-    *   Cách ly các kênh thông báo (EMAIL, IN_APP, WEBSOCKET, PUSH) qua Strategy Pattern.
-    *   Thiết lập WebSocket gateway phục vụ đẩy tin real-time.
-    *   Hàng đợi chạy ngầm quét gửi lại email lỗi (Retry Poller thread daemon).
-*   **[Hướng Dẫn Hệ Thống Quan Sát, Đo Lường & Giám Sát (docs/monitoring/prometheus_setup.md)](file:///e:/TaskSyncEnterprise/docs/monitoring/prometheus_setup.md)**:
-    *   Thiết lập và vận hành Prometheus Server thu thập metrics tự động.
-    *   **[Hướng Dẫn Tích Hợp Grafana (docs/learning/phase-3.7.6-grafana-monitoring-guide-vi.md)](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.7.6-grafana-monitoring-guide-vi.md)**: Hướng dẫn kỹ thuật và lý thuyết trực quan hóa chỉ số giám sát bằng tiếng Việt.
-    *   **[Kịch Bản Kiểm Thử Giám Sát (docs/monitoring/phase-3.7.6-manual-testing-guide-vi.md)](file:///e:/TaskSyncEnterprise/docs/monitoring/phase-3.7.6-manual-testing-guide-vi.md)**: Quy trình kiểm thử thủ công và checklist xác minh hoạt động của Grafana + Prometheus.
-*   **[Hướng Dẫn Xử Lý Sự Cố Frontend (docs/frontend/FRONTEND_TROUBLESHOOTING.md)](file:///e:/TaskSyncEnterprise/docs/frontend/FRONTEND_TROUBLESHOOTING.md)**:
-    *   Cẩm nang xử lý lỗi giao diện React khởi động thành công nhưng trống dữ liệu.
-    *   Sơ đồ cây quyết định chẩn đoán (Decision Tree) và các lỗi kết nối, CORS, token JWT, DB Seed.
-*   **[Kịch Bản Kiểm Thử Thủ Công Hệ Thống (docs/testing/MANUAL_SYSTEM_TEST.md)](file:///e:/TaskSyncEnterprise/docs/testing/MANUAL_SYSTEM_TEST.md)**:
-    *   Checklist chi tiết từng module (Auth, Employee, Task, Notification, Vacation, Audit, Upload, Health, Monitoring, CI).
-    *   Mô tả bước thực hiện, kết quả mong đợi và đánh giá Pass/Fail.
-*   **[Hướng Dẫn Khởi Tạo Dữ Liệu Mẫu (docs/database/SEED_GUIDE.md)](file:///e:/TaskSyncEnterprise/docs/database/SEED_GUIDE.md)**:
-    *   Hướng dẫn chạy script seed dữ liệu mẫu `backend/seed_v2.py` trên Docker và Local.
-    *   Thứ tự xóa/chèn dữ liệu tránh vi phạm Foreign Key và đề xuất nâng cấp seed strategy.
+- [Phase 4 Final Certification](reports/phase-4/PHASE_4_FINAL_CERTIFICATION.md)
+- [Phase 4 Final Runtime Retest](reports/phase-4/PHASE_4_FINAL_RUNTIME_RETEST.md)
+- [Phase 4 Final Git Audit](reports/phase-4/PHASE_4_FINAL_GIT_AUDIT.md)
+- [Dead Code & Dependency Audit](reports/phase-4/DEAD_CODE_AND_DEPENDENCY_AUDIT.md)
+- [GitHub Actions Final Green Report](reports/phase-4/GITHUB_ACTIONS_FINAL_GREEN_REPORT.md)
+- [Repository Final Hardening Report](reports/phase-4/REPOSITORY_FINAL_HARDENING_REPORT.md)
+- [Documentation Reorganization Report](reports/phase-4/DOCUMENTATION_REORGANIZATION_REPORT.md)
+- [Repository Cleanup Report](reports/phase-4/REPOSITORY_CLEANUP_REPORT.md)
+- [Phase 4.8.1 Final Remediation Report](reports/phase-4/PHASE_4_8_1_FINAL_REMEDIATION_REPORT.md)
+- [Frontend Deployed Source Alignment Report](reports/phase-4/FRONTEND_DEPLOYED_SOURCE_ALIGNMENT.md)
+- [Dashboard Runtime Traceability Matrix](reports/phase-4/DASHBOARD_RUNTIME_TRACEABILITY_MATRIX.md)
+- [Phase 4 RBAC Runtime Matrix](testing/phase-4/PHASE_4_RBAC_RUNTIME_MATRIX.md)
+- [Phase 4 Leave Runtime Scenario](testing/phase-4/PHASE_4_LEAVE_RUNTIME_SCENARIO.md)
+- [Phase 4.8 Runtime Verification Report](reports/phase-4/PHASE_4_8_RUNTIME_VERIFICATION_REPORT.md)
+- [Phase 4.7 Final Stabilization Report](reports/phase-4/PHASE_4_7_FINAL_STABILIZATION_REPORT.md)
+- [Phase 4 Manual Acceptance Test Guide](testing/phase-4/PHASE_4_MANUAL_ACCEPTANCE_TEST.md)
+- [Phase 4 Runtime Evidence Capture Guide](testing/phase-4/PHASE_4_RUNTIME_EVIDENCE_GUIDE.md)
+- [Independent Audit & Verdict](reports/phase-4/PHASE_4_6_INDEPENDENT_AUDIT.md)
+- [Cross-Browser Evidence Matrix](reports/phase-4/CROSS_BROWSER_EVIDENCE_MATRIX.md)
+- [Backend-to-UI Capability Matrix](reports/phase-4/BACKEND_UI_CAPABILITY_MATRIX.md)
+- [UI Layer & Motion Gap Report](reports/phase-4/UI_LAYER_AND_MOTION_GAP_REPORT.md)
+- [README Reconciliation Report](reports/phase-4/README_RECONCILIATION_REPORT.md)
+- [Phase 4 Runtime Evidence Directory](evidence/phase-4/)
 
 ---
 
-## 🎓 2. Tài Liệu Đào Tạo Lập Trình Viên (Learning & Training Guides)
+## 🗺️ Roadmaps & Progress Tracking
 
-*   **[Sổ Tay Kỹ Thuật Backend Doanh Nghiệp (docs/learning/phase-3.8-backend-enterprise-guide-vi.md)](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.8-backend-enterprise-guide-vi.md)**:
-    *   Tài liệu đào tạo toàn diện bằng tiếng Việt giải thích lý do, hoàn cảnh và cách thức doanh nghiệp áp dụng các công nghệ hiện đại.
-    *   Phân tích chi tiết về CI/CD GitHub Actions, Bandit/pip-audit Security Scan, Docker Production Hardening, Prometheus/Grafana/OpenTelemetry Observability, Git Flow, và Clean Architecture backend.
-*   **[Đào Tạo Tích Hợp Grafana (docs/learning/phase-3.7.6-grafana-monitoring-guide-vi.md)](file:///e:/TaskSyncEnterprise/docs/learning/phase-3.7.6-grafana-monitoring-guide-vi.md)**:
-    *   Hướng dẫn chi tiết về cách thiết lập Grafana datasource, xây dựng dashboards và quản lý các metric thu thập từ OpenTelemetry.
+- [Master Roadmap (Phase 1–5)](roadmap/MASTER_ROADMAP.md)
+- [Roadmap Progress Tracker](roadmap/ROADMAP_PROGRESS_TRACKER.md)
+- [Phase 4 Roadmap](roadmap/phase-4/PHASE_4_ROADMAP.md)
+- [Phase 4 Progress Tracker](roadmap/phase-4/PHASE_4_PROGRESS_TRACKER.md)
 
 ---
 
-## 🗺️ 3. Lộ Trình & Báo Cáo Kỹ Thuật (Roadmap & Reports Index)
+## 🚀 Releases & Merges
 
-*   **[Lộ Trình Phát Triển (roadmap/README.md)](file:///e:/TaskSyncEnterprise/roadmap/README.md)**: Gantt chart tiến trình các Milestone nghiệp vụ và kế hoạch Phase 3.7 - Phase 4.
-*   **[Mục Lục Báo Cáo Đánh Giá (reports/README.md)](file:///e:/TaskSyncEnterprise/reports/README.md)**: Tập hợp các báo cáo đánh giá an ninh bảo mật, kiểm thử hiệu năng, chất lượng mã nguồn và mức độ sẵn sàng vận hành thực tế.
-    *   **[Báo Cáo Đánh Giá Kiến Trúc Backup & Disaster Recovery (docs/reports/PHASE_3_8_7_BACKUP_DR_ARCHITECTURE_AUDIT.md)](file:///e:/TaskSyncEnterprise/docs/reports/PHASE_3_8_7_BACKUP_DR_ARCHITECTURE_AUDIT.md)**: Audit tổng thể và thiết kế kiến trúc sao lưu, phục hồi dữ liệu và phòng chống thảm họa.
-    *   **[Báo Cáo Chứng Nhận Phòng Chống Thảm Họa DR (docs/reports/PHASE_3_8_7_FINAL_DR_CERTIFICATION.md)](file:///e:/TaskSyncEnterprise/docs/reports/PHASE_3_8_7_FINAL_DR_CERTIFICATION.md)**: Báo cáo nghiệm thu và chứng nhận sẵn sàng triển khai hệ thống Backup/DR (Phase 3.8.7 - Hoàn thành).
+- [Master Branch Release Guide](releases/MASTER_BRANCH_RELEASE_GUIDE.md)
+- [Phase 4 Develop Merge Summary](releases/PHASE_4_DEVELOP_MERGE_SUMMARY.md)
+- [Release Candidate RC1](releases/RELEASE_CANDIDATE_RC1.md)
+
+---
+
+## 🎨 Frontend & Design System
+
+- [Frontend Documentation Index](frontend/README.md)
+- [Design System Specification](frontend/DESIGN_SYSTEM_SPEC.md)
+- [Design Tokens](frontend/DESIGN_TOKENS.md)
+- [Component Library Specification](frontend/COMPONENT_LIBRARY_SPEC.md)
+- [Runtime & Provider Guide](frontend/PHASE_4_3_RUNTIME_GUIDE.md)
+- [Dashboard Data Audit](frontend/DASHBOARD_DATA_AUDIT.md)
+- [RBAC UI Permission Matrix](frontend/RBAC_UI_PERMISSION_MATRIX.md)
+- [Unicode & Font Audit](frontend/UNICODE_AND_FONT_AUDIT.md)
+- [Cross-Runtime Rendering Report](frontend/CROSS_RUNTIME_RENDERING_REPORT.md)
+
+---
+
+## 🏗️ Architecture & Backend
+
+- [Backend Architecture](architecture/Backend_Architecture.md)
+- [Architecture Guide](architecture/GUIDE.md)
+- [API Guide](api/GUIDE.md)
+- [API Versioning](api/API_VERSIONING.md)
+- [Idempotency](api/IDEMPOTENCY.md)
+
+---
+
+## 🐋 Deployment, Operations & Monitoring
+
+- [Deployment Guide](deployment/GUIDE.md)
+- [Production Docker Guide](deployment/PRODUCTION_DOCKER_GUIDE.md)
+- [Production Checklist](deployment/PRODUCTION_CHECKLIST.md)
+- [Docker Troubleshooting](deployment/DOCKER_TROUBLESHOOTING.md)
+- [CI Guide](deployment/CI_GUIDE.md)
+- [Security Scan Guide](deployment/SECURITY_SCAN_GUIDE.md)
+- [Prometheus Setup](monitoring/prometheus_setup.md)
+- [Phase 3 Reports Directory](reports/phase-3/)
+
+All links use clean relative Markdown paths and work in Git hosting, local Markdown viewers, and IDE previews.
