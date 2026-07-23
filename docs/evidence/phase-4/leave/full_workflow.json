@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-07-22T17:05:58.075Z",
+  "environment": "production Compose via Nginx",
+  "marker": "PHASE4-CLOSURE-1784739878447",
+  "internalRequestId": 1003,
+  "requestCreated": true,
+  "statuses": [
+    "Pending",
+    "Manager Approved",
+    "HR Approved"
+  ],
+  "invalidEmployeeFinalTransition": 409,
+  "finalVisibleToEmployee": true,
+  "notificationCount": 2,
+  "markRead": true,
+  "result": "Pass pending cleanup"
+}

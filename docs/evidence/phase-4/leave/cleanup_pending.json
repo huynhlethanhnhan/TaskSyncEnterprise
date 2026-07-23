@@ -1,0 +1,6 @@
+{
+  "generatedAt": "2026-07-22T17:07:14.449Z",
+  "marker": "PHASE4-CLOSURE-1784739878447",
+  "internalRequestId": 1003,
+  "reason": "Vacation API has no delete endpoint; cleanup must use a scoped backend DB command."
+}

@@ -1,0 +1,5 @@
+d524f5f3f22d -> 7b31f6e4c2a0 (head), Store user-facing business text as SQL Server Unicode types.
+02d5a99d9c9c -> d524f5f3f22d, add_notifications_schema
+f69319655bb9 -> 02d5a99d9c9c, standardize_datetime_and_unicode_defaults
+f4e146c8eb61 -> f69319655bb9, alter_notification_unicode
+<base> -> f4e146c8eb61, init_db_v2_final

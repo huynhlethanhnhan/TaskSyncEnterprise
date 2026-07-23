@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-07-22T17:05:08.938Z",
+  "adminAudit": 200,
+  "managerAudit": 403,
+  "employeeAudit": 403,
+  "managerEmployees": 200,
+  "employeeEmployees": 403,
+  "managerDeleteEmployee": 403,
+  "employeeCreateProject": 403,
+  "roleUi": {
+    "admin": {
+      "auditVisible": true,
+      "createTaskVisible": true
+    },
+    "manager": {
+      "auditVisible": false,
+      "createTaskVisible": true
+    },
+    "employee": {
+      "auditVisible": false,
+      "createTaskVisible": false
+    }
+  },
+  "result": "Pass"
+}

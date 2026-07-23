@@ -3,8 +3,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app
 from app.database import Base, get_db
+
+# The application metadata defaults to SQL Server's ``dbo`` schema. Normalize
+# it before importing ``app.main`` so mapper aliases created during application
+# startup never capture a schema-qualified selectable in the SQLite harness.
+Base.metadata.schema = None
+
+from app.main import app
 
 # Use SQLite for simple unit testing demonstration
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -20,7 +26,10 @@ def db():
     from sqlalchemy import text
     from sqlalchemy.sql.schema import DefaultClause
 
-    # Intercept and adapt metadata dynamically for SQLite
+    # Intercept and adapt metadata dynamically for SQLite. Clearing only each
+    # table schema leaves ORM aliases able to inherit MetaData(schema="dbo"),
+    # which makes joined dashboard queries target a nonexistent dbo database.
+    Base.metadata.schema = None
     for table in Base.metadata.tables.values():
         table.schema = None
         for column in table.columns:
@@ -33,6 +42,10 @@ def db():
                     column.server_default.arg = text("CURRENT_TIMESTAMP")
                 elif default_val.startswith("N'") and default_val.endswith("'"):
                     column.server_default.arg = text(default_val[1:])
+    # Schema is deliberately mutated for the SQLite test harness. SQLAlchemy's
+    # engine-level compilation cache can otherwise reuse SQL compiled before
+    # normalization (for example, ``dbo.employees`` from an earlier test).
+    engine.clear_compiled_cache()
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     try:
