@@ -1,7 +1,7 @@
 # TaskSyncEnterprise — Visual Reference Inventory
 
 **Status:** Re-audited from the original JPEG files on 2026-07-22.  
-**Source:** `E:\TaskSyncEnterprise\docs\image`  
+**Source:** `docs/image`
 **Important:** The images are HRIMS concept references. They are not screenshots of TaskSyncEnterprise and several have no matching product route.
 
 | Reference file (suffix) | Size | Actual reference screen | Closest runtime route | Target viewport | Main components | Mapping status |

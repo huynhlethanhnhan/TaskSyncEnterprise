@@ -134,10 +134,10 @@ class Settings(BaseSettings):
     # =========================================================================
 
     MSSQL_HOST: str = Field(
-        default="JINDOU_ITSUKI",
+        default="127.0.0.1",
         description=(
             "Purpose: SQL Server hostname or network address.\n"
-            "Default: 'JINDOU_ITSUKI'\n"
+            "Default: '127.0.0.1'\n"
             "Production Recommendation: Point to the production DB server or cluster instance.\n"
             "Development Recommendation: Local SQL Server hostname, IP address, or '127.0.0.1'.\n"
             "Security Consideration: None directly, but should be isolated in private subnets in production."
@@ -228,7 +228,7 @@ class Settings(BaseSettings):
             return f"mssql+pymssql://{user}:{password}@{self.MSSQL_HOST}:{self.MSSQL_PORT}/{self.MSSQL_DATABASE}?charset=utf8"
 
         # Exact backward compatibility default loopback check
-        if self.MSSQL_HOST == "JINDOU_ITSUKI" or self.MSSQL_HOST == "127.0.0.1":
+        if self.MSSQL_HOST in ("localhost", "127.0.0.1"):
             return f"mssql+pymssql://127.0.0.1:{self.MSSQL_PORT}/{self.MSSQL_DATABASE}?charset=utf8"
 
         return f"mssql+pymssql://{self.MSSQL_HOST}:{self.MSSQL_PORT}/{self.MSSQL_DATABASE}?charset=utf8"

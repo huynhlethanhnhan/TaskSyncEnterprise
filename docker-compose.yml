@@ -10,7 +10,7 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - SECRET_KEY=${SECRET_KEY:-task_sync_enterprise_secret_key_chuandry_2026}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - DATABASE_URL=${DATABASE_URL:-mssql+pymssql://sa:ThanhNhan1807!@sqlserver:1433/TaskSyncEnterprise}
+      - DATABASE_URL=${DATABASE_URL:-mssql+pymssql://sa:TaskSync@2026@sqlserver:1433/TaskSyncEnterprise}
     depends_on:
       redis:
         condition: service_healthy
@@ -39,7 +39,7 @@ services:
       - "1433:1433"
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:-ThanhNhan1807!}
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:-TaskSync@2026}
     volumes:
       - mssql_data:/var/opt/mssql
     healthcheck:
