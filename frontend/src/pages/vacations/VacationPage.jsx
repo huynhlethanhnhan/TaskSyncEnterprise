@@ -1,148 +1,357 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../../api/axios";
-import VacationFormModal from "./VacationFormModal";
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Calendar as CalendarIcon,
+  CheckCircle2,
+  Clock,
+  Plus,
+  UserCheck,
+  XCircle,
+  HelpCircle,
+  Undo2,
+  FileCheck,
+  ShieldCheck,
+} from 'lucide-react';
+import api from '../../api/axios';
+import VacationFormModal from './VacationFormModal';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { Breadcrumb } from '../../components/navigation/Breadcrumb';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/common/Card';
+import { Badge } from '../../components/common/Badge';
+import { Button } from '../../components/ui/Button';
+import { EmptyState } from '../../components/common/EmptyState';
+import { useToast } from '../../providers/ToastProvider';
 
-const STATUS_CLASS = {
-  Pending: "bg-amber-100 text-amber-700",
-  Approved: "bg-emerald-100 text-emerald-700",
-  Rejected: "bg-rose-100 text-rose-700",
+const STATUS_BADGES = {
+  Pending: { variant: 'warning', label: 'Chờ duyệt', icon: <Clock className="h-3 w-3" /> },
+  'Manager Approved': { variant: 'info', label: 'Manager Đã Duyệt', icon: <UserCheck className="h-3 w-3" /> },
+  'HR Approved': { variant: 'success', label: 'HR Đã Duyệt', icon: <CheckCircle2 className="h-3 w-3" /> },
+  Approved: { variant: 'success', label: 'Đã Duyệt', icon: <CheckCircle2 className="h-3 w-3" /> },
+  Rejected: { variant: 'danger', label: 'Từ chối', icon: <XCircle className="h-3 w-3" /> },
+  InfoRequested: { variant: 'outline', label: 'Cần bổ sung TT', icon: <HelpCircle className="h-3 w-3" /> },
+  'Info Requested': { variant: 'outline', label: 'Cần bổ sung TT', icon: <HelpCircle className="h-3 w-3" /> },
+  Withdrawn: { variant: 'default', label: 'Đã rút đơn', icon: <Undo2 className="h-3 w-3" /> },
+  Cancelled: { variant: 'default', label: 'Hủy đơn', icon: <Undo2 className="h-3 w-3" /> },
 };
 
 export default function VacationPage() {
-  const currentUser = useMemo(() => JSON.parse(localStorage.getItem("user") || "{}"), []);
+  const currentUser = useMemo(() => JSON.parse(localStorage.getItem('user') || '{}'), []);
+  const toast = useToast();
+  const navigate = useNavigate();
+
   const [vacations, setVacations] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [error, setError] = useState("");
+  const [filterTab, setFilterTab] = useState('all');
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
-  const loadData = async () => {
+  const isManager = currentUser.role === 'manager' || Number(currentUser.role_id) === 2;
+  const isAdmin = currentUser.role === 'admin' || Number(currentUser.role_id) === 1;
+
+  const loadData = React.useCallback(async () => {
     try {
       setLoading(true);
       const [vacRes, empRes] = await Promise.all([
-        api.get("/vacations").catch(() => ({ data: [] })),
-        api.get("/employees").catch(() => ({ data: [] })),
+        api.get('/vacations').catch(() => ({ data: [] })),
+        api.get('/employees').catch(() => ({ data: [] })),
       ]);
       setVacations(Array.isArray(vacRes.data) ? vacRes.data : vacRes.data?.data || []);
       setEmployees(Array.isArray(empRes.data) ? empRes.data : empRes.data?.data || []);
-    } catch (err) {
-      console.error("Lỗi tải vacation:", err);
-      setError("Không thể tải yêu cầu nghỉ phép.");
+    } catch {
+      toast.error('Lỗi kết nối', 'Không thể tải danh sách nghỉ phép.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
+
 
   const handleSave = async (data) => {
     try {
-      await api.post("/vacations", {
+      await api.post('/vacations', {
         type: data.type,
         start_date: data.start_date,
         end_date: data.end_date,
         reason: data.reason,
-        status: "Pending",
+        status: 'Pending',
       });
+      toast.success('Gửi đơn nghỉ phép thành công', 'Đơn xin nghỉ đã được gửi tới quản lý.');
       setIsModalOpen(false);
       loadData();
-    } catch (err) {
-      console.error("Lỗi lưu vacation:", err);
-      setError("Không thể gửi yêu cầu nghỉ phép.");
+    } catch {
+      toast.error('Gửi đơn thất bại', 'Không thể tạo đơn nghỉ phép.');
     }
   };
 
   const handleUpdateStatus = async (vacationId, newStatus) => {
     try {
-      setError("");
       await api.patch(`/vacations/${vacationId}`, { status: newStatus });
+      toast.success('Cập nhật trạng thái thành công', `Đơn nghỉ phép đã được chuyển sang "${newStatus}".`);
       loadData();
-    } catch (err) {
-      console.error("Lỗi cập nhật trạng thái vacation:", err);
-      setError("Không thể duyệt/từ chối đơn nghỉ phép.");
+    } catch {
+      toast.error('Cập nhật thất bại', 'Không thể thay đổi trạng thái đơn nghỉ.');
     }
   };
 
-  const handleOpenDetail = (vacation) => {
-    navigate(`/vacations/${vacation.id}`);
-  };
-
-  const recentRequests = useMemo(() => [...vacations].sort((a, b) => new Date(b.created_at || b.start_date) - new Date(a.created_at || a.start_date)).slice(0, 6), [vacations]);
+  const filteredVacations = useMemo(() => {
+    if (filterTab === 'pending') return vacations.filter((v) => v.status === 'Pending' || v.status === 'Manager Approved');
+    if (filterTab === 'approved') return vacations.filter((v) => v.status === 'Approved' || v.status === 'HR Approved');
+    if (filterTab === 'rejected') return vacations.filter((v) => v.status === 'Rejected');
+    return vacations;
+  }, [vacations, filterTab]);
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Quản lý nghỉ phép</h1>
-          <p className="mt-2 text-sm text-slate-500">Theo dõi yêu cầu nghỉ phép của nhân viên.</p>
-        </div>
-        <button onClick={() => setIsModalOpen(true)} className="rounded-3xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700">Tạo yêu cầu nghỉ</button>
+    <div className="space-y-6 font-sans pb-12">
+      {/* Page Header */}
+      <PageHeader
+        title="Quản lý Nghỉ phép Doanh nghiệp (Leave Management)"
+        description="Quy trình phê duyệt nghỉ phép đa cấp dành cho Nhân viên, Quản lý và HR"
+        breadcrumb={
+          <Breadcrumb
+            items={[
+              { label: 'Dashboard', href: '/dashboard' },
+              { label: 'Quản lý Nghỉ phép' },
+            ]}
+          />
+        }
+        actions={
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setIsModalOpen(true)}
+          >
+            Tạo Yêu cầu Nghỉ
+          </Button>
+        }
+      />
+
+      {/* Leave Balance & Overview Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-text-muted">Tổng Đơn Nghỉ phép</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{vacations.length}</p>
+              <p className="text-[10px] text-text-muted mt-0.5">Tất cả hồ sơ</p>
+            </div>
+            <div className="p-2.5 rounded-xl bg-accent text-primary">
+              <CalendarIcon className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-text-muted">Đơn Chờ Phê duyệt</p>
+              <p className="text-2xl font-bold text-amber-500 mt-1">
+                {vacations.filter((v) => v.status === 'Pending' || v.status === 'Manager Approved').length}
+              </p>
+              <p className="text-[10px] text-text-muted mt-0.5">Cần xử lý ngay</p>
+            </div>
+            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
+              <Clock className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-text-muted">Đã Duyệt Chính thức</p>
+              <p className="text-2xl font-bold text-emerald-500 mt-1">
+                {vacations.filter((v) => v.status === 'Approved' || v.status === 'HR Approved').length}
+              </p>
+              <p className="text-[10px] text-text-muted mt-0.5">HR / Admin đã duyệt</p>
+            </div>
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-text-muted">Đơn Bị Từ Chối</p>
+              <p className="text-2xl font-bold text-rose-500 mt-1">
+                {vacations.filter((v) => v.status === 'Rejected').length}
+              </p>
+              <p className="text-[10px] text-text-muted mt-0.5">Dữ liệu từ quy trình phê duyệt</p>
+            </div>
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {error && <div className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
+      {/* Filter Tabs & Content */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle>Danh sách Yêu cầu & Tiến trình Phê duyệt</CardTitle>
+              <CardDescription>Quy trình: Đã gửi ➔ Quản lý Duyệt ➔ HR Duyệt ➔ Hoàn thành</CardDescription>
+            </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Tổng yêu cầu</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{vacations.length}</p>
-        </div>
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Đang chờ duyệt</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{vacations.filter((item) => item.status === "Pending").length}</p>
-        </div>
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Đã duyệt</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{vacations.filter((item) => item.status === "Approved").length}</p>
-        </div>
-      </div>
+            {/* Filter Pills */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-accent/40 border border-border/60">
+              <button
+                type="button"
+                onClick={() => setFilterTab('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  filterTab === 'all' ? 'bg-surface text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                Tất cả ({vacations.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab('pending')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  filterTab === 'pending' ? 'bg-surface text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                Chờ Duyệt
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab('approved')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  filterTab === 'approved' ? 'bg-surface text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                Đã Duyệt
+              </button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loading ? (
+            <div className="text-center py-8 text-xs text-text-muted">Đang tải dữ liệu nghỉ phép...</div>
+          ) : filteredVacations.length === 0 ? (
+            <EmptyState type="no-data" description="Chưa có đơn nghỉ phép nào trong danh mục này." />
+          ) : (
+            <div className="space-y-4">
+              {filteredVacations.map((vacation) => {
+                const requester = employees.find((emp) => Number(emp.id) === Number(vacation.requested_by));
+                const requesterName = vacation.requested_by_name || requester?.full_name || 'Nhân sự';
+                const statusInfo = STATUS_BADGES[vacation.status] || { variant: 'default', label: vacation.status, icon: null };
+                const isOwner = Number(currentUser.id) === Number(vacation.requested_by);
 
-      {loading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-500">Đang tải...</div>
-      ) : vacations.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-slate-500">Chưa có yêu cầu nghỉ phép nào.</div>
-      ) : (
-        <div className="space-y-4">
-          {recentRequests.map((vacation) => {
-            const requester = employees.find((emp) => Number(emp.id) === Number(vacation.requested_by));
-            const requesterName = vacation.requested_by_name || requester?.full_name || "Người dùng";
-            return (
-              <div key={vacation.id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{vacation.type} · {requesterName}</p>
-                    <p className="mt-2 text-sm text-slate-500">{vacation.start_date} → {vacation.end_date}</p>
+                return (
+                  <div key={vacation.id} className="p-4 rounded-xl border border-border bg-surface hover:border-primary/40 transition-colors space-y-4">
+                    {/* Header & Status */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-text-primary">{vacation.type}</h4>
+                          <span className="text-xs text-text-muted">· Người xin: <strong className="text-text-primary">{requesterName}</strong></span>
+                        </div>
+                        <p className="text-xs text-text-muted mt-1 flex items-center gap-1.5">
+                          <CalendarIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <span>Từ <strong>{vacation.start_date}</strong> đến <strong>{vacation.end_date}</strong></span>
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Badge variant={statusInfo.variant} showDot>
+                          <span className="flex items-center gap-1">{statusInfo.icon} {statusInfo.label}</span>
+                        </Badge>
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/vacations/${vacation.id}`)}>
+                          Chi tiết
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Step Approval Timeline Bar */}
+                    <div className="p-3 rounded-lg bg-accent/20 border border-border/60">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-text-muted">
+                        <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> 1. Đã Gửi đơn
+                        </span>
+                        <span className={`flex items-center gap-1 ${vacation.status === 'Manager Approved' || vacation.status === 'HR Approved' || vacation.status === 'Approved' ? 'text-emerald-600 font-semibold' : ''}`}>
+                          <UserCheck className="h-3.5 w-3.5" /> 2. Manager Phê duyệt
+                        </span>
+                        <span className={`flex items-center gap-1 ${vacation.status === 'HR Approved' || vacation.status === 'Approved' ? 'text-emerald-600 font-semibold' : ''}`}>
+                          <FileCheck className="h-3.5 w-3.5" /> 3. HR Hoàn tất
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons based on Role */}
+                    <div className="flex flex-wrap items-center justify-between border-t border-border/60 pt-3 gap-2">
+                      <p className="text-xs text-text-secondary italic truncate max-w-lg">
+                        Lý do: "{vacation.reason || 'Không có lý do chi tiết'}"
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        {/* Employee withdraw action */}
+                        {isOwner && (vacation.status === 'Pending' || vacation.status === 'Info Requested') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Undo2 className="h-3.5 w-3.5" />}
+                            onClick={() => handleUpdateStatus(vacation.id, 'Withdrawn')}
+                          >
+                            Rút Đơn
+                          </Button>
+                        )}
+
+                        {/* Manager approval actions */}
+                        {isManager && vacation.status === 'Pending' && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUpdateStatus(vacation.id, 'Info Requested')}
+                            >
+                              Yêu cầu bổ sung TT
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleUpdateStatus(vacation.id, 'Manager Approved')}
+                            >
+                              Manager Duyệt
+                            </Button>
+                          </>
+                        )}
+
+                        {/* HR/Admin final approval actions */}
+                        {isAdmin && (vacation.status === 'Pending' || vacation.status === 'Manager Approved') && (
+                          <>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleUpdateStatus(vacation.id, 'Rejected')}
+                            >
+                              Từ chối
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                              onClick={() => handleUpdateStatus(vacation.id, 'HR Approved')}
+                            >
+                              HR Duyệt Cuối
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${STATUS_CLASS[vacation.status] || "bg-slate-100 text-slate-600"}`}>{vacation.status}</span>
-                    {((currentUser.role === "admin" || currentUser.role === "manager" || Number(currentUser.role_id) === 1 || Number(currentUser.role_id) === 2) && vacation.status === "Pending") && (
-                      <>
-                        <button 
-                          onClick={() => handleUpdateStatus(vacation.id, "Approved")} 
-                          className="rounded-3xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition"
-                        >
-                          Duyệt
-                        </button>
-                        <button 
-                          onClick={() => handleUpdateStatus(vacation.id, "Rejected")} 
-                          className="rounded-3xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition"
-                        >
-                          Từ chối
-                        </button>
-                      </>
-                    )}
-                    <button onClick={() => handleOpenDetail(vacation)} className="rounded-3xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200">Chi tiết</button>
-                  </div>
-                </div>
-                <p className="mt-4 text-sm text-slate-600">{vacation.reason || "Không có lý do"}</p>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <VacationFormModal open={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSave} initialData={null} />
     </div>
