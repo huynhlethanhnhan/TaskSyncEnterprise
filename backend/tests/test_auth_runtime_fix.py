@@ -92,9 +92,7 @@ def test_refresh_token_rotation_and_revocation(client, db, seeded_admin_user):
     refresh_token = login_res.json()["refresh_token"]
 
     # First refresh call should succeed
-    ref_res = client.post(
-        "/api/v1/auth/refresh", json={"refresh_token": refresh_token}
-    )
+    ref_res = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert ref_res.status_code == 200
     new_data = ref_res.json()
     assert "access_token" in new_data
