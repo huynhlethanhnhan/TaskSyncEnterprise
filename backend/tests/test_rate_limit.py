@@ -40,7 +40,7 @@ class MockRateLimitRedis:
             return [("member", oldest_score)]
         return ["member"]
 
-    def pipeline(self):
+    def pipeline(self, *args, **kwargs):
         return MockPipeline(self)
 
 

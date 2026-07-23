@@ -13,11 +13,13 @@ def reset_redis_singleton():
     if hasattr(cache_service, "client_manager"):
         cache_service.client_manager._client = None
         cache_service.client_manager._pool = None
+        cache_service.client_manager._offline_until = 0.0
     yield
     RedisClient._instance = None
     if hasattr(cache_service, "client_manager"):
         cache_service.client_manager._client = None
         cache_service.client_manager._pool = None
+        cache_service.client_manager._offline_until = 0.0
 
 
 @pytest.fixture
@@ -145,9 +147,13 @@ def test_task_update_invalidation(mock_redis):
 
 def test_redis_unavailable():
     """Verify that if Redis is offline/unavailable, CacheInvalidator fails silently without throwing errors."""
-    with patch("app.cache.redis_client.redis.Redis") as mock_redis_class:
-        mock_redis_class.side_effect = Exception("Redis server not reachable")
+    from unittest.mock import PropertyMock
 
+    with patch(
+        "app.cache.redis_client.RedisClient.client",
+        new_callable=PropertyMock,
+        return_value=None,
+    ):
         # Invalidation should run without throwing exception
         try:
             CacheInvalidator.invalidate_employee(employee_id=99)
