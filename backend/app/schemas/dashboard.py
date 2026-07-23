@@ -35,6 +35,15 @@ class DepartmentBreakdown(BaseModel):
     employee_count: int = Field(..., description="Total active employees headcount")
 
 
+class DepartmentWorkload(BaseModel):
+    """Live task workload aggregated through task assignments."""
+
+    department_name: str
+    total_tasks: int
+    pending_tasks: int
+    overdue_tasks: int
+
+
 class DashboardAnalyticsResponse(BaseModel):
     """Aggregated response containing overview numbers and category distributions."""
 
@@ -42,3 +51,11 @@ class DashboardAnalyticsResponse(BaseModel):
     tasks_by_status: list[StatusBreakdown]
     projects_by_status: list[StatusBreakdown]
     employees_by_department: list[DepartmentBreakdown]
+    workload_by_department: list[DepartmentWorkload]
+    leave_by_status: list[StatusBreakdown] = Field(default_factory=list)
+    monthly_activity: list[dict] = Field(default_factory=list)
+    notification_volume: list[dict] = Field(default_factory=list)
+    upcoming_deadlines: list[dict] = Field(default_factory=list)
+    upcoming_leaves: list[dict] = Field(default_factory=list)
+    upcoming_birthdays: list[dict] = Field(default_factory=list)
+    pending_approvals: list[dict] = Field(default_factory=list)

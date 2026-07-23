@@ -111,20 +111,6 @@ def create_task(data: TaskCreate, db: Session = Depends(get_db)):
         task.id, project_id=task.project_id, employee_id=task.employee_id
     )
 
-    from app.crud.notification import create_notification
-
-    if task.employee_id:
-        try:
-            create_notification(
-                db=db,
-                employee_id=task.employee_id,
-                title="Bạn có công việc mới",
-                message=f"Bạn đã được gán vào task: {task.title}",
-            )
-        except Exception as e:
-            from app.core.logger import app_logger
-
-            app_logger.error(f"Error creating notification: {e}")
     return task
 
 
@@ -156,20 +142,6 @@ def update_task(task_id: int, data: TaskUpdate, db: Session = Depends(get_db)):
     if old_employee_id != task.employee_id:
         CacheInvalidator.invalidate_employee(old_employee_id)
 
-    from app.crud.notification import create_notification
-
-    if task.employee_id:
-        try:
-            create_notification(
-                db=db,
-                employee_id=task.employee_id,
-                title="Bạn có công việc mới",
-                message=f"Bạn đã được gán vào task: {task.title}",
-            )
-        except Exception as e:
-            from app.core.logger import app_logger
-
-            app_logger.error(f"Error creating notification: {e}")
     return task
 
 

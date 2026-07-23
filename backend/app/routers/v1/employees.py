@@ -68,7 +68,7 @@ def search_employee(keyword: str, db: Session = Depends(get_db)):
 
 
 @router.get(
-    "/{employee_id}",
+    "/{employee_id:int}",
     response_model=EmployeeResponse,
     dependencies=[
         Depends(RequireEmployee)
@@ -109,7 +109,7 @@ def create_employee(data: EmployeeCreate, db: Session = Depends(get_db)):
     return res
 
 
-@router.put("/{employee_id}", response_model=EmployeeResponse)
+@router.put("/{employee_id:int}", response_model=EmployeeResponse)
 def update_employee(
     employee_id: int,
     data: EmployeeUpdate,
@@ -151,7 +151,7 @@ def update_employee(
 
 
 @router.delete(
-    "/{employee_id}",
+    "/{employee_id:int}",
     dependencies=[
         Depends(RequireAdmin)
     ],  # <-- Admin mới được quyền ra lệnh xóa mềm nhân viên
@@ -187,6 +187,7 @@ def upload_my_avatar(
     db: Session = Depends(get_db),
 ):
     # 1. Gọi Storage Service kiểm tra và lưu vật lý vào thư mục uploads/avatars/
+    previous_avatar_url = current_user.avatar_url
     avatar_url = StorageService.save_avatar(file)
 
     # 2. Thực thi câu lệnh cập nhật trực tiếp đường dẫn ảnh vào cơ sở dữ liệu
@@ -197,6 +198,8 @@ def upload_my_avatar(
     )
     db.execute(stmt)
     db.commit()
+    if previous_avatar_url and previous_avatar_url != avatar_url:
+        StorageService.delete_uploaded_file(previous_avatar_url)
 
     from app.cache import CacheInvalidator
 
@@ -206,4 +209,28 @@ def upload_my_avatar(
         "success": True,
         "message": "Cập nhật ảnh đại diện thành công!",
         "avatar_url": avatar_url,
+    }
+
+
+@router.delete("/avatar", summary="Xóa ảnh đại diện cá nhân")
+def delete_my_avatar(
+    current_user: Employee = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    previous_avatar_url = current_user.avatar_url
+    stmt = (
+        update(Employee).where(Employee.id == current_user.id).values(avatar_url=None)
+    )
+    db.execute(stmt)
+    db.commit()
+    StorageService.delete_uploaded_file(previous_avatar_url)
+
+    from app.cache import CacheInvalidator
+
+    CacheInvalidator.invalidate_employee(current_user.id)
+
+    return {
+        "success": True,
+        "message": "Đã xóa ảnh đại diện thành công!",
+        "avatar_url": None,
     }

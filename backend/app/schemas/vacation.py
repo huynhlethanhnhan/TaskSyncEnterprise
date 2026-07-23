@@ -1,7 +1,7 @@
 # 📂 FILE: app/schemas/vacation.py
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class VacationBase(BaseModel):
@@ -13,7 +13,12 @@ class VacationBase(BaseModel):
 
 
 class VacationCreate(VacationBase):
-    pass
+    @field_validator("status")
+    @classmethod
+    def force_initial_pending_status(cls, value: str | None) -> str:
+        if value not in (None, "Pending"):
+            raise ValueError("New vacation requests must start in Pending status")
+        return "Pending"
 
 
 class VacationResponse(VacationBase):
@@ -30,3 +35,11 @@ class VacationResponse(VacationBase):
 
 class VacationUpdate(BaseModel):
     status: str
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str) -> str:
+        allowed = {"Manager Approved", "HR Approved", "Info Requested", "Rejected", "Withdrawn", "Cancelled"}
+        if value not in allowed:
+            raise ValueError(f"Unsupported vacation status: {value}")
+        return value

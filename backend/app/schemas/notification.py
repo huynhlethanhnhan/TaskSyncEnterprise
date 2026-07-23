@@ -1,7 +1,7 @@
 # 📂 FILE: app/schemas/notification.py
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_serializer
 from app.core.enums import (
     NotificationType,
     NotificationPriority,
@@ -90,6 +90,14 @@ class NotificationResponse(BaseModel):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("read_at", "created_at", "updated_at")
+    def serialize_utc_datetime(self, value: Optional[datetime]) -> Optional[str]:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 # Alias for Response as requested

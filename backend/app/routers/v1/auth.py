@@ -1,4 +1,4 @@
-# ?? FILE: app/routers/v1/auth.py
+# 📂 FILE: app/routers/v1/auth.py
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -19,13 +19,13 @@ from app.core.security import (
     get_password_hash,
 )
 from app.core.deps import get_current_user, oauth2_scheme
-from app.core.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE, ROLE_MAP
+from app.core.constants import ROLE_MAP
 from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-# --- CÁC SCHEMA (Ð?nh nghia tru?c khi dùng) ---
+# --- SCHEMAS ---
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -67,6 +67,12 @@ class SessionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+    confirm_password: str | None = None
+
+
 @router.post("/login", response_model=LoginResponse)
 def login_user(
     request: Request,
@@ -87,7 +93,7 @@ def login_user(
 
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(
-            status_code=401, detail="Email ho?c m?t kh?u không chính xác!"
+            status_code=401, detail="Email hoặc mật khẩu không chính xác!"
         )
 
     user.last_login = datetime.now(timezone.utc)
@@ -159,17 +165,20 @@ def refresh_access_token(req_data: RefreshRequest, db: Session = Depends(get_db)
         )
         user_id = payload.get("sub")
     except JWTError:
-        raise HTTPException(status_code=401, detail="Token không h?p l?!")
+        raise HTTPException(status_code=401, detail="Token không hợp lệ!")
 
-    db_token = db.execute(
+    db_token = db.scalars(
         select(RefreshToken).where(RefreshToken.token == req_data.refresh_token)
-    ).scalar_one_or_none()
+    ).first()
     if not db_token or db_token.is_revoked:
-        raise HTTPException(status_code=401, detail="Token dã b? vô hi?u hóa!")
+        raise HTTPException(status_code=401, detail="Token đã bị vô hiệu hóa!")
 
-    user = db.execute(
+    user = db.scalars(
         select(Employee).where(Employee.id == int(user_id))
-    ).scalar_one_or_none()
+    ).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="Tài khoản không tồn tại hoặc bị khóa!")
+
     db_token.is_revoked = True
 
     new_access = create_access_token(
@@ -222,12 +231,6 @@ def logout_user(
     return {"message": "Đăng xuất thành công"}
 
 
-class ChangePasswordRequest(BaseModel):
-    old_password: str
-    new_password: str
-    confirm_password: str
-
-
 @router.post("/change-password")
 def change_password(
     data: ChangePasswordRequest,
@@ -235,17 +238,50 @@ def change_password(
     db: Session = Depends(get_db),
 ):
     if not verify_password(data.old_password, current_user.password_hash):
-        raise HTTPException(status_code=400, detail="M?t kh?u cu không chính xác!")
-    if data.new_password != data.confirm_password:
+        raise HTTPException(status_code=400, detail="Mật khẩu cũ không chính xác!")
+    if data.confirm_password is not None and data.new_password != data.confirm_password:
         raise HTTPException(
-            status_code=400, detail="M?t kh?u m?i và xác nh?n không kh?p!"
+            status_code=400, detail="Mật khẩu mới và xác nhận không khớp!"
         )
 
     current_user.password_hash = get_password_hash(data.new_password)
     current_user.is_first_login = False
     current_user.updated_at = datetime.now(timezone.utc)
     db.commit()
-    return {"message": "M?t kh?u dã du?c c?p nh?t thành công."}
+    return {"message": "Mật khẩu đã được cập nhật thành công."}
+
+
+@router.get("/sessions", response_model=list[SessionResponse])
+def get_user_sessions(
+    current_user: Employee = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    stmt = (
+        select(UserSession)
+        .where(UserSession.employee_id == current_user.id, UserSession.is_active == True)
+        .order_by(UserSession.created_at.desc())
+    )
+    return db.scalars(stmt).all()
+
+
+@router.post("/sessions/logout-others")
+def logout_other_sessions(
+    current_user: Employee = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+):
+    stmt = (
+        update(UserSession)
+        .where(
+            UserSession.employee_id == current_user.id,
+            UserSession.access_token != token,
+            UserSession.is_active == True,
+        )
+        .values(is_active=False)
+    )
+    db.execute(stmt)
+    db.commit()
+    return {"message": "Đã đăng xuất khỏi tất cả các thiết bị khác thành công."}
 
 
 @router.get("/me")
