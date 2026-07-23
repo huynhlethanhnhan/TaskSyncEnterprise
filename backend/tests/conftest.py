@@ -100,3 +100,11 @@ def mock_redis_client(request):
     ) as mock_prop:
         mock_prop.return_value = mock_client
         yield mock_client
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _shutdown_tracing_on_pytest_exit():
+    yield
+    from app.tracing.config import shutdown_tracing
+
+    shutdown_tracing()

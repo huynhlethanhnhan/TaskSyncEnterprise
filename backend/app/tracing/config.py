@@ -22,6 +22,7 @@ Design Decisions
 
 from __future__ import annotations
 
+import atexit
 import logging
 from urllib.parse import urlparse
 
@@ -176,6 +177,9 @@ def setup_tracing() -> None:
     # Register as the global provider – all instrumentation libs use this
     trace.set_tracer_provider(provider)
 
+    # Register atexit handler so provider is shut down before stdio streams close
+    atexit.register(shutdown_tracing)
+
     # Wire OTel trace_id / span_id into Python logging records
     _setup_logging_bridge()
 
@@ -257,8 +261,14 @@ def shutdown_tracing() -> None:
     if _tracing_shutdown:
         return
 
+    _tracing_shutdown = True
     provider = trace.get_tracer_provider()
     if isinstance(provider, TracerProvider):
-        provider.force_flush()
-        provider.shutdown()
-    _tracing_shutdown = True
+        try:
+            provider.force_flush()
+        except Exception:
+            pass
+        try:
+            provider.shutdown()
+        except Exception:
+            pass
