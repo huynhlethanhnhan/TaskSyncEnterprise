@@ -71,8 +71,12 @@ services:
     environment:
       - ENVIRONMENT=production
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
+      - MSSQL_HOST=sqlserver
+      - MSSQL_PORT=1433
+      - MSSQL_DATABASE=TaskSyncEnterprise
+      - MSSQL_USER=sa
+      - MSSQL_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}
       - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}
-      - DATABASE_URL=mssql+pymssql://sa:${MSSQL_SA_PASSWORD}@sqlserver:1433/TaskSyncEnterprise
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:?BACKEND_CORS_ORIGINS is required}

@@ -10,7 +10,11 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - SECRET_KEY=${SECRET_KEY:-task_sync_enterprise_secret_key_chuandry_2026}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - DATABASE_URL=${DATABASE_URL:-mssql+pymssql://sa:TaskSync@2026@sqlserver:1433/TaskSyncEnterprise}
+      - MSSQL_HOST=${MSSQL_HOST:-sqlserver}
+      - MSSQL_PORT=${MSSQL_PORT:-1433}
+      - MSSQL_DATABASE=${MSSQL_DATABASE:-TaskSyncEnterprise}
+      - MSSQL_USER=${MSSQL_USER:-sa}
+      - MSSQL_PASSWORD=${MSSQL_SA_PASSWORD:-TaskSync@2026}
     depends_on:
       redis:
         condition: service_healthy
