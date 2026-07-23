@@ -65,6 +65,13 @@ def retry_failed_emails(db: Session) -> None:
 
 def start_email_retry_poller() -> None:
     """Launches the background daemon thread executing retry poller cycles."""
+    import sys
+    from app.config import settings
+
+    if "pytest" in sys.modules or settings.ENVIRONMENT == "testing":
+        app_logger.info("Email retry poller thread bypassed in testing environment.")
+        return
+
     poller_stop_event.clear()
 
     def loop_wrapper():

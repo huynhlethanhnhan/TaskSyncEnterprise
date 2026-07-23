@@ -110,6 +110,8 @@ jobs:
         working-directory: backend
         env:
           PYTHONPATH: .
+          ENVIRONMENT: testing
+          OTEL_EXPORTER_TYPE: none
         run: |
           pytest \
             --cov=app \
