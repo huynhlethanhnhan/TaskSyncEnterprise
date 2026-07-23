@@ -194,6 +194,7 @@ alembic upgrade head
 ### Backend Pytest Suite & OpenTelemetry Shutdown Check
 ```powershell
 cd backend
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m black --check .
 .\.venv\Scripts\python.exe -m ruff check .
 .\.venv\Scripts\python.exe -m pytest tests/test_auth_runtime_fix.py -vv
