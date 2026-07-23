@@ -77,9 +77,17 @@ nginx/ssl/*
 !nginx/ssl/.gitkeep
 !nginx/ssl/generate_self_signed_cert.ps1
 
-# ===========================
+# Documentation Demo & Reference Assets
+docs/image/
+docs/images/
+docs/reference_images/
+
+# Log files
+backend/logs/*.log
+backend/logs/*.log.*
+!backend/logs/.gitkeep
+
 # Backup & DR Storage (Phase 3.8.7)
-# ===========================
 /backups/
 /infrastructure/backup/runtime/
 *.bak
