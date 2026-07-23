@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, Boolean, DateTime, text
+from sqlalchemy import String, Unicode, Boolean, DateTime, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -12,7 +12,7 @@ class Role(Base):
 
     role_name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
 
-    description: Mapped[str | None] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(Unicode(255))
 
     is_system: Mapped[bool] = mapped_column(Boolean, server_default=text("0"))
 

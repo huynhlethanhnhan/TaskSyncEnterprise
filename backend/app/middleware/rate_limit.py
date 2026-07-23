@@ -25,7 +25,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         try:
             return self.redis_client_mgr.client
         except Exception as e:
-            logger.error(f"Redis client is unavailable for rate limiter: {e}")
+            logger.warning(f"Redis client is unavailable for rate limiter: {e}")
             return None
 
     async def dispatch(self, request: Request, call_next):
@@ -40,7 +40,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         client = self._get_client()
         if not client:
-            logger.warning("Bypassing rate limit check because Redis is offline.")
             return await call_next(request)
 
         # 3. Resolve request context identity
@@ -64,7 +63,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         try:
             # Atomic sliding window updates using pipeline
-            pipe = client.pipeline()
+            pipe = client.pipeline(transaction=False)
             pipe.zremrangebyscore(redis_key, "-inf", window_start)
 
             # Add element first to include it in the count
@@ -112,5 +111,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return response
 
         except Exception as e:
-            logger.error(f"Rate limiting pipeline execution failed: {e}")
+            self.redis_client_mgr.mark_offline(str(e))
+            logger.warning(f"Rate limiting bypassed due to Redis connection issue: {e}")
             return await call_next(request)

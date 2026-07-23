@@ -2,6 +2,7 @@
 import os
 import shutil
 import uuid
+from pathlib import Path
 from fastapi import UploadFile, HTTPException
 
 from app.config import settings
@@ -17,6 +18,7 @@ MAX_ATTACHMENT_SIZE = settings.STORAGE_MAX_ATTACHMENT_SIZE
 
 # Danh sách định dạng ảnh được phép làm Avatar từ cấu hình
 ALLOWED_AVATAR_EXTENSIONS = set(settings.STORAGE_ALLOWED_AVATAR_EXTENSIONS)
+ALLOWED_AVATAR_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 # Danh sách định dạng file đính kèm được phép upload an toàn từ cấu hình
 ALLOWED_ATTACHMENT_EXTENSIONS = set(settings.STORAGE_ALLOWED_ATTACHMENT_EXTENSIONS)
@@ -36,11 +38,17 @@ class StorageService:
         StorageService._ensure_directories()
 
         # 1. Kiểm tra định dạng file
-        file_ext = os.path.splitext(file.filename)[1].lower()
+        file_ext = os.path.splitext(file.filename or "")[1].lower()
         if file_ext not in ALLOWED_AVATAR_EXTENSIONS:
             raise HTTPException(
                 status_code=400,
                 detail=f"Định dạng file không hỗ trợ! Chỉ chấp nhận: {', '.join(ALLOWED_AVATAR_EXTENSIONS)}",
+            )
+
+        if file.content_type not in ALLOWED_AVATAR_MIME_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail="Avatar content type must be image/jpeg, image/png, or image/webp",
             )
 
         # 2. Kiểm tra dung lượng file (Đọc tạm thời để check size)
@@ -64,6 +72,18 @@ class StorageService:
 
         # Trả về đường dẫn lưu trong DB để Frontend gọi link truy cập
         return f"/{settings.STORAGE_UPLOAD_DIR}/{settings.STORAGE_AVATAR_SUBDIR}/{unique_filename}"
+
+    @staticmethod
+    def delete_uploaded_file(public_url: str | None) -> None:
+        """Delete a file only when its resolved path is inside the upload root."""
+        if not public_url:
+            return
+        relative = public_url.lstrip("/").replace("/", os.sep)
+        upload_root = Path(settings.UPLOAD_DIR_PATH).resolve()
+        candidate = Path(relative).resolve()
+        if upload_root not in candidate.parents:
+            return
+        candidate.unlink(missing_ok=True)
 
     @staticmethod
     def save_attachment(file: UploadFile) -> dict:

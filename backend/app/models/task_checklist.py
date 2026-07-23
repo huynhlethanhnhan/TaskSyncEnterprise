@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Boolean, text
+from sqlalchemy import ForeignKey, UnicodeText, Boolean, text
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,7 +12,7 @@ class TaskChecklist(Base):
 
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
 
-    title: Mapped[str]
+    title: Mapped[str] = mapped_column(UnicodeText)
 
     is_completed: Mapped[bool] = mapped_column(Boolean, server_default=text("0"))
 

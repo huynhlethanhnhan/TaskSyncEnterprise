@@ -1,3 +1,5 @@
+import asyncio
+import concurrent.futures
 from typing import Dict, List
 from fastapi import WebSocket, WebSocketDisconnect
 from jose import jwt
@@ -16,9 +18,11 @@ class WebSocketConnectionManager:
     def __init__(self) -> None:
         # Map user_id (int) -> List of WebSocket connections
         self.active_connections: Dict[int, List[WebSocket]] = {}
+        self._event_loop: asyncio.AbstractEventLoop | None = None
 
     async def connect(self, websocket: WebSocket, user_id: int) -> None:
         """Registers a new authenticated connection under the recipient's private user channel."""
+        self._event_loop = asyncio.get_running_loop()
         await websocket.accept()
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
@@ -67,6 +71,40 @@ class WebSocketConnectionManager:
                 self.disconnect(connection, user_id)
 
         return success
+
+    def send_private_notification_threadsafe(
+        self, user_id: int, notification_data: dict
+    ) -> bool:
+        """Dispatch from synchronous FastAPI worker threads onto the WebSocket loop."""
+        loop = self._event_loop
+        if loop is None or loop.is_closed() or not loop.is_running():
+            return False
+
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if current_loop is loop:
+            loop.create_task(self.send_private_notification(user_id, notification_data))
+            return True
+
+        future = asyncio.run_coroutine_threadsafe(
+            self.send_private_notification(user_id, notification_data), loop
+        )
+        try:
+            return future.result(timeout=2.0)
+        except concurrent.futures.TimeoutError:
+            future.cancel()
+            app_logger.warning(
+                f"WebSocket delivery timed out for user ID {user_id}"
+            )
+            return False
+        except Exception as error:
+            app_logger.warning(
+                f"WebSocket delivery failed for user ID {user_id}: {error}"
+            )
+            return False
 
     async def broadcast(self, notification_data: dict) -> int:
         """

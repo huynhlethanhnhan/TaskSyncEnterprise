@@ -56,8 +56,12 @@ class QueryEngine:
         default_sort_order: str = "asc",
     ) -> Query:
         """Applies validated sorting to the query."""
-        sort_by = sort_params.sort_by or default_sort_by
-        sort_order = sort_params.sort_order or default_sort_order
+        if sort_params.sort_by:
+            sort_by = sort_params.sort_by
+            sort_order = sort_params.sort_order
+        else:
+            sort_by = default_sort_by
+            sort_order = default_sort_order
 
         # Fallback to default if field is not allowed
         if sort_by not in allowed_fields:

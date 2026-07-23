@@ -1,11 +1,11 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    String,
+    Unicode,
     Integer,
     DateTime,
     ForeignKey,
-    Text,
+    UnicodeText,
     Numeric,
     Boolean,
     text,
@@ -23,13 +23,13 @@ class Task(Base):
 
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
 
-    title: Mapped[str] = mapped_column(String(200))
+    title: Mapped[str] = mapped_column(Unicode(200))
 
-    description: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(UnicodeText)
 
-    priority: Mapped[str] = mapped_column(String(20), server_default=text("N'Medium'"))
+    priority: Mapped[str] = mapped_column(Unicode(20), server_default=text("N'Medium'"))
 
-    status: Mapped[str] = mapped_column(String(30), server_default=text("N'To Do'"))
+    status: Mapped[str] = mapped_column(Unicode(30), server_default=text("N'To Do'"))
 
     story_points: Mapped[int] = mapped_column(Integer, server_default=text("0"))
 

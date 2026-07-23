@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import String, Date, DateTime, Numeric, ForeignKey, Boolean, Text, text
+from sqlalchemy import String, Unicode, UnicodeText, Date, DateTime, Numeric, ForeignKey, Boolean, text
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,17 +14,17 @@ class Project(Base):
 
     project_code: Mapped[str] = mapped_column(String(30), unique=True)
 
-    name: Mapped[str] = mapped_column(String(200))
+    name: Mapped[str] = mapped_column(Unicode(200))
 
-    description: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(UnicodeText)
 
     start_date: Mapped[date | None] = mapped_column(Date)
 
     end_date: Mapped[date | None] = mapped_column(Date)
 
-    status: Mapped[str] = mapped_column(String(30), server_default=text("N'Planning'"))
+    status: Mapped[str] = mapped_column(Unicode(30), server_default=text("N'Planning'"))
 
-    priority: Mapped[str] = mapped_column(String(20), server_default=text("N'Medium'"))
+    priority: Mapped[str] = mapped_column(Unicode(20), server_default=text("N'Medium'"))
 
     budget: Mapped[float | None] = mapped_column(Numeric(18, 2))
 

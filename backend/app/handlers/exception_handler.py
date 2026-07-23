@@ -143,8 +143,10 @@ async def unified_exception_handler(request: Request, exc: Exception) -> JSONRes
         pass
 
     execution_time = None
-    if ctx_data and "start_time" in ctx_data:
-        execution_time = time.time() - ctx_data["start_time"]
+    if hasattr(request.state, "start_mono"):
+        execution_time = round(time.perf_counter() - request.state.start_mono, 4)
+    elif ctx_data and "start_time" in ctx_data:
+        execution_time = round(time.time() - ctx_data["start_time"], 4)
 
     log_metadata = {
         "request_id": request_id,

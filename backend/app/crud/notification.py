@@ -29,6 +29,22 @@ def create(db: Session, title: str, message: str, employee_id: int):
     db.add(obj)
     db.commit()
     db.refresh(obj)
+
+    # CRUD endpoints run in FastAPI worker threads. Schedule the push on the
+    # main WebSocket event loop so every open browser session for this user is
+    # refreshed immediately. The database record remains the source of truth
+    # when the recipient is offline.
+    from app.services.notification.websocket_manager import websocket_manager
+
+    websocket_manager.send_private_notification_threadsafe(
+        employee_id,
+        {
+            "id": obj.id,
+            "title": title,
+            "message": message,
+            "channel": "WEBSOCKET",
+        },
+    )
     return obj
 
 

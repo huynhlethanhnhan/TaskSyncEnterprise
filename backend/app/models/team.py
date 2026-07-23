@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, Boolean, DateTime, ForeignKey, text
+from sqlalchemy import String, Unicode, UnicodeText, Boolean, DateTime, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -14,9 +14,9 @@ class Team(Base):
 
     team_code: Mapped[str] = mapped_column(String(30), unique=True)
 
-    name: Mapped[str] = mapped_column(String(100))
+    name: Mapped[str] = mapped_column(Unicode(100))
 
-    description: Mapped[str | None]
+    description: Mapped[str | None] = mapped_column(UnicodeText)
 
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
 

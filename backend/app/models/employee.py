@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     from app.models.notification import Notification
     from app.models.notification_preference import NotificationPreference
 
-from sqlalchemy import String, Boolean, Date, DateTime, ForeignKey, Integer, text
+from sqlalchemy import String, Unicode, UnicodeText, Boolean, Date, DateTime, ForeignKey, Integer, text
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,15 +19,15 @@ class Employee(Base):
 
     employee_code: Mapped[str] = mapped_column(String(30), unique=True)
 
-    full_name: Mapped[str] = mapped_column(String(150))
+    full_name: Mapped[str] = mapped_column(Unicode(150))
 
     email: Mapped[str] = mapped_column(String(255), unique=True)
 
-    phone: Mapped[str | None]
+    phone: Mapped[str | None] = mapped_column(Unicode(50))
 
-    gender: Mapped[str | None]
+    gender: Mapped[str | None] = mapped_column(Unicode(30))
 
-    address: Mapped[str | None]
+    address: Mapped[str | None] = mapped_column(UnicodeText)
 
     date_of_birth: Mapped[date | None] = mapped_column(Date)
 
@@ -53,7 +53,7 @@ class Employee(Base):
 
     manager_id: Mapped[int | None] = mapped_column(ForeignKey("employees.id"))
 
-    job_title: Mapped[str | None]
+    job_title: Mapped[str | None] = mapped_column(Unicode(150))
 
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
 

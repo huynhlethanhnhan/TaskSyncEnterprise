@@ -1,19 +1,3 @@
-# 📂 FILE: app/middleware/request_context.py
-"""
-Request Context Middleware for TaskSyncEnterprise.
-
-Responsibilities:
-  1. Generate or reuse X-Request-ID for the incoming request.
-  2. Generate or reuse X-Correlation-ID for the incoming request.
-  3. Populate the request-context dict with all observability fields.
-  4. Measure request duration and write X-Process-Time to response headers.
-  5. Emit the structured access log line via the access logger.
-  6. Record Prometheus request metrics.
-
-This middleware runs FIRST in the middleware stack (added last in main.py),
-so all subsequent middlewares and route handlers see a fully populated context.
-"""
-
 import time
 import uuid
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -37,7 +21,10 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        start_mono = time.perf_counter()
         start_time = time.time()
+        request.state.start_mono = start_mono
+        request.state.start_time = start_time
 
         # ── 1. Resolve Request ID ──────────────────────────────────────────
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
@@ -77,6 +64,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             "user_agent": user_agent,
             "user_id": user_id,
             "start_time": start_time,
+            "start_mono": start_mono,
             "duration": 0.0,
             "duration_ms": 0.0,
         }
@@ -100,8 +88,8 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             return response
 
         finally:
-            # ── 6. Measure duration ────────────────────────────────────────
-            duration = time.time() - start_time
+            # ── 6. Measure duration using monotonic perf_counter ─────────────
+            duration = time.perf_counter() - start_mono
             duration_ms = duration * 1000.0
             ctx_data["duration"] = duration
             ctx_data["duration_ms"] = duration_ms
@@ -119,7 +107,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             is_error = status_code >= 500
             metrics.record_request(duration, is_error=is_error)
 
-            # ── 9. Access log (text format for backward compat assertions) ──
+            # ── 9. Access log ───────────────────────────────────────────────
             error_code = ctx_data.get("error_code", "-")
             log_msg = (
                 f"HTTP Request Completed: method={method} path={path} status={status_code} "
