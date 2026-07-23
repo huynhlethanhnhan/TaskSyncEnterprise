@@ -3,10 +3,10 @@
 **Date of Execution:** 2026-07-23 (Asia/Saigon)  
 **Target Branch:** `develop`  
 **Repository Working Tree:** `Clean` (`nothing to commit, working tree clean`)  
-**Latest Certified Commit SHA:** `2db76454d6bf0ff4eb04c7ebbb43779e56caeaef`  
+**Latest Certified Commit SHA:** `f30d4f09961c469cc14b7cfe820428f682c4a719`  
 **Clean-Room Target Directory:** `E:\TaskSyncEnterprise-CleanRoom`  
-**Clean-Room Target SHA:** `a54a8faf8c9148887c5b04da16020e5fa3476283`  
-**Final Validation Verdict:** **Passed**
+**Clean-Room Target SHA:** `f30d4f09961c469cc14b7cfe820428f682c4a719`  
+**Final Validation Verdict:** **Conditional Pass**
 
 ---
 
@@ -93,4 +93,40 @@ If a developer cloned the repository on a different machine without providing ex
 - **Docker Environment:** Backend container uses `MSSQL_HOST=sqlserver`.
 - **Clean-Room Validation Status:** **Clean-Room Validation Passed**
 - **GitHub Actions Status:** **`GitHub Actions Green`**
-- **Final Verdict:** **Passed**
+- **Final Verdict:** **Conditional Pass** (pending runtime acceptance testing)
+
+---
+
+## ⚡ 7. CI Timeout Investigation & Root Cause Remediation
+
+### A. Failure Evidence Summary
+- **Old Workflow SHA:** `435320692571c0fcea48039870256bd3211d1aef`
+- **Old Actions Run ID:** `29984923296`
+- **Timeout Evidence:** Backend CI reached the 10-minute job timeout ceiling (`timeout-minutes: 10`). `pytest` ran for ~9 minutes 47 seconds before job cancellation, causing security checks (`Bandit` and `pip-audit`) to be skipped.
+
+### B. Root Cause Analysis
+1. **Leaked Circuit Breaker State:** In `tests/test_cache_invalidation.py`, `test_redis_unavailable` patched `redis.Redis` with `mock_redis_class.side_effect = Exception(...)`. When `_setup_connection()` caught this exception, it called `RedisClient.mark_offline()`, activating the Redis circuit breaker for 15 seconds (`_offline_until = time.time() + 15.0`).
+2. **Incomplete Fixture Teardown:** The `reset_redis_singleton` fixture reset `RedisClient._instance` and `_client`, but failed to reset `_offline_until = 0.0` on `cache_service.client_manager`. Subsequent test runs saw `is_offline() == True`, bypassing cache invalidation and causing retry loop delays / hangs across test modules.
+3. **Incompatible Mock Signature:** `MockRateLimitRedis.pipeline()` in `tests/test_rate_limit.py` did not accept `*args, **kwargs` (such as `transaction=True`), throwing `TypeError: MockRateLimitRedis.pipeline() got an unexpected keyword argument 'transaction'`. This unexpectedly activated the Redis circuit breaker during rate limit testing.
+
+### C. Exact Code Fixes
+- **`backend/tests/test_cache_invalidation.py`**:
+  1. Updated `reset_redis_singleton` fixture to explicitly reset `cache_service.client_manager._offline_until = 0.0`.
+  2. Updated `test_redis_unavailable` to patch `RedisClient.client` via `PropertyMock` returning `None`, cleanly simulating an offline Redis instance without triggering unhandled class construction side effects or leaking state.
+- **`backend/tests/test_rate_limit.py`**:
+  Updated `MockRateLimitRedis.pipeline()` to accept `*args, **kwargs` (`def pipeline(self, *args, **kwargs):`).
+
+### D. Verification & Timing Metrics
+- **Local Pytest Duration Before Fix:** Timed out / hung (> 9 min 47 s).
+- **Local Pytest Duration After Fix:** `288 passed in 55.38s` (and `test_cache_invalidation.py` 8 passed in 0.26s).
+- **CI Job Suite Duration After Fix (Run ID `29994366935`):** ~1 minute 15 seconds (well within 10-minute timeout budget).
+- **Security Steps Verification:**
+  - `Run Bandit check`: **`success`**
+  - `Run pip-audit check`: **`success`**
+  - Bandit & pip-audit JSON security reports generated and uploaded successfully.
+- **SHA Verification Matrix:**
+  - **Final Pushed SHA:** `f30d4f09961c469cc14b7cfe820428f682c4a719`
+  - **Final GitHub Actions SHA:** `f30d4f09961c469cc14b7cfe820428f682c4a719` (Run ID `29994366935` - Status: **`completed`**, Conclusion: **`success`**)
+  - **Final Clean-Room SHA:** `f30d4f09961c469cc14b7cfe820428f682c4a719` (`git status` clean, Docker compose validation passed)
+- **Final Verdict:** **CONDITIONAL PASS** (All CI checks green, clean-room aligned, pending final runtime acceptance).
+
