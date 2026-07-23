@@ -8,7 +8,6 @@ from app.models.employee import Employee
 from app.models.task import Task
 from app.schemas.notification import NotificationResponse
 
-
 VIETNAMESE_SAMPLES = [
     "Tái cấu trúc UI Dashboard Figma",
     "Xác minh lược đồ cơ sở dữ liệu SQL Server",

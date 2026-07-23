@@ -5,7 +5,17 @@ if TYPE_CHECKING:
     from app.models.notification import Notification
     from app.models.notification_preference import NotificationPreference
 
-from sqlalchemy import String, Unicode, UnicodeText, Boolean, Date, DateTime, ForeignKey, Integer, text
+from sqlalchemy import (
+    String,
+    Unicode,
+    UnicodeText,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    text,
+)
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

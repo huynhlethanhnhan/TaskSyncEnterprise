@@ -46,13 +46,55 @@ DEPARTMENTS = [
 ]
 
 MANAGERS = [
-    ("MGR001", "Nguyễn Minh Khang", "manager.it@tasksync.example.com", "IT", "Giám đốc Công nghệ"),
-    ("MGR002", "Trần Thu Hà", "manager.product@tasksync.example.com", "PRODUCT", "Giám đốc Sản phẩm"),
-    ("MGR003", "Lê Hoàng Anh", "manager.hr@tasksync.example.com", "HR", "Trưởng phòng Nhân sự"),
-    ("MGR004", "Phạm Ngọc Mai", "manager.finance@tasksync.example.com", "FIN", "Trưởng phòng Tài chính"),
-    ("MGR005", "Vũ Quốc Bảo", "manager.sales@tasksync.example.com", "SALES", "Giám đốc Kinh doanh"),
-    ("MGR006", "Đặng Thanh Tâm", "manager.ops@tasksync.example.com", "OPS", "Trưởng phòng Vận hành"),
-    ("MGR007", "Bùi Gia Hân", "manager.exec@tasksync.example.com", "EXEC", "Quản lý Điều hành"),
+    (
+        "MGR001",
+        "Nguyễn Minh Khang",
+        "manager.it@tasksync.example.com",
+        "IT",
+        "Giám đốc Công nghệ",
+    ),
+    (
+        "MGR002",
+        "Trần Thu Hà",
+        "manager.product@tasksync.example.com",
+        "PRODUCT",
+        "Giám đốc Sản phẩm",
+    ),
+    (
+        "MGR003",
+        "Lê Hoàng Anh",
+        "manager.hr@tasksync.example.com",
+        "HR",
+        "Trưởng phòng Nhân sự",
+    ),
+    (
+        "MGR004",
+        "Phạm Ngọc Mai",
+        "manager.finance@tasksync.example.com",
+        "FIN",
+        "Trưởng phòng Tài chính",
+    ),
+    (
+        "MGR005",
+        "Vũ Quốc Bảo",
+        "manager.sales@tasksync.example.com",
+        "SALES",
+        "Giám đốc Kinh doanh",
+    ),
+    (
+        "MGR006",
+        "Đặng Thanh Tâm",
+        "manager.ops@tasksync.example.com",
+        "OPS",
+        "Trưởng phòng Vận hành",
+    ),
+    (
+        "MGR007",
+        "Bùi Gia Hân",
+        "manager.exec@tasksync.example.com",
+        "EXEC",
+        "Quản lý Điều hành",
+    ),
 ]
 
 STAFF_BY_DEPARTMENT = {
@@ -129,7 +171,9 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
         )
 
     staff_number = 1
-    manager_by_department = {department_code: code for code, _, _, department_code, _ in MANAGERS}
+    manager_by_department = {
+        department_code: code for code, _, _, department_code, _ in MANAGERS
+    }
     for department_code, names in STAFF_BY_DEPARTMENT.items():
         for index, full_name in enumerate(names, start=1):
             employees.append(
@@ -167,10 +211,21 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
                 "progress_percent": progress,
             }
         )
-        department_staff = [item for item in employees if item.get("department_code") == department_code and item["role"] == "employee"]
-        for task_index, (title, priority, task_status, task_progress) in enumerate(TASK_TEMPLATES, start=1):
-            assignee = department_staff[(project_index + task_index) % len(department_staff)]
-            deadline_offset = -2 if priority == "Urgent" else project_index + task_index + 2
+        department_staff = [
+            item
+            for item in employees
+            if item.get("department_code") == department_code
+            and item["role"] == "employee"
+        ]
+        for task_index, (title, priority, task_status, task_progress) in enumerate(
+            TASK_TEMPLATES, start=1
+        ):
+            assignee = department_staff[
+                (project_index + task_index) % len(department_staff)
+            ]
+            deadline_offset = (
+                -2 if priority == "Urgent" else project_index + task_index + 2
+            )
             tasks.append(
                 {
                     "task_code": f"{project_code}-T{task_index:02d}",
@@ -188,14 +243,33 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
             )
 
     notification_templates = [
-        ("TASKS", "Bạn có công việc mới", "Một công việc vừa được phân công và đang chờ bạn xử lý.", "HIGH"),
-        ("PROJECTS", "Dự án vừa cập nhật", "Tiến độ dự án đã thay đổi, vui lòng kiểm tra nội dung mới nhất.", "NORMAL"),
-        ("SYSTEM", "TaskSync đang hoạt động", "Kênh thông báo thời gian thực đã sẵn sàng.", "LOW"),
+        (
+            "TASKS",
+            "Bạn có công việc mới",
+            "Một công việc vừa được phân công và đang chờ bạn xử lý.",
+            "HIGH",
+        ),
+        (
+            "PROJECTS",
+            "Dự án vừa cập nhật",
+            "Tiến độ dự án đã thay đổi, vui lòng kiểm tra nội dung mới nhất.",
+            "NORMAL",
+        ),
+        (
+            "SYSTEM",
+            "TaskSync đang hoạt động",
+            "Kênh thông báo thời gian thực đã sẵn sàng.",
+            "LOW",
+        ),
     ]
     notifications: list[dict] = []
     for employee_index, employee in enumerate(employees):
-        for notification_index, (kind, title, message, priority) in enumerate(notification_templates):
-            created_at = now - timedelta(minutes=employee_index * 3 + notification_index * 17)
+        for notification_index, (kind, title, message, priority) in enumerate(
+            notification_templates
+        ):
+            created_at = now - timedelta(
+                minutes=employee_index * 3 + notification_index * 17
+            )
             is_read = notification_index == 2
             notifications.append(
                 {
@@ -207,25 +281,38 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
                     "status": "READ" if is_read else "SENT",
                     "channel": "IN_APP",
                     "event_id": f"seed-{employee['employee_code'].lower()}-{notification_index + 1}",
-                    "context_json": json.dumps({"seed": "Seed_Example", "generated_at": now.isoformat()}, ensure_ascii=False),
+                    "context_json": json.dumps(
+                        {"seed": "Seed_Example", "generated_at": now.isoformat()},
+                        ensure_ascii=False,
+                    ),
                     "is_read": is_read,
                     "read_at": created_at + timedelta(minutes=5) if is_read else None,
                     "created_at": created_at,
                 }
             )
 
-    return {"employees": employees, "projects": projects, "tasks": tasks, "notifications": notifications}
+    return {
+        "employees": employees,
+        "projects": projects,
+        "tasks": tasks,
+        "notifications": notifications,
+    }
 
 
 EXPECTED_COUNTS = {
     "admins": 2,
     "managers": len(MANAGERS),
-    "employees": 2 + len(MANAGERS) + sum(len(names) for names in STAFF_BY_DEPARTMENT.values()),
+    "employees": 2
+    + len(MANAGERS)
+    + sum(len(names) for names in STAFF_BY_DEPARTMENT.values()),
     "departments": len(DEPARTMENTS),
     "teams": len(DEPARTMENTS) * 2,
     "projects": len(PROJECT_NAMES),
     "tasks": len(PROJECT_NAMES) * len(TASK_TEMPLATES),
-    "notifications": (2 + len(MANAGERS) + sum(len(names) for names in STAFF_BY_DEPARTMENT.values())) * 3,
+    "notifications": (
+        2 + len(MANAGERS) + sum(len(names) for names in STAFF_BY_DEPARTMENT.values())
+    )
+    * 3,
 }
 
 
@@ -243,14 +330,31 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
     try:
         existing_employees = db.scalar(select(func.count(Employee.id))) or 0
         if existing_employees and not reset_existing:
-            raise RuntimeError("Database đã có dữ liệu. Chạy lại với --reset nếu đây là môi trường demo.")
+            raise RuntimeError(
+                "Database đã có dữ liệu. Chạy lại với --reset nếu đây là môi trường demo."
+            )
         if reset_existing:
             _reset_demo_data(db)
 
         roles = {
-            "admin": Role(id=1, role_name="admin", description="Quản trị toàn hệ thống", is_system=True),
-            "manager": Role(id=2, role_name="manager", description="Quản lý phòng ban và dự án", is_system=True),
-            "employee": Role(id=3, role_name="employee", description="Nhân viên sử dụng hệ thống", is_system=True),
+            "admin": Role(
+                id=1,
+                role_name="admin",
+                description="Quản trị toàn hệ thống",
+                is_system=True,
+            ),
+            "manager": Role(
+                id=2,
+                role_name="manager",
+                description="Quản lý phòng ban và dự án",
+                is_system=True,
+            ),
+            "employee": Role(
+                id=3,
+                role_name="employee",
+                description="Nhân viên sử dụng hệ thống",
+                is_system=True,
+            ),
         }
         db.add_all(roles.values())
         db.flush()
@@ -258,7 +362,9 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
         departments: dict[str, Department] = {}
         teams: dict[tuple[str, int], Team] = {}
         for code, name, description in DEPARTMENTS:
-            department = Department(department_code=code, name=name, description=description, is_active=True)
+            department = Department(
+                department_code=code, name=name, description=description, is_active=True
+            )
             db.add(department)
             db.flush()
             departments[code] = department
@@ -285,13 +391,27 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
                 full_name=record["full_name"],
                 email=record["email"],
                 phone=f"090{len(employees) + 1000000:07d}"[-10:],
-                gender="Khác" if len(employees) % 3 == 0 else ("Nam" if len(employees) % 2 == 0 else "Nữ"),
+                gender=(
+                    "Khác"
+                    if len(employees) % 3 == 0
+                    else ("Nam" if len(employees) % 2 == 0 else "Nữ")
+                ),
                 address="Thành phố Hồ Chí Minh, Việt Nam",
-                date_of_birth=date(1988 + len(employees) % 12, (len(employees) % 12) + 1, (len(employees) % 24) + 1),
-                start_date=date(2022 + len(employees) % 4, (len(employees) % 12) + 1, 1),
+                date_of_birth=date(
+                    1988 + len(employees) % 12,
+                    (len(employees) % 12) + 1,
+                    (len(employees) % 24) + 1,
+                ),
+                start_date=date(
+                    2022 + len(employees) % 4, (len(employees) % 12) + 1, 1
+                ),
                 password_hash=password_hash,
-                department_id=departments[department_code].id if department_code else None,
-                team_id=teams[(department_code, team_index)].id if department_code else None,
+                department_id=(
+                    departments[department_code].id if department_code else None
+                ),
+                team_id=(
+                    teams[(department_code, team_index)].id if department_code else None
+                ),
                 role_id=roles[record["role"]].id,
                 manager_id=manager.id if manager else None,
                 job_title=record["job_title"],
@@ -322,10 +442,15 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
             db.flush()
             projects[record["project_code"]] = project
             member_codes = [record["manager_code"]] + [
-                item["employee_code"] for item in plan["employees"]
-                if item.get("department_code") == record["department_code"] and item["role"] == "employee"
+                item["employee_code"]
+                for item in plan["employees"]
+                if item.get("department_code") == record["department_code"]
+                and item["role"] == "employee"
             ]
-            db.add_all(ProjectMember(project_id=project.id, employee_id=employees[code].id) for code in member_codes)
+            db.add_all(
+                ProjectMember(project_id=project.id, employee_id=employees[code].id)
+                for code in member_codes
+            )
 
         for index, record in enumerate(plan["tasks"]):
             task = Task(
@@ -346,9 +471,21 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
             db.add(TaskAssignment(task_id=task.id, employee_id=assignee.id))
             db.add_all(
                 [
-                    TaskChecklist(task_id=task.id, title="Đã xác nhận yêu cầu đầu vào", is_completed=True),
-                    TaskChecklist(task_id=task.id, title="Hoàn tất kiểm thử và bàn giao", is_completed=record["status"] == "Done"),
-                    TaskComment(task_id=task.id, employee_id=assignee.id, content="Đã cập nhật tiến độ bằng dữ liệu demo tiếng Việt."),
+                    TaskChecklist(
+                        task_id=task.id,
+                        title="Đã xác nhận yêu cầu đầu vào",
+                        is_completed=True,
+                    ),
+                    TaskChecklist(
+                        task_id=task.id,
+                        title="Hoàn tất kiểm thử và bàn giao",
+                        is_completed=record["status"] == "Done",
+                    ),
+                    TaskComment(
+                        task_id=task.id,
+                        employee_id=assignee.id,
+                        content="Đã cập nhật tiến độ bằng dữ liệu demo tiếng Việt.",
+                    ),
                 ]
             )
 
@@ -373,9 +510,24 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
         for employee in employees.values():
             db.add_all(
                 [
-                    NotificationPreference(employee_id=employee.id, notification_type="TASKS", channel="IN_APP", enabled=True),
-                    NotificationPreference(employee_id=employee.id, notification_type="TASKS", channel="WEBSOCKET", enabled=True),
-                    NotificationPreference(employee_id=employee.id, notification_type="PROJECTS", channel="IN_APP", enabled=True),
+                    NotificationPreference(
+                        employee_id=employee.id,
+                        notification_type="TASKS",
+                        channel="IN_APP",
+                        enabled=True,
+                    ),
+                    NotificationPreference(
+                        employee_id=employee.id,
+                        notification_type="TASKS",
+                        channel="WEBSOCKET",
+                        enabled=True,
+                    ),
+                    NotificationPreference(
+                        employee_id=employee.id,
+                        notification_type="PROJECTS",
+                        channel="IN_APP",
+                        enabled=True,
+                    ),
                 ]
             )
 
@@ -399,7 +551,13 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
 
         for index, admin_code in enumerate(("ADM001", "ADM002"), start=1):
             admin = employees[admin_code]
-            db.add(AuditLog(employee_id=admin.id, employee_email=admin.email, action=f"SEED_EXAMPLE_ADMIN_{index}"))
+            db.add(
+                AuditLog(
+                    employee_id=admin.id,
+                    employee_email=admin.email,
+                    action=f"SEED_EXAMPLE_ADMIN_{index}",
+                )
+            )
 
         db.commit()
         counts = dict(EXPECTED_COUNTS)
@@ -414,7 +572,13 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Seed TaskSyncEnterprise with a realistic demo dataset")
-    parser.add_argument("--reset", action="store_true", help="Delete existing application data before seeding")
+    parser = argparse.ArgumentParser(
+        description="Seed TaskSyncEnterprise with a realistic demo dataset"
+    )
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Delete existing application data before seeding",
+    )
     args = parser.parse_args()
     seed(reset_existing=args.reset)

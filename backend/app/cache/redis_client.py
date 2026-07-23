@@ -36,7 +36,9 @@ class RedisClient:
         self._pool: Optional[redis.ConnectionPool] = None
         self._client: Optional[redis.Redis] = None
         self._offline_until: float = 0.0
-        self._offline_cooldown: float = 15.0  # Bypass Redis attempts for 15 seconds after failure
+        self._offline_cooldown: float = (
+            15.0  # Bypass Redis attempts for 15 seconds after failure
+        )
 
     def is_offline(self) -> bool:
         """Returns True if the circuit breaker is active and Redis is flagged offline."""

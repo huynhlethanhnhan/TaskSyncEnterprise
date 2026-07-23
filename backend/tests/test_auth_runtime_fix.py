@@ -15,8 +15,12 @@ def test_admin_credentials_in_db():
     db: Session = SessionLocal()
     try:
         user = db.query(Employee).filter(Employee.email == "admin@gmail.com").first()
-        assert user is not None, "Administrator account admin@gmail.com should exist in DB"
-        assert verify_password("123456", user.password_hash), "Password hash should match 123456"
+        assert (
+            user is not None
+        ), "Administrator account admin@gmail.com should exist in DB"
+        assert verify_password(
+            "123456", user.password_hash
+        ), "Password hash should match 123456"
     finally:
         db.close()
 
@@ -85,5 +89,7 @@ def test_refresh_token_rotation_and_revocation():
     assert "refresh_token" in new_data
 
     # Reusing the old refresh token must be rejected with 401
-    reuse_res = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    reuse_res = client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": refresh_token}
+    )
     assert reuse_res.status_code == 401

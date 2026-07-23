@@ -173,11 +173,11 @@ def refresh_access_token(req_data: RefreshRequest, db: Session = Depends(get_db)
     if not db_token or db_token.is_revoked:
         raise HTTPException(status_code=401, detail="Token đã bị vô hiệu hóa!")
 
-    user = db.scalars(
-        select(Employee).where(Employee.id == int(user_id))
-    ).first()
+    user = db.scalars(select(Employee).where(Employee.id == int(user_id))).first()
     if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="Tài khoản không tồn tại hoặc bị khóa!")
+        raise HTTPException(
+            status_code=401, detail="Tài khoản không tồn tại hoặc bị khóa!"
+        )
 
     db_token.is_revoked = True
 
@@ -258,7 +258,9 @@ def get_user_sessions(
 ):
     stmt = (
         select(UserSession)
-        .where(UserSession.employee_id == current_user.id, UserSession.is_active == True)
+        .where(
+            UserSession.employee_id == current_user.id, UserSession.is_active == True
+        )
         .order_by(UserSession.created_at.desc())
     )
     return db.scalars(stmt).all()

@@ -15,7 +15,6 @@ from app.database import SessionLocal
 from app.models.employee import Employee
 from app.models.task import Task
 
-
 EXPECTED_EMPLOYEE = ("demo1@gmail.com", "Huỳnh Lê Thành Nhân")
 TASK_REPAIRS = {
     "Tích h?p lu?ng xác th?c JWT": "Tích hợp luồng xác thực JWT",  # utf8-check: intentional-corrupt-fixture
@@ -31,7 +30,9 @@ def repair(*, apply: bool) -> int:
             select(Employee).where(Employee.email == EXPECTED_EMPLOYEE[0])
         )
         if employee and employee.full_name != EXPECTED_EMPLOYEE[1]:
-            changes.append(("employees.full_name", employee.full_name, EXPECTED_EMPLOYEE[1]))
+            changes.append(
+                ("employees.full_name", employee.full_name, EXPECTED_EMPLOYEE[1])
+            )
             if apply:
                 employee.full_name = EXPECTED_EMPLOYEE[1]
 

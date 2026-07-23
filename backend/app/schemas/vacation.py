@@ -39,7 +39,14 @@ class VacationUpdate(BaseModel):
     @field_validator("status")
     @classmethod
     def validate_status(cls, value: str) -> str:
-        allowed = {"Manager Approved", "HR Approved", "Info Requested", "Rejected", "Withdrawn", "Cancelled"}
+        allowed = {
+            "Manager Approved",
+            "HR Approved",
+            "Info Requested",
+            "Rejected",
+            "Withdrawn",
+            "Cancelled",
+        }
         if value not in allowed:
             raise ValueError(f"Unsupported vacation status: {value}")
         return value

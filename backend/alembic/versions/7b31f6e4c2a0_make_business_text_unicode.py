@@ -9,7 +9,6 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-
 revision: str = "7b31f6e4c2a0"
 down_revision: Union[str, Sequence[str], None] = "d524f5f3f22d"
 branch_labels: Union[str, Sequence[str], None] = None
@@ -45,8 +44,7 @@ UNICODE_COLUMNS = (
 
 def _drop_unique_constraint(table: str, column: str) -> None:
     """Drop the SQL Server-generated single-column unique constraint, if present."""
-    op.execute(
-        f"""
+    op.execute(f"""
         DECLARE @constraint_name sysname;
         SELECT TOP (1) @constraint_name = kc.name
         FROM sys.key_constraints AS kc
@@ -62,13 +60,11 @@ def _drop_unique_constraint(table: str, column: str) -> None:
 
         IF @constraint_name IS NOT NULL
             EXEC(N'ALTER TABLE dbo.{table} DROP CONSTRAINT [' + @constraint_name + N']');
-        """
-    )
+        """)
 
 
 def _drop_default_constraint(table: str, column: str) -> None:
-    op.execute(
-        f"""
+    op.execute(f"""
         DECLARE @constraint_name sysname;
         SELECT @constraint_name = dc.name
         FROM sys.default_constraints AS dc
@@ -80,8 +76,7 @@ def _drop_default_constraint(table: str, column: str) -> None:
 
         IF @constraint_name IS NOT NULL
             EXEC(N'ALTER TABLE dbo.{table} DROP CONSTRAINT [' + @constraint_name + N']');
-        """
-    )
+        """)
 
 
 def upgrade() -> None:
@@ -106,11 +101,21 @@ def upgrade() -> None:
     op.create_unique_constraint(
         "uq_departments_name", "departments", ["name"], schema="dbo"
     )
-    op.execute("ALTER TABLE dbo.projects ADD CONSTRAINT df_projects_status DEFAULT N'Planning' FOR status")
-    op.execute("ALTER TABLE dbo.projects ADD CONSTRAINT df_projects_priority DEFAULT N'Medium' FOR priority")
-    op.execute("ALTER TABLE dbo.tasks ADD CONSTRAINT df_tasks_status DEFAULT N'To Do' FOR status")
-    op.execute("ALTER TABLE dbo.tasks ADD CONSTRAINT df_tasks_priority DEFAULT N'Medium' FOR priority")
-    op.execute("ALTER TABLE dbo.vacations ADD CONSTRAINT df_vacations_status DEFAULT N'Pending' FOR status")
+    op.execute(
+        "ALTER TABLE dbo.projects ADD CONSTRAINT df_projects_status DEFAULT N'Planning' FOR status"
+    )
+    op.execute(
+        "ALTER TABLE dbo.projects ADD CONSTRAINT df_projects_priority DEFAULT N'Medium' FOR priority"
+    )
+    op.execute(
+        "ALTER TABLE dbo.tasks ADD CONSTRAINT df_tasks_status DEFAULT N'To Do' FOR status"
+    )
+    op.execute(
+        "ALTER TABLE dbo.tasks ADD CONSTRAINT df_tasks_priority DEFAULT N'Medium' FOR priority"
+    )
+    op.execute(
+        "ALTER TABLE dbo.vacations ADD CONSTRAINT df_vacations_status DEFAULT N'Pending' FOR status"
+    )
 
 
 def downgrade() -> None:

@@ -30,7 +30,9 @@ class QueryEngineDefaultSortTest(unittest.TestCase):
         now = datetime(2026, 7, 22, 8, 0)
 
         with Session(engine) as session:
-            session.add_all([Event(created_at=now - timedelta(minutes=10)), Event(created_at=now)])
+            session.add_all(
+                [Event(created_at=now - timedelta(minutes=10)), Event(created_at=now)]
+            )
             session.commit()
             query = QueryEngine.apply_sorting(
                 session.query(Event),
@@ -41,7 +43,10 @@ class QueryEngineDefaultSortTest(unittest.TestCase):
                 default_sort_order="desc",
             )
 
-            self.assertEqual([event.created_at for event in query.all()], [now, now - timedelta(minutes=10)])
+            self.assertEqual(
+                [event.created_at for event in query.all()],
+                [now, now - timedelta(minutes=10)],
+            )
 
 
 if __name__ == "__main__":

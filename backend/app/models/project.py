@@ -1,6 +1,16 @@
 from datetime import date, datetime
 
-from sqlalchemy import String, Unicode, UnicodeText, Date, DateTime, Numeric, ForeignKey, Boolean, text
+from sqlalchemy import (
+    String,
+    Unicode,
+    UnicodeText,
+    Date,
+    DateTime,
+    Numeric,
+    ForeignKey,
+    Boolean,
+    text,
+)
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

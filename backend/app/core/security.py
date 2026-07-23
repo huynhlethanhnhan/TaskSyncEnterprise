@@ -45,7 +45,9 @@ def create_refresh_token(user_id: int) -> str:
     payload = {
         "sub": str(user_id),
         "type": "refresh",
-        "jti": str(uuid.uuid4()),  # Unique token ID to guarantee distinct JWT signatures
+        "jti": str(
+            uuid.uuid4()
+        ),  # Unique token ID to guarantee distinct JWT signatures
         "exp": expire,
     }
     encoded_jwt = jwt.encode(

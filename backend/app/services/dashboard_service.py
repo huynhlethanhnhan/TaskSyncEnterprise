@@ -198,10 +198,17 @@ class DashboardService:
             select(
                 Department.name.label("department_name"),
                 func.count(func.distinct(Task.id)).label("total_tasks"),
-                func.sum(case((Task.status != "Done", 1), else_=0)).label("pending_tasks"),
+                func.sum(case((Task.status != "Done", 1), else_=0)).label(
+                    "pending_tasks"
+                ),
                 func.sum(
                     case(
-                        ((Task.status != "Done") & (Task.deadline.is_not(None)) & (Task.deadline < now_value), 1),
+                        (
+                            (Task.status != "Done")
+                            & (Task.deadline.is_not(None))
+                            & (Task.deadline < now_value),
+                            1,
+                        ),
                         else_=0,
                     )
                 ).label("overdue_tasks"),
@@ -209,7 +216,11 @@ class DashboardService:
             .join(Employee, Department.id == Employee.department_id)
             .join(TaskAssignment, Employee.id == TaskAssignment.employee_id)
             .join(Task, TaskAssignment.task_id == Task.id)
-            .where(Employee.is_deleted == False, Department.is_active == True, Task.is_deleted == False)
+            .where(
+                Employee.is_deleted == False,
+                Department.is_active == True,
+                Task.is_deleted == False,
+            )
             .group_by(Department.name)
             .order_by(Department.name)
         )
@@ -226,17 +237,25 @@ class DashboardService:
         from app.models.notification import Notification
 
         # 4. Fetch Leave counts grouped by Status
-        vac_stmt = select(Vacation.status, func.count(Vacation.id).label("count")).group_by(Vacation.status)
+        vac_stmt = select(
+            Vacation.status, func.count(Vacation.id).label("count")
+        ).group_by(Vacation.status)
         vac_rows = db.execute(vac_stmt).all()
         leave_by_status = [{"status": r.status, "count": r.count} for r in vac_rows]
 
         # 5. Fetch Notification counts grouped by Category/Type
-        notif_stmt = select(Notification.type, func.count(Notification.id).label("count")).group_by(Notification.type)
+        notif_stmt = select(
+            Notification.type, func.count(Notification.id).label("count")
+        ).group_by(Notification.type)
         notif_rows = db.execute(notif_stmt).all()
-        notification_volume = [{"category": r.type or "System", "count": r.count} for r in notif_rows]
+        notification_volume = [
+            {"category": r.type or "System", "count": r.count} for r in notif_rows
+        ]
 
         # 6. Upcoming Deadlines (tasks due in future or recently due, top 5)
-        deadline_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=14)
+        deadline_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
+            days=14
+        )
         deadline_stmt = (
             select(Task.id, Task.title, Task.deadline, Task.priority, Task.status)
             .where(
@@ -264,9 +283,19 @@ class DashboardService:
         # 7. Upcoming Leaves (Vacations starting soon)
         today = datetime.now(timezone.utc).date()
         leave_up_stmt = (
-            select(Vacation.id, Vacation.type, Vacation.start_date, Vacation.end_date, Vacation.status, Employee.full_name.label("employee_name"))
+            select(
+                Vacation.id,
+                Vacation.type,
+                Vacation.start_date,
+                Vacation.end_date,
+                Vacation.status,
+                Employee.full_name.label("employee_name"),
+            )
             .join(Employee, Vacation.requested_by == Employee.id)
-            .where(Vacation.start_date >= today, Vacation.status.in_(["HR Approved", "Approved"]))
+            .where(
+                Vacation.start_date >= today,
+                Vacation.status.in_(["HR Approved", "Approved"]),
+            )
             .order_by(Vacation.start_date.asc())
             .limit(5)
         )
@@ -285,7 +314,13 @@ class DashboardService:
 
         # 8. Upcoming Birthdays
         bday_stmt = (
-            select(Employee.id, Employee.full_name, Employee.date_of_birth, Employee.job_title, Department.name.label("department_name"))
+            select(
+                Employee.id,
+                Employee.full_name,
+                Employee.date_of_birth,
+                Employee.job_title,
+                Department.name.label("department_name"),
+            )
             .outerjoin(Department, Employee.department_id == Department.id)
             .where(Employee.is_deleted == False, Employee.date_of_birth.is_not(None))
             .limit(5)
@@ -304,7 +339,14 @@ class DashboardService:
 
         # 9. Pending Approvals (Leaves requiring manager/HR approval)
         pending_stmt = (
-            select(Vacation.id, Vacation.type, Vacation.start_date, Vacation.end_date, Vacation.reason, Employee.full_name.label("requested_by_name"))
+            select(
+                Vacation.id,
+                Vacation.type,
+                Vacation.start_date,
+                Vacation.end_date,
+                Vacation.reason,
+                Employee.full_name.label("requested_by_name"),
+            )
             .join(Employee, Vacation.requested_by == Employee.id)
             .where(Vacation.status == "Pending")
             .order_by(Vacation.created_at.desc())
@@ -325,9 +367,13 @@ class DashboardService:
 
         # Task has no completed_at column, so report real creations only
         # instead of inventing a completion trend.
-        six_months_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=183)
+        six_months_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
+            days=183
+        )
         created_rows = db.execute(
-            select(Task.created_at).where(Task.is_deleted == False, Task.created_at >= six_months_ago)
+            select(Task.created_at).where(
+                Task.is_deleted == False, Task.created_at >= six_months_ago
+            )
         ).all()
         month_counts: dict[str, int] = {}
         for row in created_rows:

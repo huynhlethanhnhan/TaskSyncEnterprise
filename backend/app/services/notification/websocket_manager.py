@@ -96,9 +96,7 @@ class WebSocketConnectionManager:
             return future.result(timeout=2.0)
         except concurrent.futures.TimeoutError:
             future.cancel()
-            app_logger.warning(
-                f"WebSocket delivery timed out for user ID {user_id}"
-            )
+            app_logger.warning(f"WebSocket delivery timed out for user ID {user_id}")
             return False
         except Exception as error:
             app_logger.warning(
