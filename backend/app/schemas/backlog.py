@@ -1,6 +1,6 @@
 # 📂 FILE: app/schemas/backlog.py
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BacklogItemBase(BaseModel):
@@ -8,7 +8,7 @@ class BacklogItemBase(BaseModel):
     description: str | None = None
     priority: str = "Medium"
     status: str = "Backlog"
-    story_points: int = 0
+    story_points: int = Field(default=0, ge=0)
     sprint_id: int | None = None
     topic_id: int | None = None
 
@@ -22,7 +22,7 @@ class BacklogItemUpdate(BaseModel):
     description: str | None = None
     priority: str | None = None
     status: str | None = None
-    story_points: int | None = None
+    story_points: int | None = Field(default=None, ge=0)
     sprint_id: int | None = None
     topic_id: int | None = None
     task_id: int | None = None

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { departmentsApi, type DepartmentItem } from '../api/services';
+import { departmentsApi, type DepartmentItem, type DepartmentDetailItem } from '../api/services';
+import { isValidEntityId } from '../utils/entityId';
 
 export const useDepartments = () => {
   return useQuery<DepartmentItem[], Error>({
@@ -9,10 +10,10 @@ export const useDepartments = () => {
 };
 
 export const useDepartmentDetail = (id: number) => {
-  return useQuery<DepartmentItem, Error>({
+  return useQuery<DepartmentDetailItem, Error>({
     queryKey: ['departments', id],
     queryFn: () => departmentsApi.getById(id),
-    enabled: Boolean(id),
+    enabled: isValidEntityId(id),
   });
 };
 

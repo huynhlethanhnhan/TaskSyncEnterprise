@@ -20,6 +20,10 @@ from app.core.deps import get_current_user
 from app.crud import project as crud_project
 from app.cache import cache_manager
 from app.cache.cache_keys import get_project_key, get_project_list_key
+from app.services.project_access import (
+    require_project_access,
+    require_project_management,
+)
 
 # Bổ sung kiểm soát quyền riêng lẻ ở từng route
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -32,11 +36,12 @@ def get_projects(
     skip: int = 0,
     limit: int = settings.DEFAULT_PAGE_SIZE,
     db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
 ):
-    key = get_project_list_key(skip, limit)
+    key = get_project_list_key(skip, limit, user_id=current_user.id)
     return cache_manager.cache_collection(
         key=key,
-        creator_fn=lambda: list(crud_project.get_all(db, skip, limit)),
+        creator_fn=lambda: list(crud_project.get_all(db, current_user, skip, limit)),
         ttl=settings.CACHE_TTL_PROJECT,
         response_model=list[ProjectResponse],
     )
@@ -47,7 +52,12 @@ def get_projects(
     response_model=ProjectResponse,
     dependencies=[Depends(RequireEmployee)],
 )
-def get_project(project_id: int, db: Session = Depends(get_db)):
+def get_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
+    require_project_access(db, project_id, current_user)
     key = get_project_key(project_id)
     obj = cache_manager.cache_model(
         key=key,
@@ -63,8 +73,13 @@ def get_project(project_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=ProjectResponse, dependencies=[Depends(RequireManager)])
-def create_project(data: ProjectCreate, db: Session = Depends(get_db)):
-    res = crud_project.create(db, data)
+def create_project(
+    data: ProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
+    secured_data = data.model_copy(update={"created_by": current_user.id})
+    res = crud_project.create(db, secured_data)
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_project(res.id)
@@ -76,7 +91,13 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db)):
     response_model=ProjectResponse,
     dependencies=[Depends(RequireManager)],
 )
-def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(get_db)):
+def update_project(
+    project_id: int,
+    data: ProjectUpdate,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
+    require_project_management(db, project_id, current_user)
     obj = crud_project.get_by_id(db, project_id)
 
     if obj is None:
@@ -90,7 +111,12 @@ def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(g
 
 
 @router.delete("/{project_id}", dependencies=[Depends(RequireManager)])
-def delete_project(project_id: int, db: Session = Depends(get_db)):
+def delete_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
+    require_project_management(db, project_id, current_user)
     obj = crud_project.get_by_id(db, project_id)
 
     if obj is None:
@@ -125,18 +151,7 @@ def get_project_members(
     if not project or project.is_deleted:
         raise HTTPException(404, "Project not found")
 
-    # RBAC IDOR check: Non-admins/managers must be members of the project to view its member list
-    if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
-        member_stmt = select(ProjectMember).where(
-            ProjectMember.project_id == project_id,
-            ProjectMember.employee_id == current_user.id,
-        )
-        is_member = db.scalars(member_stmt).first()
-        if not is_member:
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied. You must be a project member to view member details.",
-            )
+    require_project_access(db, project_id, current_user)
 
     members_stmt = (
         select(Employee)
@@ -145,9 +160,4 @@ def get_project_members(
     )
     members = db.scalars(members_stmt).all()
 
-    # Fallback: If project has no explicit ProjectMember entries yet, return current_user if authorized
-    if not members and current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER):
-        members = [current_user]
-
     return members
-

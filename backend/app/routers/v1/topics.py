@@ -25,7 +25,9 @@ from app.schemas.topic import (
 router = APIRouter(prefix="/topics", tags=["Discussion Topics"])
 
 
-def check_project_membership(db: Session, project_id: int | None, current_user: Employee):
+def check_project_membership(
+    db: Session, project_id: int | None, current_user: Employee
+):
     if not project_id:
         return
     if current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER):
@@ -33,11 +35,14 @@ def check_project_membership(db: Session, project_id: int | None, current_user: 
     is_member = db.scalar(
         select(ProjectMember).where(
             ProjectMember.project_id == project_id,
-            ProjectMember.employee_id == current_user.id
+            ProjectMember.employee_id == current_user.id,
         )
     )
     if not is_member:
-        raise HTTPException(status_code=403, detail="You do not have access to this project's discussions")
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this project's discussions",
+        )
 
 
 @router.get("", response_model=list[DiscussionTopicResponse])
@@ -47,7 +52,7 @@ def get_topics(
     db: Session = Depends(get_db),
 ):
     check_project_membership(db, project_id, current_user)
-    
+
     stmt = select(DiscussionTopic).where(DiscussionTopic.is_deleted == False)
     if project_id:
         stmt = stmt.where(DiscussionTopic.project_id == project_id)
@@ -55,40 +60,48 @@ def get_topics(
         # If no project filter, let employees only see topics for projects they belong to, plus public topics (where project_id is null)
         if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
             member_projects = db.scalars(
-                select(ProjectMember.project_id).where(ProjectMember.employee_id == current_user.id)
+                select(ProjectMember.project_id).where(
+                    ProjectMember.employee_id == current_user.id
+                )
             ).all()
             stmt = stmt.where(
                 or_(
                     DiscussionTopic.project_id.in_(member_projects),
-                    DiscussionTopic.project_id.is_(None)
+                    DiscussionTopic.project_id.is_(None),
                 )
             )
-            
+
     stmt = stmt.order_by(DiscussionTopic.id.desc())
     topics = db.scalars(stmt).all()
-    
+
     # Map reply count manually
     res = []
     for t in topics:
-        reply_count = db.scalar(
-            select(func.count(DiscussionReply.id)).where(
-                DiscussionReply.topic_id == t.id,
-                DiscussionReply.is_deleted == False
+        reply_count = (
+            db.scalar(
+                select(func.count(DiscussionReply.id)).where(
+                    DiscussionReply.topic_id == t.id,
+                    DiscussionReply.is_deleted == False,
+                )
             )
-        ) or 0
-        
+            or 0
+        )
+
         # Load replies
-        replies_stmt = select(DiscussionReply).where(
-            DiscussionReply.topic_id == t.id,
-            DiscussionReply.is_deleted == False
-        ).order_by(DiscussionReply.id.asc())
+        replies_stmt = (
+            select(DiscussionReply)
+            .where(
+                DiscussionReply.topic_id == t.id, DiscussionReply.is_deleted == False
+            )
+            .order_by(DiscussionReply.id.asc())
+        )
         replies = db.scalars(replies_stmt).all()
 
         resp = DiscussionTopicResponse.model_validate(t)
         resp.reply_count = reply_count
         resp.replies = replies
         res.append(resp)
-        
+
     return res
 
 
@@ -99,11 +112,8 @@ def create_topic(
     db: Session = Depends(get_db),
 ):
     check_project_membership(db, data.project_id, current_user)
-    
-    topic = DiscussionTopic(
-        **data.model_dump(),
-        created_by_id=current_user.id
-    )
+
+    topic = DiscussionTopic(**data.model_dump(), created_by_id=current_user.id)
     db.add(topic)
     db.commit()
     db.refresh(topic)
@@ -125,18 +135,24 @@ def get_topic(
         raise HTTPException(status_code=404, detail="Topic not found")
 
     check_project_membership(db, topic.project_id, current_user)
-    
-    reply_count = db.scalar(
-        select(func.count(DiscussionReply.id)).where(
-            DiscussionReply.topic_id == topic_id,
-            DiscussionReply.is_deleted == False
+
+    reply_count = (
+        db.scalar(
+            select(func.count(DiscussionReply.id)).where(
+                DiscussionReply.topic_id == topic_id,
+                DiscussionReply.is_deleted == False,
+            )
         )
-    ) or 0
-    
-    replies_stmt = select(DiscussionReply).where(
-        DiscussionReply.topic_id == topic_id,
-        DiscussionReply.is_deleted == False
-    ).order_by(DiscussionReply.id.asc())
+        or 0
+    )
+
+    replies_stmt = (
+        select(DiscussionReply)
+        .where(
+            DiscussionReply.topic_id == topic_id, DiscussionReply.is_deleted == False
+        )
+        .order_by(DiscussionReply.id.asc())
+    )
     replies = db.scalars(replies_stmt).all()
 
     resp = DiscussionTopicResponse.model_validate(topic)
@@ -181,7 +197,9 @@ def delete_topic(
 
     is_moderator = current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER)
     if topic.created_by_id != current_user.id and not is_moderator:
-        raise HTTPException(status_code=403, detail="You are not authorized to delete this topic")
+        raise HTTPException(
+            status_code=403, detail="You are not authorized to delete this topic"
+        )
 
     topic.is_deleted = True
     topic.deleted_at = datetime.now(UTC).replace(tzinfo=None)
@@ -191,7 +209,9 @@ def delete_topic(
     return {"success": True, "message": "Topic deleted"}
 
 
-@router.post("/{topic_id:int}/replies", response_model=DiscussionReplyResponse, status_code=201)
+@router.post(
+    "/{topic_id:int}/replies", response_model=DiscussionReplyResponse, status_code=201
+)
 def create_reply(
     topic_id: int,
     data: DiscussionReplyCreate,
@@ -205,9 +225,7 @@ def create_reply(
     check_project_membership(db, topic.project_id, current_user)
 
     reply = DiscussionReply(
-        topic_id=topic_id,
-        content=data.content,
-        created_by_id=current_user.id
+        topic_id=topic_id, content=data.content, created_by_id=current_user.id
     )
     db.add(reply)
     db.commit()
@@ -215,7 +233,9 @@ def create_reply(
     return reply
 
 
-@router.patch("/{topic_id:int}/replies/{reply_id:int}", response_model=DiscussionReplyResponse)
+@router.patch(
+    "/{topic_id:int}/replies/{reply_id:int}", response_model=DiscussionReplyResponse
+)
 def update_reply(
     topic_id: int,
     reply_id: int,
@@ -228,7 +248,9 @@ def update_reply(
         raise HTTPException(status_code=404, detail="Reply not found")
 
     if reply.created_by_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You can only edit your own replies")
+        raise HTTPException(
+            status_code=403, detail="You can only edit your own replies"
+        )
 
     reply.content = data.content
     db.commit()
@@ -249,7 +271,9 @@ def delete_reply(
 
     is_moderator = current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER)
     if reply.created_by_id != current_user.id and not is_moderator:
-        raise HTTPException(status_code=403, detail="You are not authorized to delete this reply")
+        raise HTTPException(
+            status_code=403, detail="You are not authorized to delete this reply"
+        )
 
     reply.is_deleted = True
     reply.deleted_at = datetime.now(UTC).replace(tzinfo=None)

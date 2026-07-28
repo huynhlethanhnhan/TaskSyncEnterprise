@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { topicsApi, type TopicItem } from '../api/services';
+import { isValidEntityId } from '../utils/entityId';
 
 export const useTopics = (projectId?: number) => {
   return useQuery<TopicItem[], Error>({
     queryKey: ['topics', { projectId }],
     queryFn: () => topicsApi.getAll(projectId ? { project_id: projectId } : {}),
+    enabled: projectId === undefined || isValidEntityId(projectId),
   });
 };
 
@@ -12,7 +14,7 @@ export const useTopicDetail = (id: number) => {
   return useQuery<TopicItem, Error>({
     queryKey: ['topics', id],
     queryFn: () => topicsApi.getById(id),
-    enabled: Boolean(id),
+    enabled: isValidEntityId(id),
   });
 };
 

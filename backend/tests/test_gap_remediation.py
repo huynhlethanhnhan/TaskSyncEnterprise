@@ -55,9 +55,13 @@ def setup_data(db):
     db.commit()
     db.refresh(project)
 
-    # Assign employee to project member
-    member = ProjectMember(project_id=project.id, employee_id=employee.id)
-    db.add(member)
+    # Scope both the delivery employee and the manager to this project.
+    db.add_all(
+        [
+            ProjectMember(project_id=project.id, employee_id=employee.id),
+            ProjectMember(project_id=project.id, employee_id=manager.id),
+        ]
+    )
     db.commit()
 
     task = Task(

@@ -1,6 +1,8 @@
 # 📂 FILE: app/schemas/sprint.py
 from datetime import date, datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.schemas.backlog import BacklogItemResponse
 
 
 class SprintBase(BaseModel):
@@ -9,7 +11,17 @@ class SprintBase(BaseModel):
     start_date: datetime | None = None
     end_date: datetime | None = None
     status: str = "Planned"
-    capacity: int = 0
+    capacity: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and self.start_date > self.end_date
+        ):
+            raise ValueError("Sprint start date cannot be after its end date")
+        return self
 
 
 class SprintCreate(SprintBase):
@@ -22,7 +34,17 @@ class SprintUpdate(BaseModel):
     start_date: datetime | None = None
     end_date: datetime | None = None
     status: str | None = None
-    capacity: int | None = None
+    capacity: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and self.start_date > self.end_date
+        ):
+            raise ValueError("Sprint start date cannot be after its end date")
+        return self
 
 
 class SprintResponse(SprintBase):
@@ -31,6 +53,24 @@ class SprintResponse(SprintBase):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SprintDetailResponse(SprintResponse):
+    total_tasks: int = 0
+    completed_tasks: int = 0
+    remaining_tasks: int = 0
+    progress_percent: float = 0
+    total_story_points: int = 0
+    completed_story_points: int = 0
+    remaining_story_points: int = 0
+
+
+class SprintPlanningResponse(BaseModel):
+    sprint: SprintResponse
+    eligible_items: list[BacklogItemResponse]
+    sprint_items: list[BacklogItemResponse]
+    capacity: int
+    total_story_points: int
 
 
 class SprintSnapshotResponse(BaseModel):

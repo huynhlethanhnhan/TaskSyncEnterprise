@@ -39,8 +39,6 @@ export const TaskPage: React.FC = () => {
   const { data: allTopics = [] } = useTopics();
   const { data: departments = [] } = useDepartments();
 
-  const sprintMap = React.useMemo(() => new Map(allSprints.map((s) => [s.id, s])), [allSprints]);
-  const topicMap = React.useMemo(() => new Map(allTopics.map((t) => [t.id, t])), [allTopics]);
   const departmentMap = React.useMemo(() => new Map(departments.map((d) => [d.id, d])), [departments]);
 
   const createTask = useCreateTask();
@@ -329,9 +327,8 @@ export const TaskPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('kanban')}
-                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 ${
-                  viewMode === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
-                }`}
+                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 ${viewMode === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
+                  }`}
               >
                 <LayoutGrid className="h-4 w-4" />
                 Kanban
@@ -339,9 +336,8 @@ export const TaskPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 ${
-                  viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
-                }`}
+                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
+                  }`}
               >
                 <List className="h-4 w-4" />
                 Bảng (Table)
@@ -410,9 +406,8 @@ export const TaskPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`h-3 w-3 rounded-full ${
-                        colStatus === 'Done' ? 'bg-emerald-500' : colStatus === 'In Progress' ? 'bg-sky-500' : 'bg-amber-500'
-                      }`}
+                      className={`h-3 w-3 rounded-full ${colStatus === 'Done' ? 'bg-emerald-500' : colStatus === 'In Progress' ? 'bg-sky-500' : 'bg-amber-500'
+                        }`}
                     />
                     <h3 className="text-sm font-bold text-text-primary">{colStatus}</h3>
                   </div>

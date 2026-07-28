@@ -10,14 +10,24 @@ class BacklogItem(AuditMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
-    sprint_id: Mapped[int | None] = mapped_column(ForeignKey("sprints.id"), nullable=True)
-    topic_id: Mapped[int | None] = mapped_column(ForeignKey("discussion_topics.id"), nullable=True)
+    sprint_id: Mapped[int | None] = mapped_column(
+        ForeignKey("sprints.id"), nullable=True
+    )
+    topic_id: Mapped[int | None] = mapped_column(
+        ForeignKey("discussion_topics.id"), nullable=True
+    )
     task_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id"), nullable=True)
     title: Mapped[str] = mapped_column(Unicode(200))
     description: Mapped[str | None] = mapped_column(UnicodeText, nullable=True)
-    priority: Mapped[str] = mapped_column(Unicode(20), server_default=text("N'Medium'"), default="Medium")
-    status: Mapped[str] = mapped_column(Unicode(30), server_default=text("N'Backlog'"), default="Backlog")
-    story_points: Mapped[int] = mapped_column(Integer, server_default=text("0"), default=0)
+    priority: Mapped[str] = mapped_column(
+        Unicode(20), server_default=text("N'Medium'"), default="Medium"
+    )
+    status: Mapped[str] = mapped_column(
+        Unicode(30), server_default=text("N'Backlog'"), default="Backlog"
+    )
+    story_points: Mapped[int] = mapped_column(
+        Integer, server_default=text("0"), default=0
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=text("SYSUTCDATETIME()"),

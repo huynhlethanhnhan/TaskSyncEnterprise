@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { teamsApi, type TeamItem } from '../api/services';
+import { teamsApi, type TeamItem, type TeamDetailItem } from '../api/services';
+import { isValidEntityId } from '../utils/entityId';
 
 export const useTeams = (params?: Record<string, any>) => {
   return useQuery<TeamItem[], Error>({
@@ -36,5 +37,13 @@ export const useDeleteTeam = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
     },
+  });
+};
+
+export const useTeamDetail = (id: number) => {
+  return useQuery<TeamDetailItem, Error>({
+    queryKey: ['teams', id],
+    queryFn: () => teamsApi.getById(id),
+    enabled: isValidEntityId(id),
   });
 };

@@ -1,11 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { backlogApi, sprintsApi, type BacklogItem, type SprintItem } from '../api/services';
+import {
+  backlogApi,
+  sprintsApi,
+  type BacklogItem,
+  type SprintDetailItem,
+  type SprintItem,
+  type SprintPlanningData,
+} from '../api/services';
+
+const isValidId = (id: unknown): id is number =>
+  typeof id === 'number' && Number.isFinite(id) && Number.isInteger(id) && id > 0;
 
 export const useBacklog = (projectId: number, status?: string) => {
   return useQuery<BacklogItem[], Error>({
     queryKey: ['backlog', projectId, status],
     queryFn: () => backlogApi.getAll({ project_id: projectId, status }),
-    enabled: Boolean(projectId),
+    enabled: isValidId(projectId),
   });
 };
 
@@ -59,7 +69,73 @@ export const useSprints = (projectId?: number) => {
   return useQuery<SprintItem[], Error>({
     queryKey: ['sprints', projectId],
     queryFn: () => sprintsApi.getAll(projectId ? { project_id: projectId } : undefined),
-    enabled: projectId === undefined || Boolean(projectId),
+    enabled: projectId === undefined || isValidId(projectId),
+  });
+};
+
+export const useSprintDetail = (sprintId: number) => {
+  return useQuery<SprintDetailItem, Error>({
+    queryKey: ['sprints', 'detail', sprintId],
+    queryFn: () => sprintsApi.getById(sprintId),
+    enabled: isValidId(sprintId),
+  });
+};
+
+export const useSprintPlanning = (sprintId: number) => {
+  return useQuery<SprintPlanningData, Error>({
+    queryKey: ['sprints', 'planning', sprintId],
+    queryFn: () => sprintsApi.getPlanning(sprintId),
+    enabled: isValidId(sprintId),
+  });
+};
+
+export const useAddBacklogItemToSprint = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      sprintId,
+      itemId,
+    }: {
+      sprintId: number;
+      itemId: number;
+      projectId: number;
+    }) => sprintsApi.addBacklogItem(sprintId, itemId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['sprints', 'planning', variables.sprintId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['backlog', variables.projectId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['sprints', variables.projectId],
+      });
+    },
+  });
+};
+
+export const useRemoveBacklogItemFromSprint = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      sprintId,
+      itemId,
+    }: {
+      sprintId: number;
+      itemId: number;
+      projectId: number;
+    }) => sprintsApi.removeBacklogItem(sprintId, itemId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['sprints', 'planning', variables.sprintId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['backlog', variables.projectId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['sprints', variables.projectId],
+      });
+    },
   });
 };
 
@@ -137,7 +213,7 @@ export const useSprintAnalytics = (sprintId: number) => {
   return useQuery({
     queryKey: ['sprint-analytics', sprintId],
     queryFn: () => sprintsApi.getAnalytics(sprintId),
-    enabled: Boolean(sprintId),
+    enabled: isValidId(sprintId),
   });
 };
 
@@ -145,6 +221,6 @@ export const useVelocity = (projectId: number) => {
   return useQuery({
     queryKey: ['velocity', projectId],
     queryFn: () => sprintsApi.getVelocity({ project_id: projectId }),
-    enabled: Boolean(projectId),
+    enabled: isValidId(projectId),
   });
 };

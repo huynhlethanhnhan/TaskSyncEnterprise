@@ -53,4 +53,3 @@ class ProjectMemberSummaryResponse(BaseModel):
     avatar_url: str | None = None
     job_title: str | None = None
     email: str | None = None
-

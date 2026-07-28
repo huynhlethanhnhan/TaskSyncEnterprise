@@ -22,8 +22,12 @@ class Task(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
 
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
-    sprint_id: Mapped[int | None] = mapped_column(ForeignKey("sprints.id"), nullable=True)
-    topic_id: Mapped[int | None] = mapped_column(ForeignKey("discussion_topics.id"), nullable=True)
+    sprint_id: Mapped[int | None] = mapped_column(
+        ForeignKey("sprints.id"), nullable=True
+    )
+    topic_id: Mapped[int | None] = mapped_column(
+        ForeignKey("discussion_topics.id"), nullable=True
+    )
 
     title: Mapped[str] = mapped_column(Unicode(200))
 
@@ -92,4 +96,3 @@ class Task(Base):
     @property
     def employee_id(self) -> int | None:
         return self.assigned_to
-

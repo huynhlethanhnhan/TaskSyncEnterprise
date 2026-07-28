@@ -77,6 +77,9 @@ export interface EmployeeItem {
   date_of_birth?: string | null;
   start_date?: string | null;
   department_id?: number | null;
+  department_name?: string | null;
+  team_id?: number | null;
+  team_name?: string | null;
   role_id?: number | null;
   manager_id?: number | null;
   job_title?: string | null;
@@ -87,15 +90,43 @@ export interface EmployeeItem {
 
 export interface DepartmentItem {
   id: number;
-  department_code?: string;
+  department_code: string;
   name: string;
   description?: string | null;
   manager_id?: number | null;
-  is_active: boolean;
+  manager_name?: string | null;
+  manager_avatar_url?: string | null;
   employee_count?: number;
-  created_at?: string;
+  team_count?: number;
+  is_active: boolean;
+  created_at: string;
 }
 
+export interface DepartmentMemberItem {
+  id: number;
+  employee_code: string;
+  full_name: string;
+  email: string;
+  job_title?: string | null;
+  avatar_url?: string | null;
+  team_id?: number | null;
+  is_active: boolean;
+}
+
+export interface DepartmentTeamItem {
+  id: number;
+  team_code: string;
+  name: string;
+  leader_id?: number | null;
+  leader_name?: string | null;
+  member_count: number;
+}
+
+export interface DepartmentDetailItem
+  extends DepartmentItem {
+  members: DepartmentMemberItem[];
+  teams: DepartmentTeamItem[];
+}
 export interface NotificationItem {
   id: number;
   title: string;
@@ -149,6 +180,7 @@ export const tasksApi = {
     const res = await api.get('/tasks/my-tasks');
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
+  // ĐÃ FIX LẠI ĐOẠN NÀY: Trả về TaskItem và gọi endpoint /tasks/
   getById: async (id: number): Promise<TaskItem> => {
     const res = await api.get(`/tasks/${id}`);
     return res.data?.data || res.data;
@@ -197,7 +229,7 @@ export const departmentsApi = {
     const res = await api.get('/departments');
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
-  getById: async (id: number): Promise<DepartmentItem> => {
+  getById: async (id: number): Promise<DepartmentDetailItem> => {
     const res = await api.get(`/departments/${id}`);
     return res.data?.data || res.data;
   },
@@ -229,14 +261,35 @@ export const notificationsApi = {
 
 export interface TeamItem {
   id: number;
+
   department_id: number;
+  department_name? :string | null;
   team_code: string;
   name: string;
   description?: string | null;
+
   leader_id?: number | null;
+  leader_name?: string | null;
+  leader_avatar_url?: string | null;
+
   member_count?: number;
+
   is_active: boolean;
   created_at: string;
+}
+
+export interface TeamMemberItem {
+  id: number;
+  employee_code: string;
+  full_name: string;
+  email: string;
+  job_title?: string | null;
+  avatar_url?: string | null;
+  is_active: boolean;
+}
+
+export interface TeamDetailItem extends TeamItem {
+  members: TeamMemberItem[];
 }
 
 export const teamsApi = {
@@ -244,7 +297,7 @@ export const teamsApi = {
     const res = await api.get('/teams', { params });
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
-  getById: async (id: number): Promise<TeamItem> => {
+  getById: async (id: number): Promise<TeamDetailItem> => {
     const res = await api.get(`/teams/${id}`);
     return res.data?.data || res.data;
   },
@@ -309,6 +362,24 @@ export interface SprintItem {
   status: string;
   capacity: number;
   created_at: string;
+}
+
+export interface SprintDetailItem extends SprintItem {
+  total_tasks: number;
+  completed_tasks: number;
+  remaining_tasks: number;
+  progress_percent: number;
+  total_story_points: number;
+  completed_story_points: number;
+  remaining_story_points: number;
+}
+
+export interface SprintPlanningData {
+  sprint: SprintItem;
+  eligible_items: BacklogItem[];
+  sprint_items: BacklogItem[];
+  capacity: number;
+  total_story_points: number;
 }
 
 export interface SprintSnapshot {
@@ -482,6 +553,28 @@ export const sprintsApi = {
   },
   create: async (payload: Partial<SprintItem>): Promise<SprintItem> => {
     const res = await api.post('/sprints', payload);
+    return res.data?.data || res.data;
+  },
+  getById: async (id: number): Promise<SprintDetailItem> => {
+    const res = await api.get(`/sprints/${id}`);
+    return res.data?.data || res.data;
+  },
+  getPlanning: async (id: number): Promise<SprintPlanningData> => {
+    const res = await api.get(`/sprints/${id}/planning`);
+    return res.data?.data || res.data;
+  },
+  addBacklogItem: async (
+    sprintId: number,
+    itemId: number,
+  ): Promise<SprintPlanningData> => {
+    const res = await api.post(`/sprints/${sprintId}/backlog/${itemId}`);
+    return res.data?.data || res.data;
+  },
+  removeBacklogItem: async (
+    sprintId: number,
+    itemId: number,
+  ): Promise<SprintPlanningData> => {
+    const res = await api.delete(`/sprints/${sprintId}/backlog/${itemId}`);
     return res.data?.data || res.data;
   },
   update: async (id: number, payload: Partial<SprintItem>): Promise<SprintItem> => {

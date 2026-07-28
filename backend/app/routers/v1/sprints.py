@@ -2,7 +2,7 @@
 from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select
 from datetime import date
 
 import sqlalchemy as sa
@@ -22,32 +22,31 @@ from app.schemas.sprint import (
     SprintAnalyticsResponse,
     SprintSnapshotResponse,
     VelocityResponse,
+    SprintDetailResponse,
+    SprintPlanningResponse,
 )
 from app.cache import CacheInvalidator
+from app.models.backlog_item import BacklogItem
+from app.services import sprint_service
+from app.services.project_access import (
+    project_scope_predicate,
+    require_project_access,
+    require_project_management,
+)
 
 router = APIRouter(prefix="/sprints", tags=["Sprints"])
 
 
 def check_project_membership(db: Session, project_id: int, current_user: Employee):
-    if current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER):
-        return
-    is_member = db.scalar(
-        select(ProjectMember).where(
-            ProjectMember.project_id == project_id,
-            ProjectMember.employee_id == current_user.id
-        )
-    )
-    if not is_member:
-        raise HTTPException(status_code=403, detail="You do not have access to this project's sprints")
+    require_project_access(db, project_id, current_user)
 
 
-def calculate_and_save_snapshot(db: Session, sprint_id: int, target_date: date) -> SprintDailySnapshot:
+def calculate_and_save_snapshot(
+    db: Session, sprint_id: int, target_date: date
+) -> SprintDailySnapshot:
     # Get all active tasks in this sprint
     tasks = db.scalars(
-        select(Task).where(
-            Task.sprint_id == sprint_id,
-            Task.is_deleted == False
-        )
+        select(Task).where(Task.sprint_id == sprint_id, Task.is_deleted == False)
     ).all()
 
     total_sp = sum(t.story_points for t in tasks)
@@ -62,7 +61,7 @@ def calculate_and_save_snapshot(db: Session, sprint_id: int, target_date: date) 
     snapshot = db.scalar(
         select(SprintDailySnapshot).where(
             SprintDailySnapshot.sprint_id == sprint_id,
-            SprintDailySnapshot.snapshot_date == target_date
+            SprintDailySnapshot.snapshot_date == target_date,
         )
     )
 
@@ -73,7 +72,7 @@ def calculate_and_save_snapshot(db: Session, sprint_id: int, target_date: date) 
             remaining_story_points=remaining_sp,
             completed_story_points=completed_sp,
             remaining_tasks=remaining_tasks_count,
-            completed_tasks=completed_tasks_count
+            completed_tasks=completed_tasks_count,
         )
         db.add(snapshot)
     else:
@@ -93,8 +92,12 @@ def backfill_snapshots(db: Session, sprint: Sprint):
 
     start_date = sprint.start_date.date()
     # If completed, snap to end_date, otherwise snap to today
-    end_date = sprint.end_date.date() if sprint.status == "Completed" and sprint.end_date else datetime.now(UTC).date()
-    
+    end_date = (
+        sprint.end_date.date()
+        if sprint.status == "Completed" and sprint.end_date
+        else datetime.now(UTC).date()
+    )
+
     current_date = start_date
     last_known_snapshot = None
 
@@ -103,13 +106,15 @@ def backfill_snapshots(db: Session, sprint: Sprint):
         snapshot = db.scalar(
             select(SprintDailySnapshot).where(
                 SprintDailySnapshot.sprint_id == sprint.id,
-                SprintDailySnapshot.snapshot_date == current_date
+                SprintDailySnapshot.snapshot_date == current_date,
             )
         )
         if not snapshot:
             if current_date == datetime.now(UTC).date():
                 # Compute today's snapshot fresh
-                last_known_snapshot = calculate_and_save_snapshot(db, sprint.id, current_date)
+                last_known_snapshot = calculate_and_save_snapshot(
+                    db, sprint.id, current_date
+                )
             elif last_known_snapshot:
                 # Carry forward the last known snapshot values
                 snapshot = SprintDailySnapshot(
@@ -118,17 +123,19 @@ def backfill_snapshots(db: Session, sprint: Sprint):
                     remaining_story_points=last_known_snapshot.remaining_story_points,
                     completed_story_points=last_known_snapshot.completed_story_points,
                     remaining_tasks=last_known_snapshot.remaining_tasks,
-                    completed_tasks=last_known_snapshot.completed_tasks
+                    completed_tasks=last_known_snapshot.completed_tasks,
                 )
                 db.add(snapshot)
                 db.commit()
                 last_known_snapshot = snapshot
             else:
                 # First day backfill, compute it fresh
-                last_known_snapshot = calculate_and_save_snapshot(db, sprint.id, current_date)
+                last_known_snapshot = calculate_and_save_snapshot(
+                    db, sprint.id, current_date
+                )
         else:
             last_known_snapshot = snapshot
-        
+
         current_date += timedelta(days=1)
 
 
@@ -140,14 +147,21 @@ def get_sprints(
 ):
     if project_id is not None:
         check_project_membership(db, project_id, current_user)
-        stmt = select(Sprint).where(
-            Sprint.project_id == project_id,
-            Sprint.is_deleted == False
-        ).order_by(Sprint.id.desc())
+        stmt = (
+            select(Sprint)
+            .where(Sprint.project_id == project_id, Sprint.is_deleted == False)
+            .order_by(Sprint.id.desc())
+        )
     else:
-        stmt = select(Sprint).where(
-            Sprint.is_deleted == False
-        ).order_by(Sprint.id.desc())
+        stmt = select(Sprint).where(Sprint.is_deleted == False)  # noqa: E712
+        project_scope = project_scope_predicate(current_user)
+        if project_scope is not None:
+            from app.models.project import Project
+
+            stmt = stmt.join(Project, Project.id == Sprint.project_id).where(
+                project_scope
+            )
+        stmt = stmt.order_by(Sprint.id.desc())
     return db.scalars(stmt).all()
 
 
@@ -157,21 +171,83 @@ def create_sprint(
     current_user: Employee = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    check_project_membership(db, data.project_id, current_user)
-    if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
-        raise HTTPException(status_code=403, detail="Only Managers or Admins can create sprints")
-
-    sprint = Sprint(
-        **data.model_dump(),
-        created_by_id=current_user.id
+    require_project_management(db, data.project_id, current_user)
+    sprint = sprint_service.create_sprint(
+        db,
+        data,
+        created_by_id=current_user.id,
     )
-    db.add(sprint)
-    db.commit()
-    db.refresh(sprint)
+    CacheInvalidator.invalidate_sprint(sprint.id, project_id=sprint.project_id)
     return sprint
 
 
-@router.get("/{sprint_id:int}", response_model=SprintResponse)
+@router.get(
+    "/{sprint_id:int}/planning",
+    response_model=SprintPlanningResponse,
+)
+def get_sprint_planning(
+    sprint_id: int,
+    current_user: Employee = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    sprint = db.get(Sprint, sprint_id)
+    if not sprint or sprint.is_deleted:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+    require_project_access(db, sprint.project_id, current_user)
+    return sprint_service.get_planning_data(db, sprint)
+
+
+@router.post(
+    "/{sprint_id:int}/backlog/{item_id:int}",
+    response_model=SprintPlanningResponse,
+)
+def add_item_to_sprint(
+    sprint_id: int,
+    item_id: int,
+    current_user: Employee = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    sprint = db.get(Sprint, sprint_id)
+    item = db.get(BacklogItem, item_id)
+    if not sprint or sprint.is_deleted:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+    if not item or item.is_deleted:
+        raise HTTPException(status_code=404, detail="Backlog Item not found")
+    require_project_management(db, sprint.project_id, current_user)
+    sprint_service.add_backlog_item(db, sprint, item)
+    CacheInvalidator.invalidate_backlog(
+        project_id=sprint.project_id,
+        sprint_id=sprint.id,
+    )
+    return sprint_service.get_planning_data(db, sprint)
+
+
+@router.delete(
+    "/{sprint_id:int}/backlog/{item_id:int}",
+    response_model=SprintPlanningResponse,
+)
+def remove_item_from_sprint(
+    sprint_id: int,
+    item_id: int,
+    current_user: Employee = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    sprint = db.get(Sprint, sprint_id)
+    item = db.get(BacklogItem, item_id)
+    if not sprint or sprint.is_deleted:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+    if not item or item.is_deleted:
+        raise HTTPException(status_code=404, detail="Backlog Item not found")
+    require_project_management(db, sprint.project_id, current_user)
+    sprint_service.remove_backlog_item(db, sprint, item)
+    CacheInvalidator.invalidate_backlog(
+        project_id=sprint.project_id,
+        sprint_id=sprint.id,
+    )
+    return sprint_service.get_planning_data(db, sprint)
+
+
+@router.get("/{sprint_id:int}", response_model=SprintDetailResponse)
 def get_sprint(
     sprint_id: int,
     current_user: Employee = Depends(get_current_user),
@@ -182,7 +258,7 @@ def get_sprint(
         raise HTTPException(status_code=404, detail="Sprint not found")
 
     check_project_membership(db, sprint.project_id, current_user)
-    return sprint
+    return sprint_service.serialize_sprint_detail(db, sprint)
 
 
 @router.put("/{sprint_id:int}", response_model=SprintResponse)
@@ -196,17 +272,10 @@ def update_sprint(
     if not sprint or sprint.is_deleted:
         raise HTTPException(status_code=404, detail="Sprint not found")
 
-    check_project_membership(db, sprint.project_id, current_user)
-    if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
-        raise HTTPException(status_code=403, detail="Only Managers or Admins can modify sprints")
-
-    values = data.model_dump(exclude_unset=True)
-    for k, v in values.items():
-        setattr(sprint, k, v)
-
-    db.commit()
-    db.refresh(sprint)
-    return sprint
+    require_project_management(db, sprint.project_id, current_user)
+    updated = sprint_service.update_planned_sprint(db, sprint, data)
+    CacheInvalidator.invalidate_sprint(updated.id, project_id=updated.project_id)
+    return updated
 
 
 @router.patch("/{sprint_id:int}/start", response_model=SprintResponse)
@@ -219,33 +288,12 @@ def start_sprint(
     if not sprint or sprint.is_deleted:
         raise HTTPException(status_code=404, detail="Sprint not found")
 
-    check_project_membership(db, sprint.project_id, current_user)
-    if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
-        raise HTTPException(status_code=403, detail="Only Managers or Admins can start sprints")
-
-    # Prevent overlapping active sprints
-    active_sprint = db.scalar(
-        select(Sprint).where(
-            Sprint.project_id == sprint.project_id,
-            Sprint.status == "Active",
-            Sprint.is_deleted == False
-        )
-    )
-    if active_sprint and active_sprint.id != sprint_id:
-        raise HTTPException(status_code=409, detail="There is already an active sprint for this project")
-
-    sprint.status = "Active"
-    if not sprint.start_date:
-        sprint.start_date = datetime.now(UTC).replace(tzinfo=None)
-    if not sprint.end_date:
-         datetime.now(UTC).replace(tzinfo=None) + timedelta(days=14)
-
-    db.commit()
-    db.refresh(sprint)
+    require_project_management(db, sprint.project_id, current_user)
+    sprint_service.start_sprint(db, sprint)
 
     # Trigger first snapshot
     calculate_and_save_snapshot(db, sprint_id, datetime.now(UTC).date())
-
+    CacheInvalidator.invalidate_sprint(sprint.id, project_id=sprint.project_id)
     return sprint
 
 
@@ -259,17 +307,13 @@ def complete_sprint(
     if not sprint or sprint.is_deleted:
         raise HTTPException(status_code=404, detail="Sprint not found")
 
-    check_project_membership(db, sprint.project_id, current_user)
-    if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
-        raise HTTPException(status_code=403, detail="Only Managers or Admins can complete sprints")
-
-    sprint.status = "Completed"
-    sprint.end_date = datetime.now(UTC).replace(tzinfo=None)
-    db.commit()
-    db.refresh(sprint)
+    require_project_management(db, sprint.project_id, current_user)
+    calculate_and_save_snapshot(db, sprint_id, datetime.now(UTC).date())
+    sprint_service.complete_sprint(db, sprint)
 
     # Invalidate dashboard
     CacheInvalidator.invalidate_dashboard()
+    CacheInvalidator.invalidate_sprint(sprint.id, project_id=sprint.project_id)
 
     return sprint
 
@@ -284,13 +328,9 @@ def cancel_sprint(
     if not sprint or sprint.is_deleted:
         raise HTTPException(status_code=404, detail="Sprint not found")
 
-    check_project_membership(db, sprint.project_id, current_user)
-    if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
-        raise HTTPException(status_code=403, detail="Only Managers or Admins can cancel sprints")
-
-    sprint.status = "Cancelled"
-    db.commit()
-    db.refresh(sprint)
+    require_project_management(db, sprint.project_id, current_user)
+    sprint_service.cancel_sprint(db, sprint)
+    CacheInvalidator.invalidate_sprint(sprint.id, project_id=sprint.project_id)
     return sprint
 
 
@@ -306,19 +346,21 @@ def reopen_sprint(
 
     check_project_membership(db, sprint.project_id, current_user)
     if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
-        raise HTTPException(status_code=403, detail="Only Managers or Admins can reopen sprints")
+        raise HTTPException(
+            status_code=403, detail="Only Managers or Admins can reopen sprints"
+        )
 
     active_sprint = db.scalar(
         select(Sprint).where(
             Sprint.project_id == sprint.project_id,
             Sprint.status == "Active",
-            Sprint.is_deleted == False
+            Sprint.is_deleted == False,
         )
     )
     if active_sprint and active_sprint.id != sprint_id:
         raise HTTPException(
             status_code=409,
-            detail=f"Đã có Sprint '{active_sprint.name}' đang ở trạng thái Active. Vui lòng hoàn tất hoặc tạm dừng Sprint đó trước khi mở lại Sprint này."
+            detail=f"Đã có Sprint '{active_sprint.name}' đang ở trạng thái Active. Vui lòng hoàn tất hoặc tạm dừng Sprint đó trước khi mở lại Sprint này.",
         )
 
     sprint.status = "Active"
@@ -353,10 +395,7 @@ def get_sprint_analytics(
 
     # Get aggregate tasks info
     tasks = db.scalars(
-        select(Task).where(
-            Task.sprint_id == sprint_id,
-            Task.is_deleted == False
-        )
+        select(Task).where(Task.sprint_id == sprint_id, Task.is_deleted == False)
     ).all()
 
     total_tasks = len(tasks)
@@ -399,28 +438,31 @@ def get_velocity(
 
     # Get completed sprints of project
     sprints = db.scalars(
-        select(Sprint).where(
+        select(Sprint)
+        .where(
             Sprint.project_id == project_id,
             Sprint.status == "Completed",
-            Sprint.is_deleted == False
-        ).order_by(Sprint.id.asc())
+            Sprint.is_deleted == False,
+        )
+        .order_by(Sprint.id.asc())
     ).all()
 
     results = []
     for s in sprints:
         # Sum completed tasks story points
-        completed_sp = db.scalar(
-            select(sa.func.sum(Task.story_points)).where(
-                Task.sprint_id == s.id,
-                Task.status == "Done",
-                Task.is_deleted == False
+        completed_sp = (
+            db.scalar(
+                select(sa.func.sum(Task.story_points)).where(
+                    Task.sprint_id == s.id,
+                    Task.status == "Done",
+                    Task.is_deleted == False,
+                )
             )
-        ) or 0
+            or 0
+        )
         results.append(
             VelocityResponse(
-                sprint_id=s.id,
-                name=s.name,
-                completed_story_points=completed_sp
+                sprint_id=s.id, name=s.name, completed_story_points=completed_sp
             )
         )
 

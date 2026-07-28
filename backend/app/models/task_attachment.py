@@ -9,10 +9,18 @@ class TaskAttachment(Base):
     __tablename__ = "task_attachments"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    task_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True)
-    topic_id: Mapped[int | None] = mapped_column(ForeignKey("discussion_topics.id"), nullable=True)
-    reply_id: Mapped[int | None] = mapped_column(ForeignKey("discussion_replies.id"), nullable=True)
-    feedback_id: Mapped[int | None] = mapped_column(ForeignKey("user_feedback.id"), nullable=True)
+    task_id: Mapped[int | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True
+    )
+    topic_id: Mapped[int | None] = mapped_column(
+        ForeignKey("discussion_topics.id"), nullable=True
+    )
+    reply_id: Mapped[int | None] = mapped_column(
+        ForeignKey("discussion_replies.id"), nullable=True
+    )
+    feedback_id: Mapped[int | None] = mapped_column(
+        ForeignKey("user_feedback.id"), nullable=True
+    )
 
     file_name: Mapped[str] = mapped_column(
         String(255)

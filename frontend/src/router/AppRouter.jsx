@@ -25,6 +25,7 @@ import SettingsPage from "../pages/settings/SettingsPage";
 import ProfilePage from "../pages/profile/ProfilePage.tsx";
 import { AuditLogPage } from "../pages/audit/AuditLogPage.tsx";
 import { TeamPage } from "../pages/teams/TeamPage.tsx";
+import TeamDetailPage from "../pages/teams/TeamDetailPage.tsx";
 
 // New Workspaces Redesign imports
 import MyWorkPage from "../pages/dashboard/MyWorkPage.tsx";
@@ -225,6 +226,17 @@ export default function AppRouter() {
             <ProtectedRoute>
               <ApplicationShell>
                 <TeamPage />
+              </ApplicationShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/teams/:id"
+          element={
+            <ProtectedRoute>
+              <ApplicationShell>
+                <TeamDetailPage />
               </ApplicationShell>
             </ProtectedRoute>
           }

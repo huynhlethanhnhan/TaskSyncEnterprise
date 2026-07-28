@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { employeesApi, type EmployeeItem } from '../api/services';
 import { useAuth } from '../providers/AuthProvider';
+import { isValidEntityId } from '../utils/entityId';
 
 export const useEmployees = (overrideEnabled?: boolean) => {
   const { user } = useAuth();
@@ -20,7 +21,7 @@ export const useEmployeeDetail = (id: number) => {
   return useQuery<EmployeeItem, Error>({
     queryKey: ['employees', id],
     queryFn: () => employeesApi.getById(id),
-    enabled: Boolean(id),
+    enabled: isValidEntityId(id),
   });
 };
 

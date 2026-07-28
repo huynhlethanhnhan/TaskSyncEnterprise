@@ -12,7 +12,7 @@ from app.models.token_blacklist import TokenBlacklist  # <-- Import model danh s
 from app.core.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE, ROLE_MAP
 
 from typing import Optional
-from fastapi import Depends, HTTPException, status, Query
+from fastapi import Query
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False

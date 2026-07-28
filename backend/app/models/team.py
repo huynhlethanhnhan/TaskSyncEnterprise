@@ -1,5 +1,14 @@
 from datetime import datetime
-from sqlalchemy import String, Unicode, UnicodeText, Boolean, DateTime, Integer, ForeignKey, text
+from sqlalchemy import (
+    String,
+    Unicode,
+    UnicodeText,
+    Boolean,
+    DateTime,
+    Integer,
+    ForeignKey,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -25,7 +34,7 @@ class Team(Base):
             name="fk_teams_leader_id_employees",
             use_alter=True,
         ),
-    nullable=True,
+        nullable=True,
     )
 
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
@@ -36,3 +45,7 @@ class Team(Base):
 
     leader = relationship("Employee", foreign_keys=[leader_id])
 
+    department = relationship(
+        "Department",
+        foreign_keys=[department_id],
+    )

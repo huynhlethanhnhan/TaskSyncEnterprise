@@ -22,11 +22,14 @@ from app.cache.cache_keys import (
     get_dashboard_analytics_key,
     get_task_list_key,
     get_task_key,
+    get_team_key,
+    get_team_list_key,
     get_department_list_pattern,
     get_employee_list_pattern,
     get_employee_search_pattern,
     get_project_list_pattern,
     get_task_list_pattern,
+    get_team_list_pattern,
 )
 
 # Global singleton CacheService & CacheManager instances for application reuse
@@ -56,9 +59,12 @@ __all__ = [
     "get_dashboard_analytics_key",
     "get_task_list_key",
     "get_task_key",
+    "get_team_key",
+    "get_team_list_key",
     "get_department_list_pattern",
     "get_employee_list_pattern",
     "get_employee_search_pattern",
     "get_project_list_pattern",
     "get_task_list_pattern",
+    "get_team_list_pattern",
 ]

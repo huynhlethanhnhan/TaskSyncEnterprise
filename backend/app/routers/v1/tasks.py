@@ -19,6 +19,10 @@ from app.crud import task as crud_task
 from app.services.storage_service import StorageService
 from app.models.task_attachment import TaskAttachment
 from app.models.task import Task
+from app.services.project_access import (
+    require_project_access,
+    require_project_management,
+)
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -26,7 +30,12 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 # --- Định nghĩa Schema nhanh cho Employee cập nhật tiến độ ---
 class TaskEmployeeUpdate(BaseModel):
     status: str = Field(..., json_schema_extra={"example": "In Progress"})
-    progress_percent: float = Field(..., json_schema_extra={"example": 50.0})
+    progress_percent: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        json_schema_extra={"example": 50.0},
+    )
 
     @field_validator("status")
     @classmethod
@@ -54,18 +63,30 @@ def get_tasks(
     project_id: int | None = None,
     status: str | None = None,
     db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
 ):
     from app.cache import cache_manager
     from app.cache.cache_keys import get_task_list_key
     from app.config import settings
 
     key = get_task_list_key(
-        skip=skip, limit=limit, project_id=project_id, status=status
+        skip=skip,
+        limit=limit,
+        project_id=project_id,
+        status=status,
+        user_id=current_user.id,
     )
+    if project_id is not None:
+        require_project_access(db, project_id, current_user)
     return cache_manager.cache_collection(
         key=key,
         creator_fn=lambda: crud_task.get_all(
-            db, skip=skip, limit=limit, project_id=project_id, status=status
+            db,
+            skip=skip,
+            limit=limit,
+            project_id=project_id,
+            status=status,
+            current_user=current_user,
         ),
         ttl=settings.CACHE_TTL_TASK,
         response_model=list[TaskResponse],
@@ -79,7 +100,11 @@ def get_tasks(
         Depends(RequireEmployee)
     ],  # <-- Cho phép Employee xem chi tiết công việc bất kỳ
 )
-def get_task(task_id: int, db: Session = Depends(get_db)):
+def get_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
     from app.cache import cache_manager
     from app.cache.cache_keys import get_task_key
     from app.config import settings
@@ -93,6 +118,7 @@ def get_task(task_id: int, db: Session = Depends(get_db)):
     )
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    require_project_access(db, obj.project_id, current_user)
     return obj
 
 
@@ -101,14 +127,23 @@ def get_task(task_id: int, db: Session = Depends(get_db)):
     response_model=TaskResponse,
     dependencies=[Depends(RequireManager)],  # <-- Chỉ Admin và Manager được tạo Task
 )
-def create_task(data: TaskCreate, db: Session = Depends(get_db)):
-    task = crud_task.create(db, data)
+def create_task(
+    data: TaskCreate,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
+    require_project_management(db, data.project_id, current_user)
+    secured_data = data.model_copy(update={"created_by": current_user.id})
+    task = crud_task.create(db, secured_data)
     db.refresh(task)
 
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_task(
-        task.id, project_id=task.project_id, employee_id=task.employee_id
+        task.id,
+        project_id=task.project_id,
+        employee_id=task.employee_id,
+        sprint_id=task.sprint_id,
     )
 
     return task
@@ -121,13 +156,20 @@ def create_task(data: TaskCreate, db: Session = Depends(get_db)):
         Depends(RequireManager)
     ],  # <-- Chỉ Admin và Manager được sửa toàn bộ Task
 )
-def update_task(task_id: int, data: TaskUpdate, db: Session = Depends(get_db)):
+def update_task(
+    task_id: int,
+    data: TaskUpdate,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
     obj = crud_task.get_by_id(db, task_id)
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    require_project_management(db, obj.project_id, current_user)
 
     old_project_id = obj.project_id
     old_employee_id = obj.employee_id
+    old_sprint_id = obj.sprint_id
 
     task = crud_task.update(db, obj, data)
     db.refresh(task)
@@ -135,12 +177,20 @@ def update_task(task_id: int, data: TaskUpdate, db: Session = Depends(get_db)):
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_task(
-        task.id, project_id=task.project_id, employee_id=task.employee_id
+        task.id,
+        project_id=task.project_id,
+        employee_id=task.employee_id,
+        sprint_id=task.sprint_id,
     )
     if old_project_id != task.project_id:
         CacheInvalidator.invalidate_project(old_project_id)
     if old_employee_id != task.employee_id:
         CacheInvalidator.invalidate_employee(old_employee_id)
+    if old_sprint_id != task.sprint_id and old_sprint_id is not None:
+        CacheInvalidator.invalidate_sprint(
+            old_sprint_id,
+            project_id=task.project_id,
+        )
 
     return task
 
@@ -159,7 +209,10 @@ def patch_task(
     from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
 
     is_manager_or_admin = current_user.role_id in {ROLE_ADMIN, ROLE_MANAGER}
-    if not is_manager_or_admin:
+    if is_manager_or_admin:
+        require_project_management(db, obj.project_id, current_user)
+    else:
+        require_project_access(db, obj.project_id, current_user)
         from app.models.task_assignment import TaskAssignment
         from sqlalchemy import select
 
@@ -174,9 +227,16 @@ def patch_task(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not assigned to this task",
             )
+        disallowed_fields = data.model_fields_set - {"status", "progress_percent"}
+        if disallowed_fields:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Employees may only update task status and progress.",
+            )
 
     old_project_id = obj.project_id
     old_employee_id = obj.employee_id
+    old_sprint_id = obj.sprint_id
 
     task = crud_task.update(db, obj, data)
     db.refresh(task)
@@ -184,12 +244,20 @@ def patch_task(
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_task(
-        task.id, project_id=task.project_id, employee_id=task.employee_id
+        task.id,
+        project_id=task.project_id,
+        employee_id=task.employee_id,
+        sprint_id=task.sprint_id,
     )
     if old_project_id != task.project_id:
         CacheInvalidator.invalidate_project(old_project_id)
     if old_employee_id != task.employee_id:
         CacheInvalidator.invalidate_employee(old_employee_id)
+    if old_sprint_id != task.sprint_id and old_sprint_id is not None:
+        CacheInvalidator.invalidate_sprint(
+            old_sprint_id,
+            project_id=task.project_id,
+        )
 
     return task
 
@@ -198,10 +266,15 @@ def patch_task(
     "/{task_id:int}",
     dependencies=[Depends(RequireManager)],  # <-- Chỉ Admin và Manager được xóa Task
 )
-def delete_task(task_id: int, db: Session = Depends(get_db)):
+def delete_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
     obj = crud_task.get_by_id(db, task_id)
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    require_project_management(db, obj.project_id, current_user)
 
     project_id = obj.project_id
     employee_id = obj.employee_id
@@ -211,7 +284,10 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_task(
-        task_id, project_id=project_id, employee_id=employee_id
+        task_id,
+        project_id=project_id,
+        employee_id=employee_id,
+        sprint_id=obj.sprint_id,
     )
 
     return {"message": "Deleted"}
@@ -263,7 +339,7 @@ def update_my_task(
     # 3. Tiến hành cập nhật giới hạn (Chỉ đổi status và progress)
     old_status = task.status
     task.status = data.status
-    task.progress_percent = data.progress_percent
+    task.progress_percent = 100 if data.status == "Done" else data.progress_percent
 
     db.commit()
     db.refresh(task)
@@ -271,7 +347,10 @@ def update_my_task(
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_task(
-        task.id, project_id=task.project_id, employee_id=current_user.id
+        task.id,
+        project_id=task.project_id,
+        employee_id=current_user.id,
+        sprint_id=task.sprint_id,
     )
 
     if old_status != data.status:

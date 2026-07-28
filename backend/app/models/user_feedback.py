@@ -12,12 +12,20 @@ class UserFeedback(AuditMixin, Base):
     title: Mapped[str] = mapped_column(Unicode(200))
     category: Mapped[str] = mapped_column(Unicode(100))
     description: Mapped[str] = mapped_column(UnicodeText)
-    impact_level: Mapped[str] = mapped_column(Unicode(50), server_default=text("N'Medium'"), default="Medium")
-    status: Mapped[str] = mapped_column(Unicode(50), server_default=text("N'New'"), default="New")
+    impact_level: Mapped[str] = mapped_column(
+        Unicode(50), server_default=text("N'Medium'"), default="Medium"
+    )
+    status: Mapped[str] = mapped_column(
+        Unicode(50), server_default=text("N'New'"), default="New"
+    )
     submitter_id: Mapped[int] = mapped_column(ForeignKey("employees.id"))
-    reviewer_id: Mapped[int | None] = mapped_column(ForeignKey("employees.id"), nullable=True)
+    reviewer_id: Mapped[int | None] = mapped_column(
+        ForeignKey("employees.id"), nullable=True
+    )
     response: Mapped[str | None] = mapped_column(UnicodeText, nullable=True)
-    is_anonymous: Mapped[bool] = mapped_column(Boolean, server_default=text("0"), default=False)
+    is_anonymous: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("0"), default=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=text("SYSUTCDATETIME()"),

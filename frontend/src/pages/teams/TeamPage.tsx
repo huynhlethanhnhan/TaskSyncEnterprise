@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Plus, Search, Building2, ShieldAlert, Edit, Trash2, Tag, UserCheck, Users } from 'lucide-react';
+import { Plus, Search, Building2, ShieldAlert, Tag, UserCheck } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/common/Card';
@@ -15,8 +15,10 @@ import { useDepartments } from '../../hooks/useDepartments';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
+import { useNavigate } from 'react-router-dom';
 
 export const TeamPage: React.FC = () => {
+  const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || Number(user?.role_id) === 1;
@@ -27,6 +29,12 @@ export const TeamPage: React.FC = () => {
 
   // Queries
   const { data: teams = [], isLoading } = useTeams();
+
+  React.useEffect(() => {
+    console.log("USER", user);
+    console.log("TEAMS", teams);
+  }, [user, teams]);
+
   const { data: departments = [] } = useDepartments();
   const { data: employees = [] } = useEmployees();
 
@@ -61,7 +69,7 @@ export const TeamPage: React.FC = () => {
     } else {
       setName('');
       setCode('');
-      setDepartmentId(departments[0] ? String(departments[0].id) : '');
+      setDepartmentId(''); // Đã fix: Để chuỗi rỗng mặc định thay vì lấy phòng ban đầu tiên
       setLeaderId('');
       setDescription('');
       setIsActive(true);
@@ -206,7 +214,7 @@ export const TeamPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTeams.map((team) => {
             const dept = departments.find((d) => d.id === team.department_id);
-            const teamMembers = employees.filter((e) => e.department_id === team.department_id); // Approximation based on dept
+
             return (
               <Card key={team.id} className="relative flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-800 transition">
                 <CardHeader className="pb-2">
@@ -240,41 +248,69 @@ export const TeamPage: React.FC = () => {
                         <UserCheck className="h-3.5 w-3.5 text-primary shrink-0" />
                         Trưởng nhóm:
                       </span>
-                      {(() => {
-                        const leader = employees.find((e) => e.id === team.leader_id);
-                        return leader ? (
-                          <div className="flex items-center gap-1.5 bg-secondary/60 px-2 py-0.5 rounded-full text-[10px]">
-                            <Avatar name={leader.full_name} src={leader.avatar_url} size="sm" />
-                            <span className="font-bold text-text-primary">{leader.full_name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-text-muted italic">Chưa chỉ định</span>
-                        );
-                      })()}
+                      {team.leader_name ? (
+                        <div className="flex items-center gap-1.5 bg-secondary/60 px-2 py-0.5 rounded-full text-[10px]">
+                          <Avatar
+                            name={team.leader_name}
+                            src={team.leader_avatar_url}
+                            size="sm"
+                          />
+                          <span className="font-bold text-text-primary">
+                            {team.leader_name}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-text-muted italic">
+                          Chưa chỉ định
+                        </span>
+                      )}
                     </div>
 
                     <div>
-                      <span><strong>Nhân sự thuộc nhóm:</strong> {teamMembers.length} thành viên</span>
+                      <span>
+                        <strong>Nhân sự thuộc nhóm:</strong>
+                        {' '}
+                        {team.member_count ?? 0} thành viên</span>
                     </div>
                   </div>
                 </CardContent>
 
-                {isAdmin && (
-                  <CardContent className="border-t border-border/60 p-3 bg-accent/10 flex items-center justify-end gap-1.5">
-                    <Button variant="ghost" size="sm" leftIcon={<Edit className="h-3.5 w-3.5" />} onClick={() => handleOpenEdit(team)}>
-                      Sửa
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                      leftIcon={<Trash2 className="h-3.5 w-3.5" />}
-                      onClick={() => setDeletingTeamId(team.id)}
-                    >
-                      Xóa
-                    </Button>
-                  </CardContent>
-                )}
+                <CardContent className="border-t border-border/60 p-3 bg-accent/10">
+
+                  <div className="flex justify-end gap-2">
+
+                      <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/teams/${team.id}`)}
+                      >
+                          Chi tiết
+                      </Button>
+
+                      {isAdmin && (
+                          <>
+                              <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenEdit(team)}
+                              >
+                                  Sửa
+                              </Button>
+
+                              <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive"
+                                  onClick={() => setDeletingTeamId(team.id)}
+                              >
+                                  Xóa
+                              </Button>
+                          </>
+                      )}
+
+                  </div>
+
+                </CardContent>
               </Card>
             );
           })}
@@ -297,7 +333,7 @@ export const TeamPage: React.FC = () => {
               <Button variant="ghost" size="sm" onClick={() => setDeletingTeamId(null)}>
                 Hủy
               </Button>
-              <Button variant="danger" size="sm" onClick={() => handleDelete(deletingTeamId)}>
+              <Button variant="danger" size="sm" onClick={() => deletingTeamId !== null && handleDelete(deletingTeamId)}>
                 Xóa nhóm
               </Button>
             </div>
@@ -343,6 +379,7 @@ export const TeamPage: React.FC = () => {
               required
               className="flex h-10 w-full appearance-none rounded-md border border-input bg-surface px-3 py-2 text-sm text-text-primary transition-all duration-200 outline-none hover:border-slate-400 cursor-pointer"
             >
+              <option value="" disabled>-- Chọn phòng ban quản lý --</option>
               {departments.map((dept) => (
                 <option key={dept.id} value={dept.id}>
                   {dept.name}
@@ -386,7 +423,7 @@ export const TeamPage: React.FC = () => {
               placeholder="Nhập chức năng chính hoặc mô tả về hoạt động của nhóm..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full min-h-[80px] rounded-xl border border-input bg-background/50 px-3 py-2 text-xs text-text-primary outline-none focus:border-primary transition"
+              className="w-full min-h-80px rounded-xl border border-input bg-background/50 px-3 py-2 text-xs text-text-primary outline-none focus:border-primary transition"
             />
           </div>
 

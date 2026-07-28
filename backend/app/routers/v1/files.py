@@ -37,7 +37,9 @@ class FileRegistryResponse(BaseModel):
     project_id: int | None = None
 
 
-def check_file_access(db: Session, attachment: TaskAttachment, current_user: Employee) -> bool:
+def check_file_access(
+    db: Session, attachment: TaskAttachment, current_user: Employee
+) -> bool:
     if current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER):
         return True
 
@@ -67,7 +69,7 @@ def check_file_access(db: Session, attachment: TaskAttachment, current_user: Emp
         is_member = db.scalar(
             select(ProjectMember).where(
                 ProjectMember.project_id == project_id,
-                ProjectMember.employee_id == current_user.id
+                ProjectMember.employee_id == current_user.id,
             )
         )
         if is_member:
@@ -180,11 +182,7 @@ def download_file(
     if not abs_path.startswith(abs_upload):
         raise HTTPException(status_code=400, detail="Path traversal attempt detected")
 
-    return FileResponse(
-        path=abs_path,
-        filename=att.file_name,
-        media_type=att.mime_type
-    )
+    return FileResponse(path=abs_path, filename=att.file_name, media_type=att.mime_type)
 
 
 @router.delete("/{file_id:int}")
@@ -200,7 +198,9 @@ def delete_file(
     # Author or Admin/Manager can delete
     is_moderator = current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER)
     if att.uploaded_by_id != current_user.id and not is_moderator:
-        raise HTTPException(status_code=403, detail="You do not have permission to delete this file")
+        raise HTTPException(
+            status_code=403, detail="You do not have permission to delete this file"
+        )
 
     local_path = att.file_path.lstrip("/")
     if os.path.exists(local_path):
@@ -213,7 +213,9 @@ def delete_file(
     if att.task_id:
         task = db.get(Task, att.task_id)
         if task:
-            CacheInvalidator.invalidate_task(task.id, project_id=task.project_id, employee_id=task.employee_id)
+            CacheInvalidator.invalidate_task(
+                task.id, project_id=task.project_id, employee_id=task.employee_id
+            )
 
     db.delete(att)
     db.commit()
@@ -222,6 +224,7 @@ def delete_file(
 
 from fastapi import UploadFile, File, Form
 from app.services.storage_service import StorageService
+
 
 @router.post("/upload", summary="Generic upload attachment endpoint for any module")
 def upload_file(
@@ -253,7 +256,9 @@ def upload_file(
     if task_id:
         task = db.get(Task, task_id)
         if task:
-            CacheInvalidator.invalidate_task(task.id, project_id=task.project_id, employee_id=task.employee_id)
+            CacheInvalidator.invalidate_task(
+                task.id, project_id=task.project_id, employee_id=task.employee_id
+            )
 
     return {
         "success": True,

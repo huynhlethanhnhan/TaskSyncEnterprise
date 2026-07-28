@@ -9,7 +9,9 @@ class DiscussionReply(AuditMixin, Base):
     __tablename__ = "discussion_replies"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    topic_id: Mapped[int] = mapped_column(ForeignKey("discussion_topics.id", ondelete="CASCADE"))
+    topic_id: Mapped[int] = mapped_column(
+        ForeignKey("discussion_topics.id", ondelete="CASCADE")
+    )
     content: Mapped[str] = mapped_column(UnicodeText)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

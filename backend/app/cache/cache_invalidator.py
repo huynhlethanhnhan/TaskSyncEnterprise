@@ -118,6 +118,49 @@ class CacheInvalidator:
             )
 
     @classmethod
+    def invalidate_team(cls, team_id: int | None = None) -> None:
+        """Evicts cache keys related to teams."""
+        if not cls._check_redis_ready():
+            return
+
+        try:
+            service = cls._get_service()
+            # 1. Invalidate specific team detail
+            if team_id is not None:
+                key = cache_keys.get_team_key(team_id)
+                if service.delete(key):
+                    logger.info(
+                        "Cache Invalidated",
+                        extra={"operation": "INVALIDATE", "key": key},
+                    )
+
+            # 2. Invalidate team list pages
+            pattern_list = cache_keys.get_team_list_pattern()
+            service.clear_pattern(pattern_list)
+            logger.info(
+                "Pattern Deleted",
+                extra={"operation": "PATTERN_DELETE", "pattern": pattern_list},
+            )
+
+            # 3. Department list caches embed team counts — invalidate those too
+            dept_list_pattern = cache_keys.get_department_list_pattern()
+            service.clear_pattern(dept_list_pattern)
+            logger.info(
+                "Pattern Deleted",
+                extra={"operation": "PATTERN_DELETE", "pattern": dept_list_pattern},
+            )
+
+            # 4. Invalidate dashboard stats
+            cls.invalidate_dashboard()
+
+        except Exception as e:
+            logger.error(
+                "Invalidation Failed",
+                extra={"operation": "INVALIDATE_FAILED", "error": str(e)},
+                exc_info=True,
+            )
+
+    @classmethod
     def invalidate_project(cls, project_id: int | None = None) -> None:
         """Evicts cache keys related to projects."""
         if not cls._check_redis_ready():
@@ -188,6 +231,7 @@ class CacheInvalidator:
         task_id: int | None = None,
         project_id: int | None = None,
         employee_id: int | None = None,
+        sprint_id: int | None = None,
     ) -> None:
         """Evicts cache keys related to tasks, including associated project and employee summaries."""
         if not cls._check_redis_ready():
@@ -235,8 +279,61 @@ class CacheInvalidator:
                 )
 
             # 5. Invalidate dashboard stats
+            if sprint_id is not None:
+                cls.invalidate_sprint(sprint_id, project_id=project_id)
+
+            # 6. Invalidate dashboard stats
             cls.invalidate_dashboard()
 
+        except Exception as e:
+            logger.error(
+                "Invalidation Failed",
+                extra={"operation": "INVALIDATE_FAILED", "error": str(e)},
+                exc_info=True,
+            )
+
+    @classmethod
+    def invalidate_sprint(
+        cls,
+        sprint_id: int | None = None,
+        *,
+        project_id: int | None = None,
+    ) -> None:
+        if not cls._check_redis_ready():
+            return
+        try:
+            service = cls._get_service()
+            if sprint_id is not None:
+                service.delete(cache_keys.get_sprint_key(sprint_id))
+            service.clear_pattern(cache_keys.get_sprint_list_pattern())
+            service.clear_pattern(cache_keys.get_sprint_planning_pattern(sprint_id))
+            service.clear_pattern(cache_keys.get_backlog_list_pattern(project_id))
+            if project_id is not None:
+                cls.invalidate_project(project_id)
+            cls.invalidate_dashboard()
+        except Exception as e:
+            logger.error(
+                "Invalidation Failed",
+                extra={"operation": "INVALIDATE_FAILED", "error": str(e)},
+                exc_info=True,
+            )
+
+    @classmethod
+    def invalidate_backlog(
+        cls,
+        *,
+        project_id: int,
+        sprint_id: int | None = None,
+    ) -> None:
+        if not cls._check_redis_ready():
+            return
+        try:
+            service = cls._get_service()
+            service.clear_pattern(cache_keys.get_backlog_list_pattern(project_id))
+            if sprint_id is not None:
+                cls.invalidate_sprint(sprint_id, project_id=project_id)
+            else:
+                cls.invalidate_project(project_id)
         except Exception as e:
             logger.error(
                 "Invalidation Failed",

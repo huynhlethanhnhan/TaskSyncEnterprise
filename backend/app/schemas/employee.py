@@ -57,3 +57,5 @@ class EmployeeResponse(EmployeeBase):
     last_logout: datetime | None = None
     login_count: int = 0
     is_first_login: bool = False
+    department_name: str | None = None
+    team_name: str | None = None

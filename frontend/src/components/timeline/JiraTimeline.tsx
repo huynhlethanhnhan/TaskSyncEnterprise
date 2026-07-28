@@ -1,18 +1,18 @@
 import * as React from 'react';
-import { Search, Calendar as CalendarIcon, ChevronRight, ChevronDown, Plus, Filter, Clock, Layers, Zap, Bookmark } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '../common/Card';
+import { Search, ChevronRight, ChevronDown, Clock, Zap, Bookmark } from 'lucide-react';
+import { Card, CardHeader, CardContent } from '../common/Card';
 import { Badge } from '../common/Badge';
 import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
+
 import { Avatar } from '../common/Avatar';
 import { TaskDrawer } from '../drawers/TaskDrawer';
-import { useTasks, useUpdateTask, useUpdateTaskStatus } from '../../hooks/useTasks';
+import { useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { useSprints } from '../../hooks/useSprintBacklog';
 import { useProjects } from '../../hooks/useProjects';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useTopics } from '../../hooks/useTopics';
 import { useToast } from '../../providers/ToastProvider';
-import { type TaskItem, type SprintItem, type TopicItem } from '../../api/services';
+import { type TaskItem, type TopicItem } from '../../api/services';
 
 interface JiraTimelineProps {
   projectId?: number;
@@ -31,7 +31,7 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
   const [viewScale, setViewScale] = React.useState<'Months' | 'Weeks' | 'Quarters'>('Months');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedStatus, setSelectedStatus] = React.useState<string>('All');
-  
+
   // Collapsible Epic state
   const [expandedEpics, setExpandedEpics] = React.useState<Record<string, boolean>>({});
 
@@ -43,7 +43,7 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
   const { data: allTasks = [], isLoading: tasksLoading, refetch: refetchTasks } = useTasks();
   const { data: projects = [] } = useProjects();
   const { data: employees = [] } = useEmployees();
-  
+
   const currentProjectId = projectId || (projects.length > 0 ? projects[0].id : 0);
   const { data: sprints = [], isLoading: sprintsLoading } = useSprints(currentProjectId);
   const { data: topics = [] } = useTopics(currentProjectId);
@@ -124,7 +124,7 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
     if (Object.keys(initial).length > 0) {
       setExpandedEpics((prev) => ({ ...prev, ...initial }));
     }
-  }, [epicGroups]);
+  }, [epicGroups, expandedEpics]);
 
   const toggleEpic = (epicId: string) => {
     setExpandedEpics((prev) => ({ ...prev, [epicId]: !prev[epicId] }));
@@ -224,11 +224,10 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
                   key={st}
                   type="button"
                   onClick={() => setSelectedStatus(st)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
-                    selectedStatus === st
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary/60 text-text-secondary hover:bg-secondary'
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${selectedStatus === st
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary/60 text-text-secondary hover:bg-secondary'
+                    }`}
                 >
                   {st}
                 </button>
@@ -244,11 +243,10 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
                   key={scale}
                   type="button"
                   onClick={() => setViewScale(scale)}
-                  className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                    viewScale === scale
-                      ? 'bg-surface text-primary shadow-xs border border-border/60'
-                      : 'text-text-muted hover:text-text-primary'
-                  }`}
+                  className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${viewScale === scale
+                    ? 'bg-surface text-primary shadow-xs border border-border/60'
+                    : 'text-text-muted hover:text-text-primary'
+                    }`}
                 >
                   {scale}
                 </button>

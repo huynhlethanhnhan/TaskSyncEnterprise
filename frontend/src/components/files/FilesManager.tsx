@@ -136,7 +136,7 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module })
               <tbody className="divide-y divide-border/20">
                 {filteredFiles.map((file) => {
                   const isOwner = user?.id === file.uploaded_by_id;
-                  const downloadUrl = `${api.defaults.baseURL || ''}/files/download/${file.id}`;
+                  const _downloadUrl = `${api.defaults.baseURL || ''}/files/download/${file.id}`;
                   return (
                     <tr key={file.id} className="hover:bg-secondary/10 group transition-colors">
                       <td className="py-3 pl-2 max-w-[200px] truncate">

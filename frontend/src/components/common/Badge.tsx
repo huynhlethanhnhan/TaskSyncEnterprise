@@ -27,7 +27,7 @@ export const badgeVariants = cva(
 );
 
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {
   showDot?: boolean;
 }
@@ -41,7 +41,7 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props
 }) => {
   return (
-    <div className={cn(badgeVariants({ variant, size, className }))} {...props}>
+    <span className={cn(badgeVariants({ variant, size, className }))} {...props}>
       {showDot && (
         <span
           className={cn(
@@ -56,6 +56,6 @@ export const Badge: React.FC<BadgeProps> = ({
         />
       )}
       {children}
-    </div>
+    </span>
   );
 };

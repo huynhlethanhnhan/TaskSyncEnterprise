@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsApi, type ProjectItem } from '../api/services';
+import { isValidEntityId } from '../utils/entityId';
 
 export const useProjects = () => {
   return useQuery<ProjectItem[], Error>({
@@ -12,7 +13,7 @@ export const useProjectDetail = (id: number) => {
   return useQuery<ProjectItem, Error>({
     queryKey: ['projects', id],
     queryFn: () => projectsApi.getById(id),
-    enabled: Boolean(id),
+    enabled: isValidEntityId(id),
   });
 };
 
@@ -55,7 +56,7 @@ export const useProjectMembers = (projectId?: number | null) => {
   return useQuery({
     queryKey: ['project-members', projectId],
     queryFn: () => projectsApi.getMembers(projectId!),
-    enabled: Boolean(projectId),
+    enabled: isValidEntityId(projectId),
   });
 };
 

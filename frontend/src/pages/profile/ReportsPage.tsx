@@ -12,9 +12,7 @@ import {
   YAxis,
   Tooltip,
   Legend,
-  ComposedChart,
-  Line,
-  Area,
+
 } from 'recharts';
 import api from '../../api/axios';
 import { useToast } from '../../providers/ToastProvider';
@@ -29,7 +27,7 @@ import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { useProjects } from '../../hooks/useProjects';
 import { useTasks } from '../../hooks/useTasks';
 import { useEmployees } from '../../hooks/useEmployees';
-import { useSprints, useSprintAnalytics, useVelocity } from '../../hooks/useSprintBacklog';
+import { useSprints, useVelocity } from '../../hooks/useSprintBacklog';
 import { exportToCsv } from '../../utils/csv';
 
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -232,11 +230,10 @@ export const ReportsPage: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-surface text-text-primary shadow-sm border border-border'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
+                className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === tab.id
+                  ? 'bg-surface text-text-primary shadow-sm border border-border'
+                  : 'text-text-muted hover:text-text-primary'
+                  }`}
               >
                 {tab.label}
               </button>
@@ -580,18 +577,8 @@ const AgileReportsSection: React.FC<{ projects: any[] }> = ({ projects }) => {
   const activeSprint = sprints.find((s) => s.status === 'Active');
   const selectedSprintId = activeSprint?.id || (sprints.length > 0 ? sprints[0].id : 0);
 
-  const { data: analytics } = useSprintAnalytics(selectedSprintId);
 
   // Transform snapshots for Burndown
-  const burndownData = React.useMemo(() => {
-    if (!analytics || !analytics.snapshots) return [];
-    return analytics.snapshots.map((snap: any) => ({
-      date: new Date(snap.snapshot_date).toLocaleDateString('vi-VN', { month: 'numeric', day: 'numeric' }),
-      'Còn lại (SP)': snap.remaining_story_points,
-      'Hoàn thành (SP)': snap.completed_story_points,
-    }));
-  }, [analytics]);
-
   const velocityData = React.useMemo(() => {
     if (!velocity) return [];
     return velocity.map((v: any) => ({

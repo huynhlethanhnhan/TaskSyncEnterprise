@@ -1,5 +1,17 @@
 import * as React from 'react';
-import { useSprints, useCreateSprint, useStartSprint, useCompleteSprint, useCancelSprint, useReopenSprint, useSprintAnalytics } from '../../hooks/useSprintBacklog';
+import {
+  useAddBacklogItemToSprint,
+  useCompleteSprint,
+  useConvertBacklogToTask,
+  useCreateSprint,
+  useRemoveBacklogItemFromSprint,
+  useReopenSprint,
+  useSprintAnalytics,
+  useSprintPlanning,
+  useSprints,
+  useStartSprint,
+  useCancelSprint,
+} from '../../hooks/useSprintBacklog';
 import { useTasks, useUpdateTask, useUpdateTaskStatus } from '../../hooks/useTasks';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useTopics } from '../../hooks/useTopics';
@@ -11,10 +23,11 @@ import { Textarea } from '../ui/Textarea';
 import { Badge } from '../common/Badge';
 import { useToast } from '../../providers/ToastProvider';
 import { useAuth } from '../../providers/AuthProvider';
-import { Users, Target, Edit, RefreshCw, Layers, X, Bookmark, ChevronDown, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { Target, Edit, Layers, X, Bookmark, ArrowUp, ArrowDown } from 'lucide-react';
 import { EditSprintModal } from './EditSprintModal';
 import { SprintBurndownChart } from './SprintBurndownChart';
-import { type SprintItem, type TaskItem } from '../../api/services';
+import { type SprintItem } from '../../api/services';
+import { RefreshCw } from 'lucide-react';
 
 interface SprintsManagerProps {
   projectId: number;
@@ -24,7 +37,8 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
   const toast = useToast();
   const { user } = useAuth();
 
-  const isManagerOrAdmin = user?.role_id === 1 || user?.role_id === 2;
+  const roleId = Number(user?.role_id);
+  const isManagerOrAdmin = roleId === 1 || roleId === 2;
 
   // Load sprints
   const { data: sprints = [], isLoading } = useSprints(projectId);
@@ -72,7 +86,7 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
   };
 
   const handleComplete = async (id: number) => {
-    if (!window.confirm('Hoàn thành Sprint này? Tất cả các công việc sẽ được ghi nhận hoàn tất.')) return;
+    if (!window.confirm('Hoàn thành Sprint này? Công việc chưa xong sẽ được trả về Product Backlog và không bị tự động đánh dấu hoàn thành.')) return;
     try {
       await completeMutation.mutateAsync(id);
       toast.success('Sprint hoàn thành', 'Sprint đã đóng thành công.');
@@ -189,14 +203,16 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
                     {/* Action Buttons */}
                     {isManagerOrAdmin && (
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          leftIcon={<Edit className="h-3.5 w-3.5" />}
-                          onClick={() => setEditingSprint(sprint)}
-                        >
-                          Sửa
-                        </Button>
+                        {sprint.status === 'Planned' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Edit className="h-3.5 w-3.5" />}
+                            onClick={() => setEditingSprint(sprint)}
+                          >
+                            Sửa
+                          </Button>
+                        )}
 
                         {sprint.status === 'Planned' && (
                           <Button
@@ -257,11 +273,19 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
 
                 <CardContent className="p-4 space-y-4">
                   {/* Task List Table inside Sprint (Matching Image 3) */}
-                  <SprintJiraTaskTable
-                    sprintId={sprint.id}
-                    projectId={projectId}
-                    isManagerOrAdmin={isManagerOrAdmin}
-                  />
+                  {sprint.status === 'Planned' ? (
+                    <SprintPlanningPanel
+                      sprintId={sprint.id}
+                      projectId={projectId}
+                      isManagerOrAdmin={isManagerOrAdmin}
+                    />
+                  ) : (
+                    <SprintJiraTaskTable
+                      sprintId={sprint.id}
+                      projectId={projectId}
+                      isManagerOrAdmin={isManagerOrAdmin}
+                    />
+                  )}
 
                   {/* Progress & Burndown Charts */}
                   {(sprint.status === 'Active' || sprint.status === 'Completed') && (
@@ -287,6 +311,115 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
   );
 };
 
+const SprintPlanningPanel: React.FC<{
+  sprintId: number;
+  projectId: number;
+  isManagerOrAdmin: boolean;
+}> = ({ sprintId, projectId, isManagerOrAdmin }) => {
+  const toast = useToast();
+  const { data, isLoading } = useSprintPlanning(sprintId);
+  const addMutation = useAddBacklogItemToSprint();
+  const removeMutation = useRemoveBacklogItemFromSprint();
+  const convertMutation = useConvertBacklogToTask();
+
+  if (isLoading) {
+    return <div className="py-4 text-center text-xs text-text-muted">Đang tải kế hoạch Sprint...</div>;
+  }
+  if (!data) {
+    return <div className="py-4 text-center text-xs text-text-muted">Không tải được dữ liệu Sprint Planning.</div>;
+  }
+
+  const addItem = async (itemId: number) => {
+    try {
+      await addMutation.mutateAsync({ sprintId, itemId, projectId });
+      toast.success('Đã thêm Product Backlog Item vào Sprint');
+    } catch {
+      toast.error('Không thể thêm Backlog Item vào Sprint');
+    }
+  };
+
+  const removeItem = async (itemId: number) => {
+    try {
+      await removeMutation.mutateAsync({ sprintId, itemId, projectId });
+      toast.success('Đã trả Backlog Item về Product Backlog');
+    } catch {
+      toast.error('Không thể gỡ Backlog Item khỏi Sprint');
+    }
+  };
+
+  const convertItem = async (itemId: number) => {
+    try {
+      await convertMutation.mutateAsync({ id: itemId });
+      toast.success('Đã tạo Task từ Backlog Item');
+    } catch {
+      toast.error('Không thể tạo Task từ Backlog Item');
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="font-bold uppercase text-text-muted">
+          Sprint Backlog ({data.sprint_items.length})
+        </span>
+        <span className="text-text-secondary">
+          Ước lượng: <strong>{data.total_story_points} SP</strong> / Capacity: <strong>{data.capacity} SP</strong>
+        </span>
+      </div>
+
+      {data.sprint_items.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-text-muted">
+          Sprint chưa có Product Backlog Item. Hãy chọn công việc đủ điều kiện bên dưới.
+        </div>
+      ) : (
+        <div className="divide-y divide-border/30 rounded-lg border border-border/40">
+          {data.sprint_items.map((item) => (
+            <div key={item.id} className="flex items-center justify-between gap-3 p-3 text-xs">
+              <div className="min-w-0">
+                <div className="truncate font-semibold text-text-primary">{item.title}</div>
+                <div className="text-text-muted">{item.priority} · {item.story_points} SP</div>
+              </div>
+              {isManagerOrAdmin && (
+                <div className="flex shrink-0 items-center gap-2">
+                  {!item.task_id && (
+                    <Button variant="outline" size="sm" onClick={() => convertItem(item.id)}>
+                      Tạo Task
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => removeItem(item.id)}>
+                    Gỡ khỏi Sprint
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isManagerOrAdmin && data.eligible_items.length > 0 && (
+        <select
+          defaultValue=""
+          onChange={(event) => {
+            const itemId = Number(event.target.value);
+            if (Number.isInteger(itemId) && itemId > 0) {
+              void addItem(itemId);
+              event.target.value = '';
+            }
+          }}
+          className="h-9 w-full rounded-md border border-input bg-surface px-2 text-xs text-text-primary"
+        >
+          <option value="" disabled>+ Chọn Product Backlog Item đủ điều kiện...</option>
+          {data.eligible_items.map((item) => (
+            <option key={item.id} value={item.id}>
+              #{item.id} {item.title} ({item.story_points} SP)
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+};
+
 // Sub-component for rendering Jira-style Task Table inside Sprint (Matching Image 3)
 const SprintJiraTaskTable: React.FC<{ sprintId: number; projectId: number; isManagerOrAdmin: boolean }> = ({
   sprintId,
@@ -297,7 +430,7 @@ const SprintJiraTaskTable: React.FC<{ sprintId: number; projectId: number; isMan
   const { data: allTasks = [] } = useTasks();
   const { data: employees = [] } = useEmployees();
   const { data: topics = [] } = useTopics(projectId);
-  
+
   const updateTaskMutation = useUpdateTask();
   const updateStatusMutation = useUpdateTaskStatus();
 
@@ -413,13 +546,12 @@ const SprintJiraTaskTable: React.FC<{ sprintId: number; projectId: number; isMan
                   <select
                     value={t.status}
                     onChange={(e) => handleStatusChange(t.id, e.target.value)}
-                    className={`h-7 px-2 rounded font-bold text-[10px] uppercase border cursor-pointer focus:outline-none ${
-                      t.status === 'Done'
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400'
-                        : t.status === 'In Progress'
+                    className={`h-7 px-2 rounded font-bold text-[10px] uppercase border cursor-pointer focus:outline-none ${t.status === 'Done'
+                      ? 'bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400'
+                      : t.status === 'In Progress'
                         ? 'bg-blue-50 text-blue-600 border-blue-300 dark:bg-blue-950/40 dark:text-blue-400'
                         : 'bg-amber-50 text-amber-600 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400'
-                    }`}
+                      }`}
                   >
                     <option value="To Do">TO DO</option>
                     <option value="In Progress">IN PROGRESS</option>

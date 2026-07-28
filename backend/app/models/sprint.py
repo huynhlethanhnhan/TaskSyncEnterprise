@@ -14,7 +14,9 @@ class Sprint(AuditMixin, Base):
     goal: Mapped[str | None] = mapped_column(UnicodeText, nullable=True)
     start_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     end_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    status: Mapped[str] = mapped_column(Unicode(30), server_default=text("N'Planned'"), default="Planned")
+    status: Mapped[str] = mapped_column(
+        Unicode(30), server_default=text("N'Planned'"), default="Planned"
+    )
     capacity: Mapped[int] = mapped_column(Integer, server_default=text("0"), default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -24,5 +26,7 @@ class Sprint(AuditMixin, Base):
 
     # Relationships
     project = relationship("Project")
-    backlog_items = relationship("BacklogItem", back_populates="sprint", cascade="all, delete-orphan")
+    backlog_items = relationship(
+        "BacklogItem", back_populates="sprint", cascade="all, delete-orphan"
+    )
     tasks = relationship("Task", back_populates="sprint")

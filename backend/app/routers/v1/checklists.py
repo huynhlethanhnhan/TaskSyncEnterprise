@@ -9,13 +9,19 @@ from app.models.task import Task
 from app.models.task_checklist import TaskChecklist
 from app.core.deps import get_current_user, RequireEmployee
 from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
-from app.schemas.checklist import TaskChecklistCreate, TaskChecklistUpdate, TaskChecklistResponse
+from app.schemas.checklist import (
+    TaskChecklistCreate,
+    TaskChecklistUpdate,
+    TaskChecklistResponse,
+)
 from app.cache import CacheInvalidator
 
 router = APIRouter(prefix="/tasks/{task_id}/checklist", tags=["Checklists"])
 
 
-def get_task_with_access(db: Session, task_id: int, current_user: Employee, read_only: bool = True) -> Task:
+def get_task_with_access(
+    db: Session, task_id: int, current_user: Employee, read_only: bool = True
+) -> Task:
     task = db.get(Task, task_id)
     if not task or task.is_deleted:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -25,10 +31,11 @@ def get_task_with_access(db: Session, task_id: int, current_user: Employee, read
 
     # Check assignment
     from app.models.task_assignment import TaskAssignment
+
     is_assigned = db.scalar(
         select(TaskAssignment).where(
             TaskAssignment.task_id == task_id,
-            TaskAssignment.employee_id == current_user.id
+            TaskAssignment.employee_id == current_user.id,
         )
     )
     if is_assigned:
@@ -40,15 +47,18 @@ def get_task_with_access(db: Session, task_id: int, current_user: Employee, read
 
     # Check project membership
     from app.models.project_member import ProjectMember
+
     is_member = db.scalar(
         select(ProjectMember).where(
             ProjectMember.project_id == task.project_id,
-            ProjectMember.employee_id == current_user.id
+            ProjectMember.employee_id == current_user.id,
         )
     )
     if is_member:
         if not read_only:
-            raise HTTPException(status_code=403, detail="You do not have write access to this task")
+            raise HTTPException(
+                status_code=403, detail="You do not have write access to this task"
+            )
         return task
 
     raise HTTPException(status_code=403, detail="Access denied to this task")
@@ -73,13 +83,15 @@ def create_checklist_item(
     db: Session = Depends(get_db),
 ):
     task = get_task_with_access(db, task_id, current_user, read_only=False)
-    
+
     item = TaskChecklist(task_id=task_id, **data.model_dump())
     db.add(item)
     db.commit()
     db.refresh(item)
 
-    CacheInvalidator.invalidate_task(task_id, project_id=task.project_id, employee_id=task.employee_id)
+    CacheInvalidator.invalidate_task(
+        task_id, project_id=task.project_id, employee_id=task.employee_id
+    )
     return item
 
 
@@ -103,7 +115,9 @@ def update_checklist_item(
     db.commit()
     db.refresh(item)
 
-    CacheInvalidator.invalidate_task(task_id, project_id=task.project_id, employee_id=task.employee_id)
+    CacheInvalidator.invalidate_task(
+        task_id, project_id=task.project_id, employee_id=task.employee_id
+    )
     return item
 
 
@@ -122,5 +136,7 @@ def delete_checklist_item(
     db.delete(item)
     db.commit()
 
-    CacheInvalidator.invalidate_task(task_id, project_id=task.project_id, employee_id=task.employee_id)
+    CacheInvalidator.invalidate_task(
+        task_id, project_id=task.project_id, employee_id=task.employee_id
+    )
     return {"success": True, "message": "Checklist item deleted"}

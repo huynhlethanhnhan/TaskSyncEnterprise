@@ -1,6 +1,6 @@
 # 📂 FILE: app/schemas/task.py
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TaskCreate(BaseModel):
@@ -9,7 +9,7 @@ class TaskCreate(BaseModel):
     description: str | None = None
     priority: str = "Medium"
     status: str = "To Do"
-    story_points: int = 0
+    story_points: int = Field(default=0, ge=0)
     deadline: datetime | None = None
     created_by: int | None = None
     assigned_to: int | None = None
@@ -22,8 +22,8 @@ class TaskUpdate(BaseModel):
     description: str | None = None
     priority: str | None = None
     status: str | None = None
-    progress_percent: float | None = None
-    story_points: int | None = None
+    progress_percent: float | None = Field(default=None, ge=0, le=100)
+    story_points: int | None = Field(default=None, ge=0)
     deadline: datetime | None = None
     assigned_to: int | None = None
     sprint_id: int | None = None
@@ -67,4 +67,3 @@ class TaskResponse(TaskCreate):
     created_at: datetime
     attachments: list[TaskAttachmentResponse] = []
     assignee: AssigneeSummaryResponse | None = None
-

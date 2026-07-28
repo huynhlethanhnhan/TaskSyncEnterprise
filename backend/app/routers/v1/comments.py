@@ -9,7 +9,11 @@ from app.models.task import Task
 from app.models.task_comment import TaskComment
 from app.core.deps import get_current_user
 from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
-from app.schemas.comment import TaskCommentCreate, TaskCommentUpdate, TaskCommentResponse
+from app.schemas.comment import (
+    TaskCommentCreate,
+    TaskCommentUpdate,
+    TaskCommentResponse,
+)
 from app.cache import CacheInvalidator
 
 router = APIRouter(prefix="/tasks/{task_id}/comments", tags=["Task Comments"])
@@ -25,10 +29,11 @@ def get_task_with_access(db: Session, task_id: int, current_user: Employee) -> T
 
     # Check assignment
     from app.models.task_assignment import TaskAssignment
+
     is_assigned = db.scalar(
         select(TaskAssignment).where(
             TaskAssignment.task_id == task_id,
-            TaskAssignment.employee_id == current_user.id
+            TaskAssignment.employee_id == current_user.id,
         )
     )
     if is_assigned:
@@ -40,10 +45,11 @@ def get_task_with_access(db: Session, task_id: int, current_user: Employee) -> T
 
     # Check project membership
     from app.models.project_member import ProjectMember
+
     is_member = db.scalar(
         select(ProjectMember).where(
             ProjectMember.project_id == task.project_id,
-            ProjectMember.employee_id == current_user.id
+            ProjectMember.employee_id == current_user.id,
         )
     )
     if is_member:
@@ -59,7 +65,11 @@ def get_comments(
     db: Session = Depends(get_db),
 ):
     get_task_with_access(db, task_id, current_user)
-    stmt = select(TaskComment).where(TaskComment.task_id == task_id).order_by(TaskComment.created_at.asc())
+    stmt = (
+        select(TaskComment)
+        .where(TaskComment.task_id == task_id)
+        .order_by(TaskComment.created_at.asc())
+    )
     return db.scalars(stmt).all()
 
 
@@ -71,18 +81,18 @@ def create_comment(
     db: Session = Depends(get_db),
 ):
     task = get_task_with_access(db, task_id, current_user)
-    
+
     comment = TaskComment(
-        task_id=task_id,
-        employee_id=current_user.id,
-        content=data.content
+        task_id=task_id, employee_id=current_user.id, content=data.content
     )
     db.add(comment)
     db.commit()
     db.refresh(comment)
 
     # Invalidate caching
-    CacheInvalidator.invalidate_task(task_id, project_id=task.project_id, employee_id=task.employee_id)
+    CacheInvalidator.invalidate_task(
+        task_id, project_id=task.project_id, employee_id=task.employee_id
+    )
     return comment
 
 
@@ -100,13 +110,17 @@ def update_comment(
         raise HTTPException(status_code=404, detail="Comment not found")
 
     if comment.employee_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You can only edit your own comments")
+        raise HTTPException(
+            status_code=403, detail="You can only edit your own comments"
+        )
 
     comment.content = data.content
     db.commit()
     db.refresh(comment)
 
-    CacheInvalidator.invalidate_task(task_id, project_id=task.project_id, employee_id=task.employee_id)
+    CacheInvalidator.invalidate_task(
+        task_id, project_id=task.project_id, employee_id=task.employee_id
+    )
     return comment
 
 
@@ -125,10 +139,14 @@ def delete_comment(
     # Only author or Admin/Manager can delete
     is_moderator = current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER)
     if comment.employee_id != current_user.id and not is_moderator:
-        raise HTTPException(status_code=403, detail="You are not authorized to delete this comment")
+        raise HTTPException(
+            status_code=403, detail="You are not authorized to delete this comment"
+        )
 
     db.delete(comment)
     db.commit()
 
-    CacheInvalidator.invalidate_task(task_id, project_id=task.project_id, employee_id=task.employee_id)
+    CacheInvalidator.invalidate_task(
+        task_id, project_id=task.project_id, employee_id=task.employee_id
+    )
     return {"success": True, "message": "Comment deleted"}
