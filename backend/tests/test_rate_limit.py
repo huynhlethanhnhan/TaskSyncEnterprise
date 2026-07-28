@@ -82,12 +82,12 @@ class MockPipeline:
 
 
 # Setup test app
-test_app = FastAPI()
-test_app.add_middleware(RateLimitMiddleware)
+rate_limit_app = FastAPI()
+rate_limit_app.add_middleware(RateLimitMiddleware)
 
 
 # Rename to avoid pytest collection warning
-@test_app.get("/api/v1/test-route")
+@rate_limit_app.get("/api/v1/test-route")
 def sample_rate_limit_route():
     return {"message": "Success"}
 
@@ -112,7 +112,7 @@ def test_rate_limiting_enforcement(rate_limit_redis):
     mock_settings.RATE_LIMIT_DEFAULT_WINDOW = 10
 
     with patch("app.middleware.rate_limit.settings", mock_settings):
-        client = TestClient(test_app)
+        client = TestClient(rate_limit_app)
 
         # 1st request -> Success
         response = client.get("/api/v1/test-route")

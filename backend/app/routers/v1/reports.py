@@ -4,7 +4,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.chart import BarChart, Reference, PieChart
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -37,7 +37,7 @@ def apply_excel_styling(ws, title_text, headers):
 
     # 2. Metadata Block
     ws["A2"].value = "Báo cáo được tạo tự động lúc:"
-    ws["B2"].value = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    ws["B2"].value = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     ws["A2"].font = Font(name="Segoe UI", size=9, italic=True, color="595959")
     ws["B2"].font = Font(name="Segoe UI", size=9, italic=True, color="595959")
     ws.row_dimensions[2].height = 20
@@ -117,7 +117,8 @@ def export_report(
             total_tasks = len(tasks)
             completed_tasks = sum(1 for t in tasks if t.status == "Done")
             progress = round((completed_tasks / total_tasks) * 100) if total_tasks > 0 else 0
-            overdue_tasks = sum(1 for t in tasks if t.status != "Done" and t.deadline and t.deadline < datetime.utcnow())
+            current_utc = datetime.now(UTC).replace(tzinfo=None)
+            overdue_tasks = sum(1 for t in tasks if t.status != "Done" and t.deadline and t.deadline < current_utc)
 
             row_data = [p.project_code, p.name, p.status, total_tasks, completed_tasks, progress, overdue_tasks]
             
@@ -226,7 +227,8 @@ def export_report(
                     )
                 ).all()
                 active_tasks = sum(1 for t in tasks if t.status != "Done")
-                overdue_tasks = sum(1 for t in tasks if t.status != "Done" and t.deadline and t.deadline < datetime.utcnow())
+                current_utc = datetime.now(UTC).replace(tzinfo=None)
+                overdue_tasks = sum(1 for t in tasks if t.status != "Done" and t.deadline and t.deadline < current_utc)
                 high_priority = sum(1 for t in tasks if t.priority in ("High", "Urgent"))
 
             row_data = [emp.full_name, dept_name, active_tasks, overdue_tasks, high_priority]
@@ -316,7 +318,7 @@ def export_report(
     wb.save(file_stream)
     file_stream.seek(0)
 
-    filename = f"{report_type}_report_{datetime.utcnow().strftime('%Y%m%d')}.xlsx"
+    filename = f"{report_type}_report_{datetime.now(UTC).strftime('%Y%m%d')}.xlsx"
     return StreamingResponse(
         file_stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

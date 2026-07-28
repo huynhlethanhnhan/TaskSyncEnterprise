@@ -18,7 +18,15 @@ class Team(Base):
 
     description: Mapped[str | None] = mapped_column(UnicodeText)
 
-    leader_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("employees.id"), nullable=True)
+    leader_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey(
+            "employees.id",
+            name="fk_teams_leader_id_employees",
+            use_alter=True,
+        ),
+    nullable=True,
+    )
 
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
 

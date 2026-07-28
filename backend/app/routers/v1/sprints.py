@@ -1,8 +1,11 @@
 # 📂 FILE: app/routers/v1/sprints.py
-from datetime import date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, or_
+from datetime import date
+
+import sqlalchemy as sa
 
 from app.database import get_db
 from app.models.employee import Employee
@@ -90,7 +93,7 @@ def backfill_snapshots(db: Session, sprint: Sprint):
 
     start_date = sprint.start_date.date()
     # If completed, snap to end_date, otherwise snap to today
-    end_date = sprint.end_date.date() if sprint.status == "Completed" and sprint.end_date else datetime.utcnow().date()
+    end_date = sprint.end_date.date() if sprint.status == "Completed" and sprint.end_date else datetime.now(UTC).date()
     
     current_date = start_date
     last_known_snapshot = None
@@ -104,7 +107,7 @@ def backfill_snapshots(db: Session, sprint: Sprint):
             )
         )
         if not snapshot:
-            if current_date == datetime.utcnow().date():
+            if current_date == datetime.now(UTC).date():
                 # Compute today's snapshot fresh
                 last_known_snapshot = calculate_and_save_snapshot(db, sprint.id, current_date)
             elif last_known_snapshot:
@@ -233,15 +236,15 @@ def start_sprint(
 
     sprint.status = "Active"
     if not sprint.start_date:
-        sprint.start_date = datetime.utcnow()
+        sprint.start_date = datetime.now(UTC).replace(tzinfo=None)
     if not sprint.end_date:
-        sprint.end_date = datetime.utcnow() + timedelta(days=14)
+         datetime.now(UTC).replace(tzinfo=None) + timedelta(days=14)
 
     db.commit()
     db.refresh(sprint)
 
     # Trigger first snapshot
-    calculate_and_save_snapshot(db, sprint_id, datetime.utcnow().date())
+    calculate_and_save_snapshot(db, sprint_id, datetime.now(UTC).date())
 
     return sprint
 
@@ -261,7 +264,7 @@ def complete_sprint(
         raise HTTPException(status_code=403, detail="Only Managers or Admins can complete sprints")
 
     sprint.status = "Completed"
-    sprint.end_date = datetime.utcnow()
+    sprint.end_date = datetime.now(UTC).replace(tzinfo=None)
     db.commit()
     db.refresh(sprint)
 

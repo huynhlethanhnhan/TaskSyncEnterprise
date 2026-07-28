@@ -317,59 +317,64 @@ class TestLoggingIntegration:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class TestFastAPIInstrumentation:
-    @pytest.fixture(scope="class")
-    def client(self):
-        return TestClient(
-            __import__("app.main", fromlist=["app"]).app, raise_server_exceptions=False
-        )
+# 1. Fixture được đưa ra ngoài class, đổi tên thành instrumented_client và bỏ tham số "self"
+@pytest.fixture(scope="class")
+def instrumented_client():
+    return TestClient(
+        __import__("app.main", fromlist=["app"]).app, raise_server_exceptions=False
+    )
 
-    def test_instrumentation_does_not_break_health_endpoint(self, client):
+class TestFastAPIInstrumentation:
+    
+    # 2. Truyền instrumented_client vào hàm thay vì client
+    def test_instrumentation_does_not_break_health_endpoint(self, instrumented_client):
         """FastAPI auto-instrumentation must not break existing routes."""
-        response = client.get("/health")
+        # 3. Sử dụng instrumented_client.get thay vì client.get
+        response = instrumented_client.get("/health")
         assert response.status_code == 200
 
-    def test_x_request_id_still_propagated(self, client):
+    def test_x_request_id_still_propagated(self, instrumented_client):
         """Request ID propagation must remain intact after OTel instrumentation."""
         import uuid
 
         rid = str(uuid.uuid4())
-        response = client.get("/health", headers={"X-Request-ID": rid})
+        response = instrumented_client.get("/health", headers={"X-Request-ID": rid})
         assert response.headers.get("X-Request-ID") == rid
 
-    def test_normal_api_request_succeeds(self, client):
+    def test_normal_api_request_succeeds(self, instrumented_client):
         """Normal API requests must work correctly after instrumentation."""
-        response = client.get("/")
+        response = instrumented_client.get("/")
         assert response.status_code == 200
 
-    def test_404_returns_correct_status(self, client):
+    def test_404_returns_correct_status(self, instrumented_client):
         """404 responses must still be properly returned."""
-        response = client.get("/api/v1/this-route-does-not-exist-9999")
+        response = instrumented_client.get("/api/v1/this-route-does-not-exist-9999")
         assert response.status_code == 404
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 6. Excluded Endpoint Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Đưa fixture ra ngoài class và xóa tham số "self"
+@pytest.fixture(scope="class")
+def in_memory_provider():
+    """Create an isolated TracerProvider with in-memory exporter for assertions."""
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+    from opentelemetry import trace
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    trace.set_tracer_provider(provider)
+    return exporter
+
 
 class TestExcludedEndpoints:
-    @pytest.fixture(scope="class")
-    def in_memory_provider(self):
-        """Create an isolated TracerProvider with in-memory exporter for assertions."""
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
-            InMemorySpanExporter,
-        )
-        from opentelemetry import trace
-
-        exporter = InMemorySpanExporter()
-        provider = TracerProvider()
-        provider.add_span_processor(SimpleSpanProcessor(exporter))
-        trace.set_tracer_provider(provider)
-        return exporter
-
+    
     def test_health_path_is_in_excluded_list(self):
         from app.config import settings
 

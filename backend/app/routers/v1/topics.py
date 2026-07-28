@@ -1,8 +1,10 @@
 # 📂 FILE: app/routers/v1/topics.py
-from datetime import datetime
+from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
+from sqlalchemy import or_
+
 
 from app.database import get_db
 from app.models.employee import Employee
@@ -182,7 +184,7 @@ def delete_topic(
         raise HTTPException(status_code=403, detail="You are not authorized to delete this topic")
 
     topic.is_deleted = True
-    topic.deleted_at = datetime.utcnow()
+    topic.deleted_at = datetime.now(UTC).replace(tzinfo=None)
     topic.deleted_by_id = current_user.id
     db.commit()
 
@@ -250,7 +252,7 @@ def delete_reply(
         raise HTTPException(status_code=403, detail="You are not authorized to delete this reply")
 
     reply.is_deleted = True
-    reply.deleted_at = datetime.utcnow()
+    reply.deleted_at = datetime.now(UTC).replace(tzinfo=None)
     reply.deleted_by_id = current_user.id
     db.commit()
 

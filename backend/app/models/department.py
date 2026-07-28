@@ -16,7 +16,15 @@ class Department(Base):
 
     description: Mapped[str | None] = mapped_column(UnicodeText)
 
-    manager_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("employees.id"), nullable=True)
+    manager_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey(
+            "employees.id",
+            name="fk_departments_manager_id_employees",
+            use_alter=True,
+        ),
+    nullable=True,
+    )
 
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
 
