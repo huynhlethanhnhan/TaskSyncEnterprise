@@ -47,26 +47,23 @@ export default function CalendarPage() {
   const [displayDate, setDisplayDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [employees, setEmployees] = useState([]);
+  const [employees] = useState([]);
   const [vacations, setVacations] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const loadData = useCallback(async () => {
     try {
-      const [taskRes, projectRes, employeeRes, vacationRes] = await Promise.all([
+      const [taskRes, projectRes, vacationRes] = await Promise.all([
         api.get("/tasks"),
         api.get("/projects"),
-        api.get("/employees").catch(() => ({ data: [] })),
         api.get("/vacations").catch(() => ({ data: [] })),
       ]);
       const rawTasks = Array.isArray(taskRes.data) ? taskRes.data : taskRes.data?.data || [];
       const rawProjects = Array.isArray(projectRes.data) ? projectRes.data : projectRes.data?.data || [];
-      const rawEmployees = Array.isArray(employeeRes.data) ? employeeRes.data : employeeRes.data?.data || [];
       const rawVacations = Array.isArray(vacationRes.data) ? vacationRes.data : vacationRes.data?.data || [];
 
       setTasks(rawTasks.map(task => ({ ...task, deadline: task.deadline || task.due_date || null })));
       setProjects(rawProjects);
-      setEmployees(rawEmployees);
       setVacations(rawVacations.filter(v => v.status === "Approved" || v.status === "HR Approved" || v.status === "Manager Approved"));
     } catch (err) {
       console.error("Lỗi tải dữ liệu Calendar:", err);

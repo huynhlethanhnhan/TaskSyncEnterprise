@@ -158,7 +158,7 @@ export default function ProjectDetailPage() {
                       {colTasks.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-slate-150 bg-slate-50/30 p-6 text-center text-[10px] text-slate-400 font-bold">Chưa có task</div>
                       ) : colTasks.map(task => {
-                        const assignee = employeesById[task.assigned_to || task.created_by];
+                        const assignee = task.assigned_to ? employeesById[task.assigned_to] : undefined;
                         return (
                           <div key={task.id} className="rounded-xl border border-slate-50 bg-white p-3.5 shadow-sm hover:shadow-md transition-all">
                             <p className="text-xs font-bold text-slate-700 truncate">{task.title}</p>

@@ -22,6 +22,8 @@ class Task(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
 
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
+    sprint_id: Mapped[int | None] = mapped_column(ForeignKey("sprints.id"), nullable=True)
+    topic_id: Mapped[int | None] = mapped_column(ForeignKey("discussion_topics.id"), nullable=True)
 
     title: Mapped[str] = mapped_column(Unicode(200))
 
@@ -59,6 +61,9 @@ class Task(Base):
         "TaskChecklist", back_populates="task", cascade="all, delete-orphan"
     )
 
+    sprint = relationship("Sprint", back_populates="tasks")
+    topic = relationship("DiscussionTopic")
+
     attachments = relationship(
         "TaskAttachment",
         back_populates="task",
@@ -73,5 +78,18 @@ class Task(Base):
         return None
 
     @property
+    def assignee(self):
+        if self.assignments and self.assignments[0].employee:
+            emp = self.assignments[0].employee
+            return {
+                "id": emp.id,
+                "full_name": emp.full_name,
+                "avatar_url": emp.avatar_url,
+                "job_title": emp.job_title,
+            }
+        return None
+
+    @property
     def employee_id(self) -> int | None:
         return self.assigned_to
+

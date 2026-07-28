@@ -7,6 +7,7 @@ class TeamBase(BaseModel):
     team_code: str
     name: str
     description: str | None = None
+    leader_id: int | None = None
 
 
 class TeamCreate(TeamBase):
@@ -18,6 +19,7 @@ class TeamUpdate(BaseModel):
     team_code: str | None = None
     name: str | None = None
     description: str | None = None
+    leader_id: int | None = None
 
 
 class TeamResponse(TeamBase):
@@ -26,3 +28,4 @@ class TeamResponse(TeamBase):
     id: int
     is_active: bool
     created_at: datetime
+

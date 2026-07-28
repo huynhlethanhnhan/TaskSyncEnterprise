@@ -11,20 +11,31 @@ from app.models.employee import Employee
 from app.models.token_blacklist import TokenBlacklist  # <-- Import model danh sách đen
 from app.core.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE, ROLE_MAP
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
+from typing import Optional
+from fastapi import Depends, HTTPException, status, Query
+
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False
+)
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+    token: Optional[str] = Depends(oauth2_scheme),
+    query_token: Optional[str] = Query(None, alias="token"),
+    db: Session = Depends(get_db),
 ) -> Employee:
+    actual_token = token or query_token
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Không thể xác thực thông tin đăng nhập hoặc Token đã hết hạn!",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if not actual_token:
+        raise credentials_exception
+
     try:
         payload = jwt.decode(
-            token,
+            actual_token,
             settings.SECRET_KEY.get_secret_value(),
             algorithms=[settings.ALGORITHM],
         )
@@ -36,7 +47,7 @@ def get_current_user(
 
     # 🛡️ KIỂM TRA TẤM KHIÊN BLACKLIST (MỚI)
     # Nếu token của request nằm trong danh sách đen -> đá văng người dùng ra ngoài
-    stmt_blacklist = select(TokenBlacklist).where(TokenBlacklist.token == token)
+    stmt_blacklist = select(TokenBlacklist).where(TokenBlacklist.token == actual_token)
     is_blacklisted = db.execute(stmt_blacklist).scalar_one_or_none()
     if is_blacklisted:
         raise HTTPException(

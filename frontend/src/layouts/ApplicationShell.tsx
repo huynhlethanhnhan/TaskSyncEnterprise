@@ -83,6 +83,8 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
   const roleStr = (user?.role || '').toLowerCase();
   const roleId = Number(user?.role_id);
   const isAdmin = roleStr === 'admin' || roleId === 1;
+  const isManager = roleStr === 'manager' || roleId === 2;
+  const isAdminOrManager = isAdmin || isManager;
 
   const sidebarSections: SidebarSection[] = [
     {
@@ -203,12 +205,12 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
     {
       title: 'Administration',
       items: [
-        {
+        ...(isAdminOrManager ? [{
           key: '/employees',
           label: 'Employees',
           icon: <Users className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/employees'); setMobileDrawerOpen(false); },
-        },
+        }] : []),
         {
           key: '/departments',
           label: 'Departments',
@@ -299,7 +301,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navbar Header */}
-        <div className="flex items-center">
+        <div className="flex items-center relative z-header sticky top-0">
           {/* Mobile hamburger menu trigger */}
           <button
             type="button"

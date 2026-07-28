@@ -25,3 +25,4 @@ opentelemetry-instrumentation-logging==0.64b0
 opentelemetry-instrumentation-httpx==0.64b0
 # ── Phase 3.8.7: Backup & DR Foundation ──
 jsonschema==4.23.0
+openpyxl==3.1.5

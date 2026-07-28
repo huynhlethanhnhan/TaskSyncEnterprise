@@ -1,10 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { employeesApi, type EmployeeItem } from '../api/services';
+import { useAuth } from '../providers/AuthProvider';
 
-export const useEmployees = () => {
+export const useEmployees = (overrideEnabled?: boolean) => {
+  const { user } = useAuth();
+  const roleStr = (user?.role || '').toLowerCase();
+  const roleId = Number(user?.role_id);
+  const isAuthorized = roleStr === 'admin' || roleStr === 'manager' || roleId === 1 || roleId === 2;
+  const enabled = overrideEnabled !== undefined ? overrideEnabled : isAuthorized;
+
   return useQuery<EmployeeItem[], Error>({
     queryKey: ['employees'],
     queryFn: employeesApi.getAll,
+    enabled,
   });
 };
 

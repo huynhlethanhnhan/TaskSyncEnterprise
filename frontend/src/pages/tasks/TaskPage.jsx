@@ -65,7 +65,7 @@ export default function TaskPage() {
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       if (filterDepartment === "all") return true;
-      const assignedTo = task.assigned_to || task.created_by;
+      const assignedTo = task.assigned_to;
       const employee = employees.find((emp) => Number(emp.id) === Number(assignedTo));
       return employee?.department_id === Number(filterDepartment);
     });
@@ -79,7 +79,7 @@ export default function TaskPage() {
   }, [filteredTasks]);
 
   const getProject = (task) => projects.find((p) => Number(p.id) === Number(task.project_id));
-  const getEmployee = (task) => employees.find((e) => Number(e.id) === Number(task.assigned_to || task.created_by));
+  const getEmployee = (task) => employees.find((e) => Number(e.id) === Number(task.assigned_to));
   const getDepartment = (employee) => departments.find((d) => Number(d.id) === Number(employee?.department_id));
 
   return (

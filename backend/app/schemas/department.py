@@ -6,6 +6,7 @@ class DepartmentBase(BaseModel):
     department_code: str
     name: str
     description: str | None = None
+    manager_id: int | None = None
 
 
 class DepartmentCreate(DepartmentBase):
@@ -16,6 +17,7 @@ class DepartmentUpdate(BaseModel):
     department_code: str | None = None
     name: str | None = None
     description: str | None = None
+    manager_id: int | None = None
 
 
 class DepartmentResponse(DepartmentBase):
@@ -24,3 +26,4 @@ class DepartmentResponse(DepartmentBase):
     id: int
     is_active: bool
     created_at: datetime
+

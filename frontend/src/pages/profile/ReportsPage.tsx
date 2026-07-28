@@ -12,23 +12,58 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  ComposedChart,
+  Line,
+  Area,
 } from 'recharts';
 import api from '../../api/axios';
+import { useToast } from '../../providers/ToastProvider';
+import { SprintBurndownChart } from '../../components/sprints/SprintBurndownChart';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { useProjects } from '../../hooks/useProjects';
 import { useTasks } from '../../hooks/useTasks';
 import { useEmployees } from '../../hooks/useEmployees';
+import { useSprints, useSprintAnalytics, useVelocity } from '../../hooks/useSprintBacklog';
 import { exportToCsv } from '../../utils/csv';
 
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export const ReportsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = React.useState<'projects' | 'tasks' | 'workload' | 'vacations' | 'gaps'>('projects');
+  const toast = useToast();
+  const [activeTab, setActiveTab] = React.useState<'projects' | 'tasks' | 'workload' | 'vacations' | 'agile'>('projects');
+
+  const handleExportExcel = async () => {
+    try {
+      const typeMap: Record<string, string> = {
+        projects: 'projects',
+        tasks: 'tasks',
+        workload: 'workload',
+        vacations: 'vacations',
+        agile: 'sprints',
+      };
+      const reportType = typeMap[activeTab] || 'projects';
+      const response = await api.get(`/reports/export/${reportType}`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${reportType}_report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Xuất báo cáo Excel thành công!');
+    } catch {
+      toast.error('Lỗi khi xuất báo cáo', 'Không thể tải xuống tệp báo cáo Excel.');
+    }
+  };
 
   // Queries
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
@@ -185,26 +220,37 @@ export const ReportsPage: React.FC = () => {
 
       {/* Tabs Header */}
       <Card>
-        <CardContent className="p-2 border-b border-border/60 flex flex-wrap gap-1.5 bg-accent/20">
-          {[
-            { id: 'projects', label: 'Báo cáo Dự án' },
-            { id: 'tasks', label: 'Báo cáo Công việc' },
-            { id: 'workload', label: 'Tải lượng Nhân sự' },
-            { id: 'vacations', label: 'Báo cáo Nghỉ phép' },
-            { id: 'gaps', label: 'Khoảng trống Hệ thống' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === tab.id
-                  ? 'bg-surface text-text-primary shadow-sm border border-border'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <CardContent className="p-2 border-b border-border/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-accent/20">
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { id: 'projects', label: 'Báo cáo Dự án' },
+              { id: 'tasks', label: 'Báo cáo Công việc' },
+              { id: 'workload', label: 'Tải lượng Nhân sự' },
+              { id: 'vacations', label: 'Báo cáo Nghỉ phép' },
+              { id: 'agile', label: 'Phân tích Agile' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-surface text-text-primary shadow-sm border border-border'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<Download className="h-3.5 w-3.5" />}
+            onClick={handleExportExcel}
+            className="border-emerald-200 dark:border-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/10 text-emerald-600 hover:text-emerald-700 shrink-0 font-bold"
+          >
+            Xuất Excel Quality Report
+          </Button>
         </CardContent>
       </Card>
 
@@ -510,59 +556,106 @@ export const ReportsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 5: GAPS */}
-        {activeTab === 'gaps' && (
-          <div className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card className="border-rose-200/40 dark:border-rose-950/20 bg-rose-500/[0.01]">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="danger">Agile Gap</Badge>
-                    <CardTitle className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-                      Biểu đồ Agile Sprints (Burndown & Velocity)
-                    </CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="text-xs text-text-secondary leading-relaxed space-y-2">
-                  <p>
-                    Để xây dựng biểu đồ Burndown và đo lường Velocity của Sprint, cơ sở dữ liệu cần hỗ trợ lưu trữ lịch sử thay đổi (snapshots) của task theo từng ngày. Do backend SQL Server chưa cấu hình bảng sự kiện này, việc giả lập biểu đồ Burndown là không chính xác và dễ gây hiểu nhầm về tiến độ.
-                  </p>
-                  <p className="font-semibold text-text-primary mt-3">Đề xuất Schema Sprints History DDL:</p>
-                  <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto">
-{`CREATE TABLE sprint_snapshots (
-  id INT IDENTITY(1,1) PRIMARY KEY,
-  sprint_id INT NOT NULL,
-  snapshot_date DATE NOT NULL,
-  remaining_story_points INT NOT NULL,
-  completed_story_points INT NOT NULL
-);`}
-                  </pre>
-                </CardContent>
-              </Card>
-
-              <Card className="border-rose-200/40 dark:border-rose-950/20 bg-rose-500/[0.01]">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="danger">Feedback Gap</Badge>
-                    <CardTitle className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-                      Báo cáo Phản hồi & Thảo luận Chuyên đề (Feedback & Topics)
-                    </CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="text-xs text-text-secondary leading-relaxed space-y-2">
-                  <p>
-                    Hệ thống phản hồi và thảo luận chuyên đề hiện chưa có thực thể (Entity) lưu trữ hay API hoàn chỉnh ở backend. Do đó các chỉ số phân loại ý kiến phản hồi theo mức độ hài lòng hoặc số lượng chủ đề thảo luận đang hoạt động được ghi nhận như một khoảng trống thiết kế kỹ thuật.
-                  </p>
-                  <p className="font-semibold text-text-primary mt-3">Đề xuất API Router Contract:</p>
-                  <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto">
-{`GET /api/v1/feedback/summary -> FeedbackSummaryResponse
-GET /api/v1/topics/analytics  -> TopicsAnalyticsResponse`}
-                  </pre>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+        {/* Tab 5: Agile Analytics */}
+        {activeTab === 'agile' && (
+          <AgileReportsSection projects={projects} />
         )}
+      </div>
+    </div>
+  );
+};
+
+const AgileReportsSection: React.FC<{ projects: any[] }> = ({ projects }) => {
+  const [selectedProjectId, setSelectedProjectId] = React.useState<number | ''>('');
+
+  React.useEffect(() => {
+    if (projects.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId]);
+
+  const { data: sprints = [] } = useSprints(Number(selectedProjectId) || 0);
+  const { data: velocity = [] } = useVelocity(Number(selectedProjectId) || 0);
+
+  const activeSprint = sprints.find((s) => s.status === 'Active');
+  const selectedSprintId = activeSprint?.id || (sprints.length > 0 ? sprints[0].id : 0);
+
+  const { data: analytics } = useSprintAnalytics(selectedSprintId);
+
+  // Transform snapshots for Burndown
+  const burndownData = React.useMemo(() => {
+    if (!analytics || !analytics.snapshots) return [];
+    return analytics.snapshots.map((snap: any) => ({
+      date: new Date(snap.snapshot_date).toLocaleDateString('vi-VN', { month: 'numeric', day: 'numeric' }),
+      'Còn lại (SP)': snap.remaining_story_points,
+      'Hoàn thành (SP)': snap.completed_story_points,
+    }));
+  }, [analytics]);
+
+  const velocityData = React.useMemo(() => {
+    if (!velocity) return [];
+    return velocity.map((v: any) => ({
+      name: v.name,
+      'Story Points': v.completed_story_points,
+    }));
+  }, [velocity]);
+
+  if (projects.length === 0) {
+    return <div className="text-center py-6 text-text-muted">Không tìm thấy dự án nào.</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Project Selector Box */}
+      <div className="p-4 rounded-xl border border-border bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h4 className="font-bold text-text-primary text-sm">Lựa chọn dự án phân tích</h4>
+          <p className="text-text-muted mt-0.5 text-[11px]">Xem biểu đồ Burndown của Sprint hiện tại và biểu đồ Velocity lịch sử.</p>
+        </div>
+        <div className="w-full sm:max-w-xs shrink-0">
+          <Select
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(Number(e.target.value))}
+            options={projects.map((p) => ({ value: p.id, label: p.name }))}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Burndown Chart */}
+        {selectedSprintId ? (
+          <SprintBurndownChart sprintId={selectedSprintId} />
+        ) : (
+          <Card>
+            <CardContent className="h-64 flex items-center justify-center text-xs text-text-muted">
+              Chưa có Sprint nào thuộc dự án này.
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Velocity Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary">
+              Biểu đồ Velocity (Các Sprint đã qua)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="h-64 flex items-center justify-center">
+            {velocityData.length === 0 ? (
+              <div className="text-[11px] text-text-muted">Chưa ghi nhận lịch sử hoàn thành Sprint nào.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={velocityData}>
+                  <XAxis dataKey="name" stroke="#888888" fontSize={10} />
+                  <YAxis stroke="#888888" fontSize={10} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="Story Points" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

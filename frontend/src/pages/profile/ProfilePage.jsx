@@ -106,7 +106,7 @@ export default function ProfilePage() {
     const now = new Date();
     return tasks.reduce(
       (acc, task) => {
-        const assigneeId = task.assigned_to || task.created_by;
+        const assigneeId = task.assigned_to;
         if (Number(assigneeId) !== Number(currentUser.id)) return acc;
         acc.total += 1;
         if (task.status === "To Do") acc.todo += 1;

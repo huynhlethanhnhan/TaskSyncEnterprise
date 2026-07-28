@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Plus, Search, Building2, ShieldAlert, Edit, Trash2, Tag } from 'lucide-react';
+import { Plus, Search, Building2, ShieldAlert, Edit, Trash2, Tag, UserCheck, Users } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/common/Card';
@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/common/Badge';
 import { Drawer } from '../../components/common/Drawer';
+import { Avatar } from '../../components/common/Avatar';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam } from '../../hooks/useTeams';
 import { type TeamItem } from '../../api/services';
@@ -42,6 +43,7 @@ export const TeamPage: React.FC = () => {
   const [name, setName] = React.useState('');
   const [code, setCode] = React.useState('');
   const [departmentId, setDepartmentId] = React.useState('');
+  const [leaderId, setLeaderId] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [isActive, setIsActive] = React.useState(true);
 
@@ -53,12 +55,14 @@ export const TeamPage: React.FC = () => {
       setName(editingTeam.name);
       setCode(editingTeam.team_code);
       setDepartmentId(String(editingTeam.department_id));
+      setLeaderId(editingTeam.leader_id ? String(editingTeam.leader_id) : '');
       setDescription(editingTeam.description || '');
       setIsActive(editingTeam.is_active);
     } else {
       setName('');
       setCode('');
       setDepartmentId(departments[0] ? String(departments[0].id) : '');
+      setLeaderId('');
       setDescription('');
       setIsActive(true);
     }
@@ -97,6 +101,7 @@ export const TeamPage: React.FC = () => {
       name: name.trim(),
       team_code: code.trim().toUpperCase(),
       department_id: Number(departmentId),
+      leader_id: leaderId ? Number(leaderId) : null,
       description: description.trim() || null,
       is_active: isActive,
     };
@@ -229,8 +234,27 @@ export const TeamPage: React.FC = () => {
                       <Building2 className="h-3.5 w-3.5 text-text-muted shrink-0" />
                       <span><strong>Phòng ban:</strong> {dept?.name || 'Không xác định'}</span>
                     </div>
+
+                    <div className="flex items-center justify-between gap-1.5 pt-1">
+                      <span className="flex items-center gap-1 font-semibold text-text-primary">
+                        <UserCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+                        Trưởng nhóm:
+                      </span>
+                      {(() => {
+                        const leader = employees.find((e) => e.id === team.leader_id);
+                        return leader ? (
+                          <div className="flex items-center gap-1.5 bg-secondary/60 px-2 py-0.5 rounded-full text-[10px]">
+                            <Avatar name={leader.full_name} src={leader.avatar_url} size="sm" />
+                            <span className="font-bold text-text-primary">{leader.full_name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-text-muted italic">Chưa chỉ định</span>
+                        );
+                      })()}
+                    </div>
+
                     <div>
-                      <span><strong>Nhân sự thuộc phòng:</strong> {teamMembers.length} thành viên</span>
+                      <span><strong>Nhân sự thuộc nhóm:</strong> {teamMembers.length} thành viên</span>
                     </div>
                   </div>
                 </CardContent>
@@ -324,6 +348,35 @@ export const TeamPage: React.FC = () => {
                   {dept.name}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-text-secondary">Trưởng nhóm (Team Lead)</label>
+              {departmentId && (
+                <span className="text-[10px] text-primary font-medium">
+                  Lọc theo {departments.find((d) => String(d.id) === String(departmentId))?.name}
+                </span>
+              )}
+            </div>
+            <select
+              value={leaderId}
+              onChange={(e) => setLeaderId(e.target.value)}
+              className="flex h-10 w-full appearance-none rounded-md border border-input bg-surface px-3 py-2 text-sm text-text-primary transition-all duration-200 outline-none hover:border-slate-400 cursor-pointer"
+            >
+              <option value="">-- Chưa chỉ định Trưởng nhóm --</option>
+              {(() => {
+                const candidates = departmentId
+                  ? employees.filter((e) => String(e.department_id) === String(departmentId))
+                  : employees;
+                const list = candidates.length > 0 ? candidates : employees;
+                return list.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.full_name} ({emp.job_title || 'Thành viên'})
+                  </option>
+                ));
+              })()}
             </select>
           </div>
 

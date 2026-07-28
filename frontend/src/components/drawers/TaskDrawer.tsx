@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Drawer } from '../common/Drawer';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -7,10 +7,18 @@ import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import api from '../../api/axios';
 import { useToast } from '../../providers/ToastProvider';
+import { useAuth } from '../../providers/AuthProvider';
+import { useProjectMembers } from '../../hooks/useProjects';
+import { useSprints } from '../../hooks/useSprintBacklog';
+import { useTopics } from '../../hooks/useTopics';
 import {
   type TaskItem,
   type ProjectItem,
   type EmployeeItem,
+  checklistsApi,
+  commentsApi,
+  type TaskChecklistResponse,
+  type TaskCommentResponse,
 } from '../../api/services';
 import {
   Paperclip,
@@ -18,10 +26,11 @@ import {
   Upload,
   MessageSquare,
   CheckSquare,
-  AlertCircle,
-  Clock,
+  Plus,
   Briefcase,
+  Clock,
 } from 'lucide-react';
+import { Avatar } from '../common/Avatar';
 
 interface TaskDrawerProps {
   isOpen: boolean;
@@ -45,6 +54,90 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   const toast = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { user: currentUser } = useAuth();
+
+  // Queries for Details, Checklists, and Comments
+  const { data: fullTask, refetch: refetchDetail } = useQuery<TaskItem, Error>({
+    queryKey: ['tasks', task?.id],
+    queryFn: async () => {
+      const res = await api.get(`/tasks/${task!.id}`);
+      return res.data?.data || res.data;
+    },
+    enabled: Boolean(task?.id && isOpen),
+  });
+
+  const activeTask = task?.id ? fullTask || task : null;
+
+  const { data: checklists = [], refetch: refetchChecklists } = useQuery<TaskChecklistResponse[]>({
+    queryKey: ['task-checklist', task?.id],
+    queryFn: () => checklistsApi.getByTaskId(task!.id),
+    enabled: Boolean(task?.id && isOpen),
+  });
+
+  const { data: comments = [], refetch: refetchComments } = useQuery<TaskCommentResponse[]>({
+    queryKey: ['task-comments', task?.id],
+    queryFn: () => commentsApi.getByTaskId(task!.id),
+    enabled: Boolean(task?.id && isOpen),
+  });
+
+  // State for Add inputs
+  const [newChecklistTitle, setNewChecklistTitle] = React.useState('');
+  const [commentContent, setCommentContent] = React.useState('');
+
+  const handleAddChecklist = async () => {
+    if (!task || !newChecklistTitle.trim()) return;
+    try {
+      await checklistsApi.create(task.id, { title: newChecklistTitle.trim() });
+      setNewChecklistTitle('');
+      refetchChecklists();
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    } catch {
+      toast.error('Lỗi khi thêm checklist');
+    }
+  };
+
+  const handleToggleChecklist = async (itemId: number, isCompleted: boolean) => {
+    if (!task) return;
+    try {
+      await checklistsApi.update(task.id, itemId, { is_completed: !isCompleted });
+      refetchChecklists();
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    } catch {
+      toast.error('Lỗi khi cập nhật checklist');
+    }
+  };
+
+  const handleDeleteChecklist = async (itemId: number) => {
+    if (!task) return;
+    try {
+      await checklistsApi.delete(task.id, itemId);
+      refetchChecklists();
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    } catch {
+      toast.error('Lỗi khi xóa checklist');
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!task || !commentContent.trim()) return;
+    try {
+      await commentsApi.create(task.id, { content: commentContent.trim() });
+      setCommentContent('');
+      refetchComments();
+    } catch {
+      toast.error('Lỗi khi gửi bình luận');
+    }
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    if (!task) return;
+    try {
+      await commentsApi.delete(task.id, commentId);
+      refetchComments();
+    } catch {
+      toast.error('Lỗi khi xóa bình luận');
+    }
+  };
 
   // Form Fields State
   const [title, setTitle] = React.useState('');
@@ -53,9 +146,20 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   const [priority, setPriority] = React.useState('Medium');
   const [projectId, setProjectId] = React.useState<number | ''>('');
   const [assignedTo, setAssignedTo] = React.useState<number | ''>('');
+  const [sprintId, setSprintId] = React.useState<number | ''>('');
+  const [topicId, setTopicId] = React.useState<number | ''>('');
   const [deadline, setDeadline] = React.useState('');
   const [storyPoints, setStoryPoints] = React.useState(0);
   const [isUploading, setIsUploading] = React.useState(false);
+
+  const { data: projectMembers = [] } = useProjectMembers(projectId ? Number(projectId) : null);
+  const { data: projectSprints = [] } = useSprints(projectId ? Number(projectId) : undefined);
+  const { data: projectTopics = [] } = useTopics(projectId ? Number(projectId) : undefined);
+
+  const assigneeOptions = React.useMemo(() => {
+    const list = projectMembers.length > 0 ? projectMembers : employees;
+    return list.map((emp) => ({ value: String(emp.id), label: emp.full_name || 'Member' }));
+  }, [projectMembers, employees]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -66,6 +170,8 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       setPriority(task.priority || 'Medium');
       setProjectId(task.project_id || '');
       setAssignedTo(task.assigned_to || '');
+      setSprintId(task.sprint_id || '');
+      setTopicId(task.topic_id || '');
       setDeadline(task.deadline ? task.deadline.substring(0, 10) : '');
       setStoryPoints(task.story_points || 0);
     } else {
@@ -75,6 +181,8 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       setPriority('Medium');
       setProjectId(projects[0]?.id || '');
       setAssignedTo('');
+      setSprintId('');
+      setTopicId('');
       setDeadline('');
       setStoryPoints(0);
     }
@@ -92,6 +200,8 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       priority,
       project_id: projectId ? Number(projectId) : null,
       assigned_to: assignedTo ? Number(assignedTo) : null,
+      sprint_id: sprintId ? Number(sprintId) : null,
+      topic_id: topicId ? Number(topicId) : null,
       deadline: deadline || null,
       story_points: Number(storyPoints),
     });
@@ -110,6 +220,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       toast.success('Tải tài liệu lên thành công', `Đã đính kèm tệp "${file.name}" vào công việc.`);
+      refetchDetail();
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch (err: any) {
       const errMsg = err.response?.data?.detail || 'Không thể tải tệp lên.';
@@ -128,6 +239,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
     try {
       await api.delete(`/tasks/${task.id}/attachments/${attachmentId}`);
       toast.success('Xóa tài liệu thành công');
+      refetchDetail();
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch {
       toast.error('Lỗi khi xóa tài liệu');
@@ -180,29 +292,57 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 />
               </div>
 
-              {/* Checklist Section (Backend Gap) */}
+              {/* Checklist Section */}
               <div className="border border-border rounded-xl p-4 bg-surface space-y-3">
                 <h4 className="text-xs font-bold text-text-primary flex items-center gap-1.5 uppercase tracking-wide">
                   <CheckSquare className="h-4 w-4 text-primary" />
-                  Checklists
+                  Checklist ({checklists.filter(c => c.is_completed).length}/{checklists.length})
                 </h4>
-                <div className="p-3 rounded-lg border border-rose-200/40 bg-rose-500/[0.02] space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-rose-500 font-semibold text-[11px]">
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    <span>Backend Gap: Chưa hỗ trợ API Checklist</span>
+                
+                <div className="space-y-2">
+                  {checklists.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between group p-2 rounded-lg hover:bg-secondary/40 transition-colors border border-transparent hover:border-border/30">
+                      <label className="flex items-center gap-2.5 cursor-pointer text-xs text-text-primary flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={item.is_completed}
+                          onChange={() => handleToggleChecklist(item.id, item.is_completed)}
+                          className="rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer shrink-0"
+                        />
+                        <span className={item.is_completed ? "line-through text-text-muted truncate" : "font-medium truncate"}>
+                          {item.title}
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteChecklist(item.id)}
+                        className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-500 cursor-pointer"
+                        title="Xóa"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
+                    <Input
+                      placeholder="Thêm mục checklist mới..."
+                      value={newChecklistTitle}
+                      onChange={(e) => setNewChecklistTitle(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button type="button" variant="primary" size="sm" className="px-3 shrink-0" onClick={handleAddChecklist}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <p className="text-[10px] text-text-muted">
-                    Bảng cơ sở dữ liệu <code className="px-1 rounded bg-secondary font-mono">dbo.task_checklists</code> đã tồn tại nhưng backend chưa triển khai API router.
-                  </p>
                 </div>
               </div>
 
-              {/* Attachments Section (Vật lý - kết nối API thực tế) */}
+              {/* Attachments Section */}
               <div className="border border-border rounded-xl p-4 bg-surface space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-text-primary flex items-center gap-1.5 uppercase tracking-wide">
                     <Paperclip className="h-4 w-4 text-primary" />
-                    Tài liệu đính kèm ({task?.attachments?.length || 0})
+                    Tài liệu đính kèm ({activeTask?.attachments?.length || 0})
                   </h4>
                   <div>
                     <input
@@ -225,9 +365,9 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                   </div>
                 </div>
 
-                {task?.attachments && task.attachments.length > 0 ? (
+                {activeTask?.attachments && activeTask.attachments.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {task.attachments.map((att) => (
+                    {activeTask.attachments.map((att) => (
                       <div
                         key={att.id}
                         className="p-3 rounded-xl border border-border bg-surface hover:border-primary/40 transition-colors flex items-center justify-between gap-3 text-xs"
@@ -240,7 +380,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                         </div>
                         <div className="flex gap-1 shrink-0">
                           <a
-                            href={att.file_path}
+                            href={`${api.defaults.baseURL || ''}/files/download/${att.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1 rounded-lg hover:bg-secondary text-primary"
@@ -267,21 +407,80 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 )}
               </div>
 
-              {/* Task Comments Section (Backend Gap) */}
+              {/* Task Comments Section */}
               <div className="border border-border rounded-xl p-4 bg-surface space-y-4">
                 <h4 className="text-xs font-bold text-text-primary flex items-center gap-1.5 uppercase tracking-wide">
                   <MessageSquare className="h-4 w-4 text-primary" />
-                  Bình luận & Thảo luận
+                  Bình luận & Thảo luận ({comments.length})
                 </h4>
 
-                <div className="p-3 rounded-lg border border-rose-200/40 bg-rose-500/[0.02] space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-rose-500 font-semibold text-[11px]">
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    <span>Backend Gap: Thiếu API Router Bình luận Task</span>
+                <div className="space-y-4">
+                  <div className="max-h-[300px] overflow-y-auto pr-1 space-y-3.5">
+                    {comments.length > 0 ? (
+                      comments.map((comment) => {
+                        const isOwner = currentUser?.id === comment.employee_id;
+                        const isMod = currentUser?.role_id === 1 || currentUser?.role_id === 2;
+                        return (
+                          <div key={comment.id} className="flex items-start gap-3 text-xs border-b border-border/20 pb-3 last:border-b-0 last:pb-0">
+                            <Avatar
+                              src={comment.author?.avatar_url}
+                              name={comment.author?.full_name}
+                              size="sm"
+                              className="mt-0.5"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-bold text-text-primary">
+                                  {comment.author?.full_name}
+                                </span>
+                                <span className="text-[10px] text-text-muted shrink-0">
+                                  {new Date(comment.created_at).toLocaleString('vi-VN')}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-text-muted mt-0.5 italic">
+                                {comment.author?.job_title || 'Thành viên'}
+                              </p>
+                              <div className="text-text-secondary mt-1 bg-secondary/20 p-2.5 rounded-lg border border-border/10 leading-relaxed break-words">
+                                {comment.content}
+                              </div>
+                            </div>
+                            {(isOwner || isMod) && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-500 shrink-0 self-start cursor-pointer"
+                                title="Xóa bình luận"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-[11px] text-text-muted text-center py-6">
+                        Chưa có bình luận nào cho công việc này.
+                      </p>
+                    )}
                   </div>
-                  <p className="text-[10px] text-text-muted leading-relaxed">
-                    Model cơ sở dữ liệu <code className="px-1 rounded bg-secondary font-mono">TaskComment</code> đã định cấu hình trường khóa ngoại liên kết nhưng chưa mở API endpoints để thực hiện CRUD bình luận.
-                  </p>
+                  
+                  <div className="flex gap-2 pt-2 border-t border-border/40">
+                    <Input
+                      placeholder="Viết bình luận mới..."
+                      value={commentContent}
+                      onChange={(e) => setCommentContent(e.target.value)}
+                      className="flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddComment();
+                        }
+                      }}
+                    />
+                    <Button type="button" variant="primary" size="sm" className="shrink-0" onClick={handleAddComment}>
+                      Gửi
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -331,7 +530,27 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                   onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : '')}
                   options={[
                     { value: '', label: '-- Chọn Người thực hiện --' },
-                    ...employees.map((emp) => ({ value: String(emp.id), label: emp.full_name })),
+                    ...assigneeOptions,
+                  ]}
+                />
+
+                <Select
+                  label="Gán vào Sprint"
+                  value={String(sprintId)}
+                  onChange={(e) => setSprintId(e.target.value ? Number(e.target.value) : '')}
+                  options={[
+                    { value: '', label: '-- Không thuộc Sprint --' },
+                    ...projectSprints.map((s) => ({ value: String(s.id), label: `${s.name} (${s.status})` })),
+                  ]}
+                />
+
+                <Select
+                  label="Thuộc Epic / Chủ đề"
+                  value={String(topicId)}
+                  onChange={(e) => setTopicId(e.target.value ? Number(e.target.value) : '')}
+                  options={[
+                    { value: '', label: '-- Không thuộc Epic --' },
+                    ...projectTopics.map((t) => ({ value: String(t.id), label: t.title })),
                   ]}
                 />
 
@@ -416,9 +635,31 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
               onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : '')}
               options={[
                 { value: '', label: '-- Chọn Người thực hiện --' },
-                ...employees.map((emp) => ({ value: String(emp.id), label: emp.full_name })),
+                ...assigneeOptions,
               ]}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Gán vào Sprint"
+                value={String(sprintId)}
+                onChange={(e) => setSprintId(e.target.value ? Number(e.target.value) : '')}
+                options={[
+                  { value: '', label: '-- Không thuộc Sprint --' },
+                  ...projectSprints.map((s) => ({ value: String(s.id), label: `${s.name} (${s.status})` })),
+                ]}
+              />
+
+              <Select
+                label="Thuộc Epic / Chủ đề"
+                value={String(topicId)}
+                onChange={(e) => setTopicId(e.target.value ? Number(e.target.value) : '')}
+                options={[
+                  { value: '', label: '-- Không thuộc Epic --' },
+                  ...projectTopics.map((t) => ({ value: String(t.id), label: t.title })),
+                ]}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <Input

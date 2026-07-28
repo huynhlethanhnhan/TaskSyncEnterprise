@@ -56,8 +56,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Brand Header */}
       <div className="h-16 px-4 flex items-center justify-between border-b border-border/60 shrink-0">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg shrink-0">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="flex items-center gap-3 overflow-hidden text-left focus-visible:outline-none group cursor-pointer"
+          title={isCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg shrink-0 transition-transform group-hover:scale-105">
             {brandLogo || brandName[0]}
           </div>
           {!isCollapsed && (
@@ -65,13 +70,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {brandName}
             </span>
           )}
-        </div>
+        </button>
 
         {onToggleCollapse && !isCollapsed && (
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="rounded-md p-1.5 text-text-muted hover:bg-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="rounded-md p-1.5 text-text-muted hover:bg-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
             aria-label="Collapse sidebar"
           >
             <ChevronLeft className="h-4 w-4 stroke-[1.75]" />

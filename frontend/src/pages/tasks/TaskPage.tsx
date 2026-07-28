@@ -17,6 +17,9 @@ import { TaskDrawer } from '../../components/drawers/TaskDrawer';
 import { useTasks, useCreateTask, useUpdateTask, useUpdateTaskStatus, useDeleteTask } from '../../hooks/useTasks';
 import { useProjects } from '../../hooks/useProjects';
 import { useEmployees } from '../../hooks/useEmployees';
+import { useSprints } from '../../hooks/useSprintBacklog';
+import { useTopics } from '../../hooks/useTopics';
+import { useDepartments } from '../../hooks/useDepartments';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
 import { type TaskItem } from '../../api/services';
@@ -32,6 +35,13 @@ export const TaskPage: React.FC = () => {
   const { data: tasks = [], isLoading, isError, refetch } = useTasks(isStaff);
   const { data: projects = [] } = useProjects();
   const { data: employees = [] } = useEmployees();
+  const { data: allSprints = [] } = useSprints();
+  const { data: allTopics = [] } = useTopics();
+  const { data: departments = [] } = useDepartments();
+
+  const sprintMap = React.useMemo(() => new Map(allSprints.map((s) => [s.id, s])), [allSprints]);
+  const topicMap = React.useMemo(() => new Map(allTopics.map((t) => [t.id, t])), [allTopics]);
+  const departmentMap = React.useMemo(() => new Map(departments.map((d) => [d.id, d])), [departments]);
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -190,13 +200,90 @@ export const TaskPage: React.FC = () => {
       },
     },
     {
+      accessorKey: 'sprint_id',
+      header: 'Sprint',
+      cell: ({ row }: { row: { original: TaskItem } }) => {
+        const projectSprints = allSprints.filter((s) => s.project_id === row.original.project_id);
+        return (
+          <select
+            value={row.original.sprint_id || ''}
+            onChange={async (e) => {
+              const val = e.target.value ? Number(e.target.value) : null;
+              try {
+                await updateTask.mutateAsync({
+                  id: row.original.id,
+                  payload: { sprint_id: val }
+                });
+                toast.success('Thành công', 'Đã cập nhật Sprint cho công việc.');
+              } catch {
+                toast.error('Lỗi', 'Không thể cập nhật Sprint.');
+              }
+            }}
+            className="text-[11px] bg-surface border border-border rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium min-w-[120px]"
+          >
+            <option value="">-- Chưa gán --</option>
+            {projectSprints.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        );
+      },
+    },
+    {
+      accessorKey: 'topic_id',
+      header: 'Epic / Chủ đề',
+      cell: ({ row }: { row: { original: TaskItem } }) => {
+        const projectTopics = allTopics.filter((t) => t.project_id === row.original.project_id);
+        return (
+          <select
+            value={row.original.topic_id || ''}
+            onChange={async (e) => {
+              const val = e.target.value ? Number(e.target.value) : null;
+              try {
+                await updateTask.mutateAsync({
+                  id: row.original.id,
+                  payload: { topic_id: val }
+                });
+                toast.success('Thành công', 'Đã cập nhật Epic cho công việc.');
+              } catch {
+                toast.error('Lỗi', 'Không thể cập nhật Epic.');
+              }
+            }}
+            className="text-[11px] bg-surface border border-border rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium min-w-[120px]"
+          >
+            <option value="">-- Chưa gán --</option>
+            {projectTopics.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        );
+      },
+    },
+    {
+      id: 'department',
+      header: 'Phòng ban',
+      cell: ({ row }: { row: { original: TaskItem } }) => {
+        const emp = (row.original as any).assignee || employees.find((e) => e.id === row.original.assigned_to);
+        const dept = emp?.department_id ? departmentMap.get(emp.department_id) : null;
+        return dept ? (
+          <span className="font-semibold text-text-primary">{dept.name}</span>
+        ) : (
+          <span className="text-text-muted">—</span>
+        );
+      },
+    },
+    {
       accessorKey: 'assigned_to',
       header: 'Người thực hiện',
       cell: ({ row }: { row: { original: TaskItem } }) => {
-        const emp = employees.find((e) => e.id === row.original.assigned_to);
+        const emp = (row.original as any).assignee || employees.find((e) => e.id === row.original.assigned_to);
         return emp ? (
           <div className="flex items-center gap-2">
-            <Avatar name={emp.full_name} size="sm" />
+            <Avatar name={emp.full_name} src={emp.avatar_url} size="sm" />
             <span className="text-xs font-medium text-text-primary">{emp.full_name}</span>
           </div>
         ) : (
@@ -340,7 +427,7 @@ export const TaskPage: React.FC = () => {
                   ) : (
                     colTasks.map((task) => {
                       const proj = projects.find((p) => p.id === task.project_id);
-                      const assignee = employees.find((e) => e.id === task.assigned_to);
+                      const assignee = (task as any).assignee || employees.find((e) => e.id === task.assigned_to);
 
                       return (
                         <Card

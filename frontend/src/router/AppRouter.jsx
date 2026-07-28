@@ -136,7 +136,7 @@ export default function AppRouter() {
         <Route
           path="/employees"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'manager', 1, 2]}>
               <ApplicationShell>
                 <EmployeePage />
               </ApplicationShell>
@@ -146,7 +146,7 @@ export default function AppRouter() {
         <Route
           path="/employees/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'manager', 1, 2]}>
               <ApplicationShell>
                 <EmployeeDetailPage />
               </ApplicationShell>
@@ -211,7 +211,7 @@ export default function AppRouter() {
         <Route
           path="/audit"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 1]}>
               <ApplicationShell>
                 <AuditLogPage />
               </ApplicationShell>

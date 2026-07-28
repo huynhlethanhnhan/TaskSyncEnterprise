@@ -43,3 +43,14 @@ class ProjectResponse(ProjectBase):
     id: int
     progress_percent: float
     created_at: datetime
+
+
+class ProjectMemberSummaryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    full_name: str
+    avatar_url: str | None = None
+    job_title: str | None = None
+    email: str | None = None
+

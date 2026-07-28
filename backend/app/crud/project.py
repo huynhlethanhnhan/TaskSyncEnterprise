@@ -5,7 +5,7 @@ from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
 
-def get_all(db: Session, skip=0, limit=20):
+def get_all(db: Session, skip=0, limit=20) -> list[Project]:
 
     stmt = (
         select(Project)
@@ -15,7 +15,7 @@ def get_all(db: Session, skip=0, limit=20):
         .order_by(Project.id.desc())
     )
 
-    return db.scalars(stmt).all()
+    return list(db.scalars(stmt).all())
 
 
 def get_by_id(db: Session, project_id: int):

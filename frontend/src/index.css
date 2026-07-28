@@ -191,7 +191,24 @@
   --shadow-lg: var(--shadow-el-3);
   --shadow-xl: var(--shadow-el-4);
   --shadow-2xl: var(--shadow-el-5);
+
+  --z-sticky: 10;
+  --z-header: 100;
+  --z-sidebar: 200;
+  --z-dropdown: 999;
+  --z-backdrop: 1000;
+  --z-modal: 1050;
+  --z-toast: 9999;
 }
+
+/* 🎯 Explicit Stacking Context Classes for Tailwind & Raw CSS */
+.z-sticky { z-index: 10 !important; }
+.z-header { z-index: 100 !important; }
+.z-sidebar { z-index: 200 !important; }
+.z-dropdown { z-index: 999 !important; }
+.z-backdrop { z-index: 1000 !important; }
+.z-modal { z-index: 1050 !important; }
+.z-toast { z-index: 9999 !important; }
 
 /* Base Body Styles */
 /* Base Body & Layout Standardization */

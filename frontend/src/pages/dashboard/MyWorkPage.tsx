@@ -360,30 +360,35 @@ export const MyWorkPage: React.FC = () => {
 
               {/* Tab 4: SPRINTS */}
               {activeTab === 'sprint' && (
-                <div className="space-y-4">
-                  <div className="p-4 border border-rose-200/40 bg-rose-500/[0.02] rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="danger">Agile Gap</Badge>
-                      <h4 className="font-bold text-xs text-rose-600 dark:text-rose-400">Hệ thống Sprints & Backlog chưa có dữ liệu backend</h4>
-                    </div>
-                    <p className="text-[11px] text-text-secondary leading-relaxed">
-                      Để bắt đầu quản lý Agile, backend cần bổ sung mô hình dữ liệu bảng <code className="px-1 py-0.5 rounded bg-secondary font-mono">sprints</code> và các quan hệ bảng với task công việc. Các task hiển thị ở đây là các task có trạng thái đang triển khai được lấy từ danh mục chung.
-                    </p>
-                  </div>
-
+                <div className="space-y-4 font-sans text-xs">
                   <div className="space-y-2">
-                    <h5 className="text-xs font-bold text-text-primary uppercase tracking-wide">Tasks đang thực hiện</h5>
-                    {myTasks.filter(t => t.status === 'In Progress').length === 0 ? (
-                      <p className="text-xs text-text-muted py-4 text-center border border-dashed border-border rounded-xl">
-                        Không có task nào đang thực hiện trong sprint.
+                    <h5 className="text-xs font-bold text-text-primary uppercase tracking-wide">Tasks trong Sprint hiện tại</h5>
+                    {myTasks.filter((t) => t.sprint_id !== null).length === 0 ? (
+                      <p className="text-xs text-text-muted py-6 text-center border border-dashed border-border rounded-xl bg-surface/50">
+                        Không có task nào được lên lịch cho Sprint hiện tại của bạn.
                       </p>
                     ) : (
-                      myTasks.filter(t => t.status === 'In Progress').map(t => (
-                        <div key={t.id} className="p-3 border border-border rounded-xl bg-surface flex items-center justify-between text-xs">
-                          <span className="font-semibold text-text-primary truncate">{t.title || t.name}</span>
-                          <Badge variant="primary">In Progress</Badge>
-                        </div>
-                      ))
+                      myTasks
+                        .filter((t) => t.sprint_id !== null)
+                        .map((t) => (
+                          <div
+                            key={t.id}
+                            className="p-3 border border-border rounded-xl bg-surface flex items-center justify-between gap-3 text-xs hover:border-primary/20 transition-all"
+                          >
+                            <span className="font-semibold text-text-primary truncate">{t.title || t.name}</span>
+                            <Badge
+                              variant={
+                                t.status === 'Done'
+                                  ? 'success'
+                                  : t.status === 'In Progress'
+                                  ? 'primary'
+                                  : 'warning'
+                              }
+                            >
+                              {t.status}
+                            </Badge>
+                          </div>
+                        ))
                     )}
                   </div>
                 </div>

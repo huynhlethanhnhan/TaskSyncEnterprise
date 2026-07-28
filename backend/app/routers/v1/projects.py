@@ -8,7 +8,15 @@ from app.core.deps import (
     RequireEmployee,
 )  # <-- Admin, Manager và Employee
 
-from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.schemas.project import (
+    ProjectCreate,
+    ProjectUpdate,
+    ProjectResponse,
+    ProjectMemberSummaryResponse,
+)
+from app.models.employee import Employee
+from app.core.deps import get_current_user
+
 from app.crud import project as crud_project
 from app.cache import cache_manager
 from app.cache.cache_keys import get_project_key, get_project_list_key
@@ -28,7 +36,7 @@ def get_projects(
     key = get_project_list_key(skip, limit)
     return cache_manager.cache_collection(
         key=key,
-        creator_fn=lambda: crud_project.get_all(db, skip, limit),
+        creator_fn=lambda: list(crud_project.get_all(db, skip, limit)),
         ttl=settings.CACHE_TTL_PROJECT,
         response_model=list[ProjectResponse],
     )
@@ -95,3 +103,51 @@ def delete_project(project_id: int, db: Session = Depends(get_db)):
     CacheInvalidator.invalidate_project(project_id)
 
     return {"message": "Deleted"}
+
+
+@router.get(
+    "/{project_id:int}/members",
+    response_model=list[ProjectMemberSummaryResponse],
+    summary="List project members",
+)
+def get_project_members(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
+    from app.models.project import Project
+    from app.models.project_member import ProjectMember
+    from app.models.employee import Employee
+    from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
+    from sqlalchemy import select
+
+    project = db.get(Project, project_id)
+    if not project or project.is_deleted:
+        raise HTTPException(404, "Project not found")
+
+    # RBAC IDOR check: Non-admins/managers must be members of the project to view its member list
+    if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
+        member_stmt = select(ProjectMember).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.employee_id == current_user.id,
+        )
+        is_member = db.scalars(member_stmt).first()
+        if not is_member:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied. You must be a project member to view member details.",
+            )
+
+    members_stmt = (
+        select(Employee)
+        .join(ProjectMember, Employee.id == ProjectMember.employee_id)
+        .where(ProjectMember.project_id == project_id, Employee.is_deleted == False)
+    )
+    members = db.scalars(members_stmt).all()
+
+    # Fallback: If project has no explicit ProjectMember entries yet, return current_user if authorized
+    if not members and current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER):
+        members = [current_user]
+
+    return members
+

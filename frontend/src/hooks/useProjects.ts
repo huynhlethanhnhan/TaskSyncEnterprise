@@ -50,3 +50,12 @@ export const useDeleteProject = () => {
     },
   });
 };
+
+export const useProjectMembers = (projectId?: number | null) => {
+  return useQuery({
+    queryKey: ['project-members', projectId],
+    queryFn: () => projectsApi.getMembers(projectId!),
+    enabled: Boolean(projectId),
+  });
+};
+

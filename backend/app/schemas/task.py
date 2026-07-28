@@ -13,6 +13,8 @@ class TaskCreate(BaseModel):
     deadline: datetime | None = None
     created_by: int | None = None
     assigned_to: int | None = None
+    sprint_id: int | None = None
+    topic_id: int | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -24,6 +26,8 @@ class TaskUpdate(BaseModel):
     story_points: int | None = None
     deadline: datetime | None = None
     assigned_to: int | None = None
+    sprint_id: int | None = None
+    topic_id: int | None = None
 
     @field_validator("status")
     @classmethod
@@ -46,6 +50,15 @@ class TaskAttachmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AssigneeSummaryResponse(BaseModel):
+    id: int
+    full_name: str
+    avatar_url: str | None = None
+    job_title: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TaskResponse(TaskCreate):
     model_config = ConfigDict(from_attributes=True)
 
@@ -53,3 +66,5 @@ class TaskResponse(TaskCreate):
     progress_percent: float
     created_at: datetime
     attachments: list[TaskAttachmentResponse] = []
+    assignee: AssigneeSummaryResponse | None = None
+

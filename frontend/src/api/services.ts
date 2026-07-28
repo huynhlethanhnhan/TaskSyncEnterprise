@@ -55,6 +55,8 @@ export interface TaskItem {
   status: string;
   priority: string;
   project_id?: number | null;
+  sprint_id?: number | null;
+  topic_id?: number | null;
   assigned_to?: number | null;
   created_by?: number | null;
   deadline?: string | null;
@@ -131,6 +133,10 @@ export const projectsApi = {
   },
   delete: async (id: number): Promise<void> => {
     await api.delete(`/projects/${id}`);
+  },
+  getMembers: async (projectId: number): Promise<Partial<EmployeeItem>[]> => {
+    const res = await api.get(`/projects/${projectId}/members`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
 };
 
@@ -227,6 +233,8 @@ export interface TeamItem {
   team_code: string;
   name: string;
   description?: string | null;
+  leader_id?: number | null;
+  member_count?: number;
   is_active: boolean;
   created_at: string;
 }
@@ -250,5 +258,326 @@ export const teamsApi = {
   },
   delete: async (id: number): Promise<void> => {
     await api.delete(`/teams/${id}`);
+  },
+};
+
+// ── NEW SERVICES & INTERFACES FOR GAP REMEDIATION ──────────────────────────
+
+export interface TaskChecklistResponse {
+  id: number;
+  task_id: number;
+  title: string;
+  is_completed: boolean;
+}
+
+export interface TaskCommentResponse {
+  id: number;
+  task_id: number;
+  employee_id: number;
+  content: string;
+  created_at: string;
+  author?: {
+    id: number;
+    full_name: string;
+    avatar_url: string | null;
+    job_title: string | null;
+    role_id: number;
+  };
+}
+
+export interface BacklogItem {
+  id: number;
+  project_id: number;
+  sprint_id?: number | null;
+  topic_id?: number | null;
+  task_id?: number | null;
+  title: string;
+  description?: string | null;
+  priority: string;
+  status: string;
+  story_points: number;
+  created_at: string;
+}
+
+export interface SprintItem {
+  id: number;
+  project_id: number;
+  name: string;
+  goal?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  status: string;
+  capacity: number;
+  created_at: string;
+}
+
+export interface SprintSnapshot {
+  snapshot_date: string;
+  remaining_story_points: number;
+  completed_story_points: number;
+  remaining_tasks: number;
+  completed_tasks: number;
+}
+
+export interface SprintAnalytics {
+  sprint_id: number;
+  name: string;
+  goal?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  status: string;
+  capacity: number;
+  total_tasks: number;
+  completed_tasks: number;
+  total_story_points: number;
+  completed_story_points: number;
+  snapshots: SprintSnapshot[];
+}
+
+export interface VelocityItem {
+  sprint_id: number;
+  name: string;
+  completed_story_points: number;
+}
+
+export interface ReplyItem {
+  id: number;
+  topic_id: number;
+  content: string;
+  created_by_id: number;
+  created_at: string;
+  creator?: {
+    id: number;
+    full_name: string;
+    avatar_url: string | null;
+    job_title: string | null;
+    role_id: number;
+  };
+}
+
+export interface TopicItem {
+  id: number;
+  project_id?: number | null;
+  title: string;
+  name?: string;
+  content: string;
+  status: string;
+  created_by_id: number;
+  created_at: string;
+  creator?: {
+    id: number;
+    full_name: string;
+    avatar_url: string | null;
+    job_title: string | null;
+    role_id: number;
+  };
+  reply_count?: number;
+  replies?: ReplyItem[];
+}
+
+export interface FeedbackItem {
+  id: number;
+  title: string;
+  category: string;
+  description: string;
+  impact_level: string;
+  status: string;
+  is_anonymous: boolean;
+  created_at: string;
+  submitter_id?: number | null;
+  submitter?: {
+    id: number;
+    full_name: string;
+    avatar_url: string | null;
+    job_title: string | null;
+    role_id: number;
+  } | null;
+  reviewer_id?: number | null;
+  reviewer?: {
+    id: number;
+    full_name: string;
+    avatar_url: string | null;
+    job_title: string | null;
+    role_id: number;
+  } | null;
+  response?: string | null;
+}
+
+export interface FileRegistryItem {
+  id: number;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_at: string;
+  uploaded_by_id: number;
+  uploader_name?: string | null;
+  parent_module: string;
+  parent_entity_id: number;
+  project_id?: number | null;
+}
+
+export const checklistsApi = {
+  getByTaskId: async (taskId: number): Promise<TaskChecklistResponse[]> => {
+    const res = await api.get(`/tasks/${taskId}/checklist`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  create: async (taskId: number, payload: Partial<TaskChecklistResponse>): Promise<TaskChecklistResponse> => {
+    const res = await api.post(`/tasks/${taskId}/checklist`, payload);
+    return res.data?.data || res.data;
+  },
+  update: async (taskId: number, itemId: number, payload: Partial<TaskChecklistResponse>): Promise<TaskChecklistResponse> => {
+    const res = await api.patch(`/tasks/${taskId}/checklist/${itemId}`, payload);
+    return res.data?.data || res.data;
+  },
+  delete: async (taskId: number, itemId: number): Promise<void> => {
+    await api.delete(`/tasks/${taskId}/checklist/${itemId}`);
+  },
+};
+
+export const commentsApi = {
+  getByTaskId: async (taskId: number): Promise<TaskCommentResponse[]> => {
+    const res = await api.get(`/tasks/${taskId}/comments`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  create: async (taskId: number, payload: { content: string }): Promise<TaskCommentResponse> => {
+    const res = await api.post(`/tasks/${taskId}/comments`, payload);
+    return res.data?.data || res.data;
+  },
+  update: async (taskId: number, commentId: number, payload: { content: string }): Promise<TaskCommentResponse> => {
+    const res = await api.patch(`/tasks/${taskId}/comments/${commentId}`, payload);
+    return res.data?.data || res.data;
+  },
+  delete: async (taskId: number, commentId: number): Promise<void> => {
+    await api.delete(`/tasks/${taskId}/comments/${commentId}`);
+  },
+};
+
+export const backlogApi = {
+  getAll: async (params: { project_id: number; status?: string }): Promise<BacklogItem[]> => {
+    const res = await api.get('/backlog', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  create: async (payload: Partial<BacklogItem>): Promise<BacklogItem> => {
+    const res = await api.post('/backlog', payload);
+    return res.data?.data || res.data;
+  },
+  update: async (id: number, payload: Partial<BacklogItem>): Promise<BacklogItem> => {
+    const res = await api.put(`/backlog/${id}`, payload);
+    return res.data?.data || res.data;
+  },
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/backlog/${id}`);
+  },
+  convertToTask: async (id: number): Promise<TaskItem> => {
+    const res = await api.post(`/backlog/${id}/convert-to-task`);
+    return res.data?.data || res.data;
+  },
+};
+
+export const sprintsApi = {
+  getAll: async (params?: { project_id?: number }): Promise<SprintItem[]> => {
+    const res = await api.get('/sprints', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  create: async (payload: Partial<SprintItem>): Promise<SprintItem> => {
+    const res = await api.post('/sprints', payload);
+    return res.data?.data || res.data;
+  },
+  update: async (id: number, payload: Partial<SprintItem>): Promise<SprintItem> => {
+    const res = await api.put(`/sprints/${id}`, payload);
+    return res.data?.data || res.data;
+  },
+  start: async (id: number): Promise<SprintItem> => {
+    const res = await api.patch(`/sprints/${id}/start`);
+    return res.data?.data || res.data;
+  },
+  complete: async (id: number): Promise<SprintItem> => {
+    const res = await api.patch(`/sprints/${id}/complete`);
+    return res.data?.data || res.data;
+  },
+  cancel: async (id: number): Promise<SprintItem> => {
+    const res = await api.patch(`/sprints/${id}/cancel`);
+    return res.data?.data || res.data;
+  },
+  reopen: async (id: number): Promise<SprintItem> => {
+    const res = await api.patch(`/sprints/${id}/reopen`);
+    return res.data?.data || res.data;
+  },
+  getAnalytics: async (id: number): Promise<SprintAnalytics> => {
+    const res = await api.get(`/sprints/${id}/analytics`);
+    return res.data?.data || res.data;
+  },
+  getVelocity: async (params: { project_id: number }): Promise<VelocityItem[]> => {
+    const res = await api.get('/sprints/velocity', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+};
+
+export const topicsApi = {
+  getAll: async (params?: { project_id?: number }): Promise<TopicItem[]> => {
+    const res = await api.get('/topics', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  getById: async (id: number): Promise<TopicItem> => {
+    const res = await api.get(`/topics/${id}`);
+    return res.data?.data || res.data;
+  },
+  create: async (payload: Partial<TopicItem>): Promise<TopicItem> => {
+    const res = await api.post('/topics', payload);
+    return res.data?.data || res.data;
+  },
+  update: async (id: number, payload: Partial<TopicItem>): Promise<TopicItem> => {
+    const res = await api.put(`/topics/${id}`, payload);
+    return res.data?.data || res.data;
+  },
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/topics/${id}`);
+  },
+  createReply: async (topicId: number, payload: { content: string }): Promise<ReplyItem> => {
+    const res = await api.post(`/topics/${topicId}/replies`, payload);
+    return res.data?.data || res.data;
+  },
+  updateReply: async (topicId: number, replyId: number, payload: { content: string }): Promise<ReplyItem> => {
+    const res = await api.patch(`/topics/${topicId}/replies/${replyId}`, payload);
+    return res.data?.data || res.data;
+  },
+  deleteReply: async (topicId: number, replyId: number): Promise<void> => {
+    await api.delete(`/topics/${topicId}/replies/${replyId}`);
+  },
+};
+
+export const feedbackApi = {
+  submit: async (payload: Partial<FeedbackItem>): Promise<FeedbackItem> => {
+    const res = await api.post('/feedback', payload);
+    return res.data?.data || res.data;
+  },
+  getMyFeedback: async (): Promise<FeedbackItem[]> => {
+    const res = await api.get('/feedback/my');
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  getAll: async (): Promise<FeedbackItem[]> => {
+    const res = await api.get('/feedback');
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  review: async (id: number, payload: { status: string; response?: string }): Promise<FeedbackItem> => {
+    const res = await api.patch(`/feedback/${id}/review`, payload);
+    return res.data?.data || res.data;
+  },
+};
+
+export const filesApi = {
+  getAll: async (params?: { project_id?: number; module?: string }): Promise<FileRegistryItem[]> => {
+    const res = await api.get('/files', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/files/${id}`);
+  },
+  upload: async (formData: FormData): Promise<any> => {
+    const res = await api.post('/files/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
   },
 };
