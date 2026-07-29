@@ -17,7 +17,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
 import { useNavigate } from 'react-router-dom';
 
-export const TeamPage: React.FC = () => {
+const TeamPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();

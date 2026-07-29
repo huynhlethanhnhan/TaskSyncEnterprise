@@ -7,7 +7,7 @@ import { SprintsManager } from '../../components/sprints/SprintsManager';
 import { JiraTimeline } from '../../components/timeline/JiraTimeline';
 import { RefreshCw, Calendar as CalendarIcon } from 'lucide-react';
 
-export const SprintsPage: React.FC = () => {
+const SprintsPage: React.FC = () => {
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = React.useState<string>('');
   const [viewMode, setViewMode] = React.useState<'list' | 'timeline'>('list');

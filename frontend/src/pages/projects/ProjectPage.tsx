@@ -25,7 +25,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useToast } from '../../providers/ToastProvider';
 import { type ProjectItem } from '../../api/services';
 
-export const ProjectPage: React.FC = () => {
+const ProjectPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const permissions = usePermissions();

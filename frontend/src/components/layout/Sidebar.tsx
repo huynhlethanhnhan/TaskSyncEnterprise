@@ -4,7 +4,7 @@ import { Avatar } from '../common/Avatar';
 import { cn } from '../../utils/cn';
 
 
-export interface SidebarNavItem {
+interface SidebarNavItem {
   key: string;
   label: string;
   icon: React.ReactNode;

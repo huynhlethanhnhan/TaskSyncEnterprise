@@ -18,7 +18,7 @@ const ACTION_BADGE_VARIANTS: Record<string, 'success' | 'primary' | 'warning' | 
   DELETE: 'danger',
 };
 
-export const AuditLogPage: React.FC = () => {
+const AuditLogPage: React.FC = () => {
   const { user } = useAuth();
   const roleStr = (user?.role || '').toLowerCase();
   const roleId = Number(user?.role_id);

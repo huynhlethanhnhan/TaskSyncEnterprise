@@ -27,7 +27,7 @@ import { type TaskItem } from '../../api/services';
 
 const STATUS_COLUMNS = ['To Do', 'In Progress', 'Done'];
 
-export const TaskPage: React.FC = () => {
+const TaskPage: React.FC = () => {
   const { user } = useAuth();
   const toast = useToast();
   const role = (user?.role || '').toLowerCase();

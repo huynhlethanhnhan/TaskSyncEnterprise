@@ -19,7 +19,7 @@ import { useToast } from '../../providers/ToastProvider';
 import { RelativeTime } from '../../components/data-display/RelativeTime';
 import { cn } from '../../utils/cn';
 
-export const NotificationsPage: React.FC = () => {
+const NotificationsPage: React.FC = () => {
   const toast = useToast();
   const navigate = useNavigate();
 

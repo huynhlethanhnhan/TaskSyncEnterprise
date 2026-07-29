@@ -38,7 +38,7 @@ import { FilesManager } from '../../components/files/FilesManager';
 import { useAuth } from '../../providers/AuthProvider';
 import { useTeams } from '../../hooks/useTeams';
 
-export const ProjectDetailPage: React.FC = () => {
+const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();

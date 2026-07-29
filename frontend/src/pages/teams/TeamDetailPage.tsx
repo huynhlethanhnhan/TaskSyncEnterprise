@@ -24,7 +24,7 @@ import { ErrorState } from '../../components/feedback/ErrorState';
 
 import { useTeamDetail } from '../../hooks/useTeams';
 
-export const TeamDetailPage: React.FC = () => {
+const TeamDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 

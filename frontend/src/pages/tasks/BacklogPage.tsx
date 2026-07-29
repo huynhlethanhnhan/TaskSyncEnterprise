@@ -5,7 +5,7 @@ import { useProjects } from '../../hooks/useProjects';
 import { Select } from '../../components/ui/Select';
 import { BacklogManager } from '../../components/backlog/BacklogManager';
 
-export const BacklogPage: React.FC = () => {
+const BacklogPage: React.FC = () => {
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = React.useState<string>('');
 

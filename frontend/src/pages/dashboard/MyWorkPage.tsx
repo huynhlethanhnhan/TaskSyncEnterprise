@@ -27,7 +27,7 @@ import { useProjects } from '../../hooks/useProjects';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
 
-export const MyWorkPage: React.FC = () => {
+const MyWorkPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();

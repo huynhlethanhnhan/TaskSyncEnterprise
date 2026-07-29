@@ -31,7 +31,7 @@ import { useTasks } from '../../hooks/useTasks';
 import { useProjects } from '../../hooks/useProjects';
 import api from '../../api/axios';
 
-export const EmployeeDetailPage: React.FC = () => {
+const EmployeeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const empId = Number(id);

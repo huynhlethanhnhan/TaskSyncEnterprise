@@ -11,7 +11,7 @@ import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { useDepartmentDetail } from '../../hooks/useDepartments';
 
-export const DepartmentDetailPage: React.FC = () => {
+const DepartmentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const deptId = Number(id);

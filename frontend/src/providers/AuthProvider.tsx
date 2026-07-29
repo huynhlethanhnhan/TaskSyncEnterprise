@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { tokenService } from '../services/tokenService';
 
-export interface UserProfile {
+interface UserProfile {
   id?: number;
   name: string;
   email: string;

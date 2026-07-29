@@ -3,7 +3,7 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { FeedbackManager } from '../../components/feedback/FeedbackManager';
 
-export const FeedbackPage: React.FC = () => {
+const FeedbackPage: React.FC = () => {
   return (
     <div className="space-y-6 font-sans pb-12 text-xs">
       {/* Page Header */}

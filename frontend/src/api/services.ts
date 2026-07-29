@@ -105,7 +105,7 @@ export interface DepartmentItem {
   created_at: string;
 }
 
-export interface DepartmentMemberItem {
+interface DepartmentMemberItem {
   id: number;
   employee_code: string;
   full_name: string;
@@ -116,7 +116,7 @@ export interface DepartmentMemberItem {
   is_active: boolean;
 }
 
-export interface DepartmentTeamItem {
+interface DepartmentTeamItem {
   id: number;
   team_code: string;
   name: string;
@@ -281,7 +281,7 @@ export interface TeamItem {
   created_at: string;
 }
 
-export interface TeamMemberItem {
+interface TeamMemberItem {
   id: number;
   employee_code: string;
   full_name: string;
@@ -385,7 +385,7 @@ export interface SprintPlanningData {
   total_story_points: number;
 }
 
-export interface SprintSnapshot {
+interface SprintSnapshot {
   snapshot_date: string;
   remaining_story_points: number;
   completed_story_points: number;

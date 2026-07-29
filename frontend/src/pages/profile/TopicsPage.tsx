@@ -3,7 +3,7 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { TopicsManager } from '../../components/topics/TopicsManager';
 
-export const TopicsPage: React.FC = () => {
+const TopicsPage: React.FC = () => {
   return (
     <div className="space-y-6 font-sans pb-12 text-xs">
       {/* Page Header */}

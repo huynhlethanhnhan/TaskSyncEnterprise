@@ -28,7 +28,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
 import api from '../../api/axios';
 
-export const ProfilePage: React.FC = () => {
+const ProfilePage: React.FC = () => {
   const { user, setUser } = useAuth();
   const toast = useToast();
 
