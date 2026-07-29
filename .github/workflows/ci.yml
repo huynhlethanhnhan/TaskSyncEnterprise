@@ -217,7 +217,9 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Validate docker-compose.yml syntax
-        run: docker compose -f docker-compose.yml config --quiet
+        # CI has no untracked .env file. Validate the committed local template
+        # explicitly so required secrets stay mandatory in real deployments.
+        run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
 
       - name: Validate docker-compose.production.yml syntax
         run: docker compose --env-file .env.production.example -f docker-compose.production.yml config --quiet
