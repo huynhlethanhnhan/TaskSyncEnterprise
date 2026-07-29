@@ -30,11 +30,6 @@ export const TeamPage: React.FC = () => {
   // Queries
   const { data: teams = [], isLoading } = useTeams();
 
-  React.useEffect(() => {
-    console.log("USER", user);
-    console.log("TEAMS", teams);
-  }, [user, teams]);
-
   const { data: departments = [] } = useDepartments();
   const { data: employees = [] } = useEmployees();
 

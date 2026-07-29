@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useBacklog, useCreateBacklogItem, useUpdateBacklogItem, useDeleteBacklogItem, useConvertBacklogToTask, useSprints } from '../../hooks/useSprintBacklog';
-import { useTopics } from '../../hooks/useTopics';
+import { useCreateTopic, useTopics } from '../../hooks/useTopics';
 import { Card, CardHeader, CardTitle, CardContent } from '../common/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -9,7 +9,7 @@ import { Textarea } from '../ui/Textarea';
 import { Badge } from '../common/Badge';
 import { useToast } from '../../providers/ToastProvider';
 import { useAuth } from '../../providers/AuthProvider';
-import { AlertCircle, Play, Trash2, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, Play, Trash2, CheckCircle2, Plus } from 'lucide-react';
 
 interface BacklogManagerProps {
   projectId: number;
@@ -19,18 +19,22 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
   const toast = useToast();
   const { user } = useAuth();
 
-  const isManagerOrAdmin = user?.role_id === 1 || user?.role_id === 2;
+  const role = (user?.role || '').toLowerCase();
+  const roleId = Number(user?.role_id);
+  const isManagerOrAdmin = role === 'admin' || role === 'manager' || roleId === 1 || roleId === 2;
 
   // Load backlog
   const { data: backlogItems = [], isLoading } = useBacklog(projectId);
   const { data: sprints = [] } = useSprints(projectId);
   const { data: topics = [] } = useTopics(projectId);
+  const plannedSprints = sprints.filter((s) => s.status === 'Planned');
 
   // Mutations
   const createMutation = useCreateBacklogItem();
   const updateMutation = useUpdateBacklogItem();
   const deleteMutation = useDeleteBacklogItem();
   const convertMutation = useConvertBacklogToTask();
+  const createTopicMutation = useCreateTopic();
 
   // Form State
   const [title, setTitle] = React.useState('');
@@ -39,6 +43,25 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
   const [storyPoints, setStoryPoints] = React.useState(0);
   const [sprintId, setSprintId] = React.useState<number | ''>('');
   const [topicId, setTopicId] = React.useState<number | ''>('');
+  const [epicTitle, setEpicTitle] = React.useState('');
+
+  const handleCreateEpic = async () => {
+    const normalizedTitle = epicTitle.trim();
+    if (!normalizedTitle) return;
+    try {
+      const epic = await createTopicMutation.mutateAsync({
+        project_id: projectId,
+        title: normalizedTitle,
+        content: `Epic của dự án: ${normalizedTitle}`,
+        status: 'Open',
+      });
+      setTopicId(epic.id);
+      setEpicTitle('');
+      toast.success('Đã tạo Epic', 'Epic mới đã được liên kết với đúng dự án.');
+    } catch (err: any) {
+      toast.error('Lỗi tạo Epic', err.response?.data?.detail || 'Không thể tạo Epic cho dự án.');
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,8 +139,8 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
     try {
       await updateMutation.mutateAsync({ id, payload: { sprint_id: targetSprintId } });
       toast.success('Thành công', 'Đã cập nhật Sprint cho hạng mục backlog.');
-    } catch {
-      toast.error('Lỗi', 'Không thể cập nhật Sprint.');
+    } catch (err: any) {
+      toast.error('Lỗi', err.response?.data?.detail || 'Không thể cập nhật Sprint.');
     }
   };
 
@@ -143,6 +166,15 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
+      <div className="lg:col-span-3 rounded-xl border border-primary/20 bg-primary/[0.04] px-4 py-3">
+        <p className="text-xs font-bold text-text-primary">
+          Project → Epic → User Story / Product Backlog → Task → Sprint
+        </p>
+        <p className="mt-1 text-[11px] text-text-muted">
+          Epic là nhóm tính năng lớn của Project; mỗi hạng mục Backlog là một User Story.
+          Khi đủ rõ, User Story được chuyển thành Task và Task được lập kế hoạch vào Sprint.
+        </p>
+      </div>
       {/* Add form (Only for Managers or Admins) */}
       <div className="lg:col-span-1">
         <Card>
@@ -195,7 +227,7 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                     onChange={(e) => setSprintId(e.target.value ? Number(e.target.value) : '')}
                     options={[
                       { value: '', label: '-- Không gán --' },
-                      ...sprints.map((s) => ({ value: String(s.id), label: s.name })),
+                      ...plannedSprints.map((s) => ({ value: String(s.id), label: s.name })),
                     ]}
                   />
                   <Select
@@ -207,6 +239,34 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                       ...topics.map((t) => ({ value: String(t.id), label: t.title })),
                     ]}
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-text-secondary">
+                    Tạo nhanh Epic cho dự án
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Tên Epic mới"
+                      value={epicTitle}
+                      onChange={(e) => setEpicTitle(e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      leftIcon={<Plus className="h-3.5 w-3.5" />}
+                      onClick={handleCreateEpic}
+                      isLoading={createTopicMutation.isPending}
+                      disabled={!epicTitle.trim()}
+                    >
+                      Tạo
+                    </Button>
+                  </div>
+                  {topics.length === 0 && (
+                    <p className="text-[10px] text-text-muted">
+                      Dự án chưa có Epic. Tạo Epic ở đây để dùng ngay cho Backlog và Task.
+                    </p>
+                  )}
                 </div>
                 <Button
                   type="submit"
@@ -301,11 +361,14 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                           title="Gán nhanh Sprint"
                         >
                           <option value="">-- Gán Sprint --</option>
-                          {sprints.map((s) => (
+                          {plannedSprints.map((s) => (
                             <option key={s.id} value={s.id}>
                               {s.name}
                             </option>
                           ))}
+                          {plannedSprints.length === 0 && (
+                            <option value="" disabled>Chưa có Sprint Planned</option>
+                          )}
                         </select>
 
                         <select

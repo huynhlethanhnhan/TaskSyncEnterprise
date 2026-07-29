@@ -344,30 +344,11 @@ def reopen_sprint(
     if not sprint or sprint.is_deleted:
         raise HTTPException(status_code=404, detail="Sprint not found")
 
-    check_project_membership(db, sprint.project_id, current_user)
-    if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
-        raise HTTPException(
-            status_code=403, detail="Only Managers or Admins can reopen sprints"
-        )
-
-    active_sprint = db.scalar(
-        select(Sprint).where(
-            Sprint.project_id == sprint.project_id,
-            Sprint.status == "Active",
-            Sprint.is_deleted == False,
-        )
-    )
-    if active_sprint and active_sprint.id != sprint_id:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Đã có Sprint '{active_sprint.name}' đang ở trạng thái Active. Vui lòng hoàn tất hoặc tạm dừng Sprint đó trước khi mở lại Sprint này.",
-        )
-
-    sprint.status = "Active"
-    db.commit()
-    db.refresh(sprint)
+    require_project_management(db, sprint.project_id, current_user)
+    sprint_service.reopen_sprint(db, sprint)
 
     CacheInvalidator.invalidate_dashboard()
+    CacheInvalidator.invalidate_sprint(sprint.id, project_id=sprint.project_id)
     return sprint
 
 

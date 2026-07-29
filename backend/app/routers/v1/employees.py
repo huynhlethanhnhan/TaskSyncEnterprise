@@ -220,6 +220,7 @@ def upload_my_avatar(
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_employee(current_user.id)
+    CacheInvalidator.invalidate_task(employee_id=current_user.id)
 
     return {
         "success": True,
@@ -244,6 +245,7 @@ def delete_my_avatar(
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_employee(current_user.id)
+    CacheInvalidator.invalidate_task(employee_id=current_user.id)
 
     return {
         "success": True,

@@ -1,9 +1,0 @@
-NAME                       IMAGE                                        COMMAND                  SERVICE      CREATED       STATUS                    PORTS
-tasksync-backend-prod      tasksyncenterprise-backend                   "uvicorn app.main:ap…"   backend      5 hours ago   Up 20 minutes (healthy)   8000/tcp
-tasksync-cadvisor-prod     gcr.io/cadvisor/cadvisor:v0.49.1             "/usr/bin/cadvisor -…"   cadvisor     7 hours ago   Up 21 minutes (healthy)   127.0.0.1:8081->8080/tcp
-tasksync-frontend-prod     tasksyncenterprise-frontend                  "/docker-entrypoint.…"   frontend     6 hours ago   Up 21 minutes (healthy)   80/tcp, 8080/tcp
-tasksync-grafana-prod      grafana/grafana:11.1.0                       "/run.sh"                grafana      7 hours ago   Up 21 minutes (healthy)   127.0.0.1:3000->3000/tcp
-tasksync-nginx-prod        nginx:1.27.1-alpine                          "/docker-entrypoint.…"   nginx        6 hours ago   Up 21 minutes (healthy)   0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp
-tasksync-prometheus-prod   prom/prometheus:v3.13.1                      "/bin/prometheus --c…"   prometheus   7 hours ago   Up 21 minutes (healthy)   127.0.0.1:9090->9090/tcp
-tasksync-redis-prod        redis:7-alpine                               "docker-entrypoint.s…"   redis        7 hours ago   Up 21 minutes (healthy)   6379/tcp
-tasksync-sqlserver-prod    mcr.microsoft.com/mssql/server:2022-latest   "/opt/mssql/bin/laun…"   sqlserver    7 hours ago   Up 21 minutes (healthy)   1433/tcp

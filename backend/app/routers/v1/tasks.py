@@ -1,6 +1,6 @@
 # 📂 FILE: app/routers/v1/tasks.py
 import os
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, field_validator
 
@@ -125,7 +125,7 @@ def get_task(
 @router.post(
     "",
     response_model=TaskResponse,
-    dependencies=[Depends(RequireManager)],  # <-- Chỉ Admin và Manager được tạo Task
+    dependencies=[Depends(RequireEmployee)],
 )
 def create_task(
     data: TaskCreate,
@@ -152,9 +152,7 @@ def create_task(
 @router.put(
     "/{task_id:int}",
     response_model=TaskResponse,
-    dependencies=[
-        Depends(RequireManager)
-    ],  # <-- Chỉ Admin và Manager được sửa toàn bộ Task
+    dependencies=[Depends(RequireEmployee)],
 )
 def update_task(
     task_id: int,
@@ -206,33 +204,7 @@ def patch_task(
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
-
-    is_manager_or_admin = current_user.role_id in {ROLE_ADMIN, ROLE_MANAGER}
-    if is_manager_or_admin:
-        require_project_management(db, obj.project_id, current_user)
-    else:
-        require_project_access(db, obj.project_id, current_user)
-        from app.models.task_assignment import TaskAssignment
-        from sqlalchemy import select
-
-        is_assigned = db.scalar(
-            select(TaskAssignment).where(
-                TaskAssignment.task_id == task_id,
-                TaskAssignment.employee_id == current_user.id,
-            )
-        )
-        if not is_assigned:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not assigned to this task",
-            )
-        disallowed_fields = data.model_fields_set - {"status", "progress_percent"}
-        if disallowed_fields:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Employees may only update task status and progress.",
-            )
+    require_project_management(db, obj.project_id, current_user)
 
     old_project_id = obj.project_id
     old_employee_id = obj.employee_id
@@ -264,7 +236,7 @@ def patch_task(
 
 @router.delete(
     "/{task_id:int}",
-    dependencies=[Depends(RequireManager)],  # <-- Chỉ Admin và Manager được xóa Task
+    dependencies=[Depends(RequireEmployee)],
 )
 def delete_task(
     task_id: int,
@@ -320,21 +292,7 @@ def update_my_task(
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # 2. CHỐT CHẶN: Xuống DB kiểm tra xem Task này có phải do Nhân viên này đảm nhận không
-    from app.models.task_assignment import TaskAssignment
-    from sqlalchemy import select
-
-    is_assigned = db.scalar(
-        select(TaskAssignment).where(
-            TaskAssignment.task_id == task_id,
-            TaskAssignment.employee_id == current_user.id,
-        )
-    )
-    if not is_assigned:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not assigned to this task",
-        )
+    require_project_management(db, task.project_id, current_user)
 
     # 3. Tiến hành cập nhật giới hạn (Chỉ đổi status và progress)
     old_status = task.status

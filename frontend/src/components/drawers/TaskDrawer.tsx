@@ -40,6 +40,7 @@ interface TaskDrawerProps {
   employees?: EmployeeItem[];
   onSave: (data: Partial<TaskItem>) => Promise<void>;
   isLoading?: boolean;
+  canEdit?: boolean;
 }
 
 export const TaskDrawer: React.FC<TaskDrawerProps> = ({
@@ -50,6 +51,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   employees = [],
   onSave,
   isLoading = false,
+  canEdit = true,
 }) => {
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -190,6 +192,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
     if (!title.trim()) return;
 
     await onSave({
@@ -216,12 +219,19 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
 
     try {
       setIsUploading(true);
-      await api.post(`/tasks/${task.id}/attachments`, formData, {
+      const response = await api.post(`/tasks/${task.id}/attachments`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      const newAttachment = response.data?.data;
+      if (newAttachment) {
+        queryClient.setQueryData<TaskItem>(['tasks', task.id], (current) => ({
+          ...(current || task),
+          attachments: [...(current?.attachments || task.attachments || []), newAttachment],
+        }));
+      }
       toast.success('Tải tài liệu lên thành công', `Đã đính kèm tệp "${file.name}" vào công việc.`);
-      refetchDetail();
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      await refetchDetail();
+      await queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch (err: any) {
       const errMsg = err.response?.data?.detail || 'Không thể tải tệp lên.';
       toast.error('Lỗi tải tệp lên', errMsg);
@@ -238,9 +248,15 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
 
     try {
       await api.delete(`/tasks/${task.id}/attachments/${attachmentId}`);
+      queryClient.setQueryData<TaskItem>(['tasks', task.id], (current) => ({
+        ...(current || task),
+        attachments: (current?.attachments || task.attachments || []).filter(
+          (attachment) => attachment.id !== attachmentId
+        ),
+      }));
       toast.success('Xóa tài liệu thành công');
-      refetchDetail();
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      await refetchDetail();
+      await queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch {
       toast.error('Lỗi khi xóa tài liệu');
     }
@@ -261,9 +277,11 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
           <Button variant="outline" size="sm" onClick={onClose} type="button">
             Hủy bỏ
           </Button>
-          <Button variant="primary" size="sm" onClick={handleSubmit} isLoading={isLoading}>
-            {isEditMode ? 'Lưu thay đổi' : 'Tạo Mới'}
-          </Button>
+          {canEdit && (
+            <Button variant="primary" size="sm" onClick={handleSubmit} isLoading={isLoading}>
+              {isEditMode ? 'Lưu thay đổi' : 'Tạo Mới'}
+            </Button>
+          )}
         </div>
       }
     >
@@ -280,6 +298,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                   placeholder="Ví dụ: Triển khai API Authentication Redis"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  disabled={!canEdit}
                   required
                 />
 
@@ -288,6 +307,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                   placeholder="Yêu cầu công việc..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  disabled={!canEdit}
                   rows={4}
                 />
               </div>
@@ -487,7 +507,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
 
             {/* Right Column: Metadata Sidebar */}
             <div className="space-y-4">
-              <div className="border border-border rounded-xl p-4 bg-surface space-y-4">
+              <fieldset disabled={!canEdit} className="border border-border rounded-xl p-4 bg-surface space-y-4">
                 <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider border-b border-border pb-2">
                   Thuộc tính & Metadata
                 </h3>
@@ -567,7 +587,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                   value={String(storyPoints)}
                   onChange={(e) => setStoryPoints(Number(e.target.value))}
                 />
-              </div>
+              </fieldset>
 
               {/* Quick Info summary */}
               <div className="text-[10px] text-text-muted space-y-1 p-3 border border-border/60 rounded-xl bg-accent/20">

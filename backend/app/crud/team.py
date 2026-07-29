@@ -64,10 +64,14 @@ def get_all(
         stmt = stmt.where(Team.department_id == current_user.department_id)
     elif current_user.role_id != ROLE_ADMIN:
         if current_user.team_id is None:
-            return []
-
-        stmt = stmt.where(Team.id == current_user.team_id)
-
+            stmt = stmt.where(Team.leader_id == current_user.id)
+        else:
+            stmt = stmt.where(
+                or_(
+                    Team.id == current_user.team_id,
+                    Team.leader_id == current_user.id,
+                )
+            )
     if department_id is not None:
         stmt = stmt.where(Team.department_id == department_id)
 

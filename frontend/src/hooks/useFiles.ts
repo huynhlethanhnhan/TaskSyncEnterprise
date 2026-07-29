@@ -7,22 +7,10 @@ export const useFilesList = (projectId?: number, module?: string) => {
     queryFn: () => filesApi.getAll(projectId || module ? { project_id: projectId, module } : undefined),
   });
 };
-
 export const useDeleteFile = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => filesApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['files'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
-};
-
-export const useUploadFile = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (formData: FormData) => filesApi.upload(formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['files'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });

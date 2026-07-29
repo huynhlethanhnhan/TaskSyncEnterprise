@@ -98,6 +98,9 @@ export interface DepartmentItem {
   manager_avatar_url?: string | null;
   employee_count?: number;
   team_count?: number;
+  project_count?: number;
+  completed_project_count?: number;
+  sprint_count?: number;
   is_active: boolean;
   created_at: string;
 }

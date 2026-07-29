@@ -207,6 +207,21 @@ def cancel_sprint(db: Session, sprint: Sprint) -> Sprint:
     return sprint
 
 
+def reopen_sprint(db: Session, sprint: Sprint) -> Sprint:
+    if sprint.status not in {SPRINT_COMPLETED, SPRINT_CANCELLED}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only a Completed or Cancelled Sprint can be reopened.",
+        )
+
+    # Reopening is a corrective planning action. It must not silently create a
+    # second Active Sprint for the same Project.
+    sprint.status = SPRINT_PLANNED
+    db.commit()
+    db.refresh(sprint)
+    return sprint
+
+
 def add_backlog_item(
     db: Session,
     sprint: Sprint,

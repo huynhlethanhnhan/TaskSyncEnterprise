@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { tokenService } from '../services/tokenService';
 
 export interface UserProfile {
@@ -24,6 +25,7 @@ interface AuthContextType {
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUserState] = React.useState<UserProfile | null>(() => {
     try {
       const savedUser = localStorage.getItem('user');
@@ -54,11 +56,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAuthenticated = Boolean(user && tokenService.getAccessToken());
 
   const login = (token: string, refreshToken: string, userProfile: UserProfile) => {
+    queryClient.clear();
     tokenService.setTokens(token, refreshToken);
     setUser(userProfile);
   };
 
   const logout = () => {
+    queryClient.clear();
     tokenService.clear();
     setUser(null);
   };

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
+from sqlalchemy.dialects import mssql
 
 from app.models.backlog_item import BacklogItem
 from app.models.employee import Employee
@@ -11,9 +12,12 @@ from app.models.project_member import ProjectMember
 from app.models.sprint import Sprint
 from app.models.task import Task
 from app.schemas.sprint import SprintCreate
+from app.schemas.task import TaskUpdate
 from app.services import sprint_service
 from app.services.task_service import validate_task_relationships
+from app.services.project_access import user_can_access_project
 from app.crud import project as crud_project
+from app.crud import task as crud_task
 from app.core.constants import ROLE_ADMIN, ROLE_EMPLOYEE, ROLE_MANAGER
 
 
@@ -132,6 +136,61 @@ def test_only_one_sprint_can_be_active_per_project(db):
         sprint_service.start_sprint(db, second_sprint)
 
     assert exc_info.value.status_code == 409
+
+
+def test_reopen_completed_sprint_returns_it_to_planning(db):
+    project = _project("PRJ-1", "Project 1")
+    db.add(project)
+    db.flush()
+    completed_sprint = _sprint(project.id, "Sprint 1", status="Completed")
+    active_sprint = _sprint(project.id, "Sprint 2", status="Active")
+    db.add_all([completed_sprint, active_sprint])
+    db.commit()
+
+    reopened = sprint_service.reopen_sprint(db, completed_sprint)
+
+    assert reopened.status == "Planned"
+    assert active_sprint.status == "Active"
+
+
+def test_sprint_assignment_does_not_revalidate_unchanged_legacy_assignee(db):
+    project = _project("PRJ-1", "Project 1")
+    db.add(project)
+    db.flush()
+    sprint = _sprint(project.id, "Sprint 1")
+    assignee = Employee(
+        employee_code="LEGACY",
+        full_name="Legacy assignee",
+        email="legacy@example.com",
+        password_hash="test",
+        role_id=ROLE_EMPLOYEE,
+        is_active=True,
+        is_deleted=False,
+        created_at=datetime(2026, 1, 1),
+    )
+    db.add_all([sprint, assignee])
+    db.flush()
+    task = Task(
+        project_id=project.id,
+        title="Legacy task",
+        status="To Do",
+        priority="Medium",
+        story_points=3,
+        progress_percent=0,
+        is_deleted=False,
+        created_at=datetime(2026, 1, 1),
+    )
+    db.add(task)
+    db.flush()
+    from app.models.task_assignment import TaskAssignment
+
+    db.add(TaskAssignment(task_id=task.id, employee_id=assignee.id))
+    db.commit()
+    db.refresh(task)
+
+    updated = crud_task.update(db, task, TaskUpdate(sprint_id=sprint.id))
+
+    assert updated.sprint_id == sprint.id
 
 
 def test_completing_sprint_returns_unfinished_item_to_product_backlog(db):
@@ -288,6 +347,42 @@ def test_project_list_is_scoped_for_manager_and_employee(db):
         managed_project.id,
         unrelated_project.id,
     }
+
+
+def test_project_membership_check_generates_sql_server_compatible_query():
+    class RecordingSession:
+        statement = None
+
+        def scalar(self, statement):
+            self.statement = statement
+            return 1
+
+    project = _project("PRJ-1", "Project 1")
+    project.id = 21
+    project.created_by = 999
+    employee = Employee(
+        id=59,
+        employee_code="EMP015",
+        full_name="Phan Hoàng Long",
+        email="employee015@example.com",
+        password_hash="test",
+        role_id=ROLE_EMPLOYEE,
+        is_active=True,
+        is_deleted=False,
+        created_at=datetime(2026, 1, 1),
+    )
+    session = RecordingSession()
+
+    assert user_can_access_project(session, project, employee) is True
+
+    sql = str(
+        session.statement.compile(
+            dialect=mssql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    )
+    assert "SELECT EXISTS" not in sql.upper()
+    assert "FROM project_members" in sql
 
 
 def test_sprint_detail_progress_uses_real_task_status_and_story_points(db):

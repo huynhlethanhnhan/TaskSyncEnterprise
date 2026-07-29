@@ -20,6 +20,7 @@ import { useEmployees } from '../../hooks/useEmployees';
 import { useSprints } from '../../hooks/useSprintBacklog';
 import { useTopics } from '../../hooks/useTopics';
 import { useDepartments } from '../../hooks/useDepartments';
+import { useTeams } from '../../hooks/useTeams';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
 import { type TaskItem } from '../../api/services';
@@ -29,8 +30,10 @@ const STATUS_COLUMNS = ['To Do', 'In Progress', 'Done'];
 export const TaskPage: React.FC = () => {
   const { user } = useAuth();
   const toast = useToast();
-  const isStaff = user?.role === 'employee' || user?.role === 'staff';
-  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+  const role = (user?.role || '').toLowerCase();
+  const roleId = Number(user?.role_id);
+  const isStaff = role === 'employee' || role === 'staff' || roleId === 3;
+  const isAdminOrManager = role === 'admin' || role === 'manager' || roleId === 1 || roleId === 2;
 
   const { data: tasks = [], isLoading, isError, refetch } = useTasks(isStaff);
   const { data: projects = [] } = useProjects();
@@ -38,6 +41,9 @@ export const TaskPage: React.FC = () => {
   const { data: allSprints = [] } = useSprints();
   const { data: allTopics = [] } = useTopics();
   const { data: departments = [] } = useDepartments();
+  const { data: teams = [] } = useTeams();
+  const isTeamLeader = teams.some((team) => Number(team.leader_id) === Number(user?.id));
+  const canManageTasks = isAdminOrManager || isTeamLeader;
 
   const departmentMap = React.useMemo(() => new Map(departments.map((d) => [d.id, d])), [departments]);
 
@@ -98,8 +104,9 @@ export const TaskPage: React.FC = () => {
     try {
       await updateTaskStatus.mutateAsync({ id: taskId, status: newStatus });
       toast.success('Cập nhật trạng thái công việc', `Đã chuyển task sang "${newStatus}".`);
-    } catch {
-      toast.error('Lỗi cập nhật trạng thái', 'Không thể thay đổi trạng thái task.');
+    } catch (error: any) {
+      const message = error.response?.data?.detail || 'Không thể thay đổi trạng thái task.';
+      toast.error('Lỗi cập nhật trạng thái', message);
     }
   };
 
@@ -205,6 +212,7 @@ export const TaskPage: React.FC = () => {
         return (
           <select
             value={row.original.sprint_id || ''}
+            disabled={!canManageTasks}
             onChange={async (e) => {
               const val = e.target.value ? Number(e.target.value) : null;
               try {
@@ -237,6 +245,7 @@ export const TaskPage: React.FC = () => {
         return (
           <select
             value={row.original.topic_id || ''}
+            disabled={!canManageTasks}
             onChange={async (e) => {
               const val = e.target.value ? Number(e.target.value) : null;
               try {
@@ -295,9 +304,9 @@ export const TaskPage: React.FC = () => {
       cell: ({ row }: { row: { original: TaskItem } }) => (
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={(e) => handleOpenEdit(row.original, e)}>
-            Sửa
+            {canManageTasks ? 'Sửa' : 'Xem'}
           </Button>
-          {isAdminOrManager && (
+          {canManageTasks && (
             <Button variant="danger" size="sm" onClick={(e) => handleDelete(row.original, e)}>
               Xóa
             </Button>
@@ -344,7 +353,7 @@ export const TaskPage: React.FC = () => {
               </button>
             </div>
 
-            {isAdminOrManager && (
+            {canManageTasks && (
               <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
                 Tạo Task Mới
               </Button>
@@ -439,6 +448,7 @@ export const TaskPage: React.FC = () => {
                               <div className="w-36 shrink-0">
                                 <Select
                                   value={task.status || 'To Do'}
+                                  disabled={!canManageTasks}
                                   onClick={(e) => e.stopPropagation()}
                                   onChange={(e) => handleStatusChange(task.id, e.target.value, e)}
                                   options={[
@@ -455,7 +465,7 @@ export const TaskPage: React.FC = () => {
                             <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
                               {assignee ? (
                                 <div className="flex items-center gap-1.5">
-                                  <Avatar name={assignee.full_name} size="sm" />
+                                  <Avatar name={assignee.full_name} src={assignee.avatar_url} size="sm" />
                                   <span className="text-[11px] text-text-primary font-medium">{assignee.full_name}</span>
                                 </div>
                               ) : (
@@ -500,6 +510,7 @@ export const TaskPage: React.FC = () => {
         projects={projects}
         employees={employees}
         onSave={handleSave}
+        canEdit={canManageTasks}
         isLoading={createTask.isPending || updateTask.isPending}
       />
     </div>

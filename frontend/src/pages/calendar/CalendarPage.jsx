@@ -74,6 +74,16 @@ export default function CalendarPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const refreshCalendar = (event) => {
+      if (["task.changed", "project.changed", "vacation.changed"].includes(event.detail?.event)) {
+        loadData();
+      }
+    };
+    window.addEventListener("tasksync:domain-event", refreshCalendar);
+    return () => window.removeEventListener("tasksync:domain-event", refreshCalendar);
+  }, [loadData]);
+
   const dayCells = useMemo(() => getCalendarDays(displayDate.getFullYear(), displayDate.getMonth()), [displayDate]);
 
   const tasksByDate = useMemo(() => {
@@ -313,14 +323,14 @@ export default function CalendarPage() {
                       const employee = employees.find((emp) => Number(emp.id) === Number(task.assigned_to)) || task.employee;
                       const isOverdue = task.deadline && new Date(task.deadline) < new Date(formatDayKey(today)) && task.status !== 'Done';
                       return (
-                        <div key={task.id} className={`p-3 rounded-xl border ${isOverdue ? 'border-rose-200/50 bg-rose-50/20 dark:bg-rose-950/10' : 'border-border bg-surface'}`}>
-                          <div className="flex items-start justify-between gap-3">
-                            <h4 className="text-xs font-bold text-text-primary leading-tight">{task.title || task.name}</h4>
-                            <Badge variant={task.status === 'Done' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} size="sm">
+                        <div key={task.id} className={`rounded-xl border p-4 ${isOverdue ? 'border-rose-200/50 bg-rose-50/20 dark:bg-rose-950/10' : 'border-border bg-surface'}`}>
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                            <h4 className="min-w-0 text-sm font-bold leading-snug text-text-primary">{task.title || task.name}</h4>
+                            <Badge className="shrink-0 whitespace-nowrap" variant={task.status === 'Done' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} size="sm">
                               {task.status}
                             </Badge>
                           </div>
-                          <div className="mt-3 space-y-1 text-[10px] text-text-secondary">
+                          <div className="mt-3 space-y-1.5 border-t border-border/60 pt-3 text-[11px] text-text-secondary">
                             <div><strong className="text-text-primary">Dự án:</strong> {project?.name || 'Không xác định'}</div>
                             {employee && (
                               <div className="flex items-center gap-1 mt-1">

@@ -71,7 +71,7 @@ export const EmployeeDetailPage: React.FC = () => {
       })
       .catch(() => setEmployeeLeaves([]));
 
-    api.get(`/audit?employee_id=${empId}`)
+    api.get(`/audit-logs?employee_id=${empId}`)
       .then((res) => {
         const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
         setEmployeeAuditLogs(list);

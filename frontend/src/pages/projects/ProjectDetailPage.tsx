@@ -5,7 +5,6 @@ import {
   Plus,
   Briefcase,
   CheckSquare,
-  LayoutGrid,
   Layers,
   RefreshCw,
   Calendar as CalendarIcon,
@@ -36,19 +35,29 @@ import { BacklogManager } from '../../components/backlog/BacklogManager';
 import { SprintsManager } from '../../components/sprints/SprintsManager';
 import { TopicsManager } from '../../components/topics/TopicsManager';
 import { FilesManager } from '../../components/files/FilesManager';
+import { useAuth } from '../../providers/AuthProvider';
+import { useTeams } from '../../hooks/useTeams';
 
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
   const projectId = Number(id);
+  const role = (user?.role || '').toLowerCase();
+  const isStaff = role === 'employee' || role === 'staff' || Number(user?.role_id) === 3;
+  const isAdminOrManager =
+    role === 'admin' || role === 'manager' || Number(user?.role_id) === 1 || Number(user?.role_id) === 2;
 
   const [activeTab, setActiveTab] = React.useState('overview');
 
   // React Query Hooks
   const { data: project, isLoading: isProjectLoading, isError: isProjectError, refetch } = useProjectDetail(projectId);
-  const { data: allTasks = [], refetch: refetchTasks } = useTasks();
+  const { data: allTasks = [], refetch: refetchTasks } = useTasks(isStaff);
   const { data: employees = [] } = useEmployees();
+  const { data: teams = [] } = useTeams();
+  const isTeamLeader = teams.some((team) => Number(team.leader_id) === Number(user?.id));
+  const canManageTasks = isAdminOrManager || isTeamLeader;
   const updateProject = useUpdateProject();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -178,8 +187,7 @@ export const ProjectDetailPage: React.FC = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: <Briefcase className="h-4 w-4" /> },
     { id: 'timeline', label: 'Timeline (Jira)', icon: <CalendarIcon className="h-4 w-4" /> },
-    { id: 'tasks', label: 'Tasks', icon: <CheckSquare className="h-4 w-4" /> },
-    { id: 'board', label: 'Kanban Board', icon: <LayoutGrid className="h-4 w-4" /> },
+    { id: 'tasks', label: 'Công việc (Kanban)', icon: <CheckSquare className="h-4 w-4" /> },
     { id: 'backlog', label: 'Backlog', icon: <Layers className="h-4 w-4" /> },
     { id: 'sprints', label: 'Sprints', icon: <RefreshCw className="h-4 w-4" /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="h-4 w-4" /> },
@@ -279,9 +287,11 @@ export const ProjectDetailPage: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>Công việc gần đây ({projectTasks.length})</span>
-                    <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
-                      Thêm công việc
-                    </Button>
+                    {canManageTasks && (
+                      <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
+                        Thêm công việc
+                      </Button>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -341,16 +351,18 @@ export const ProjectDetailPage: React.FC = () => {
         )}
 
         {/* TASKS TAB */}
-        {activeTab === 'tasks' && (
+        {activeTab === 'task-table' && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
                 <CardTitle>Tasks List ({projectTasks.length})</CardTitle>
                 <CardDescription>Bảng phân phối công việc dự án</CardDescription>
               </div>
-              <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
-                Tạo Task Mới
-              </Button>
+              {canManageTasks && (
+                <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
+                  Tạo Task Mới
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {projectTasks.length === 0 ? (
@@ -387,7 +399,7 @@ export const ProjectDetailPage: React.FC = () => {
                             <td className="p-3">
                               {assignee ? (
                                 <div className="flex items-center gap-1.5">
-                                  <Avatar name={assignee.full_name} size="sm" />
+                                  <Avatar name={assignee.full_name} src={assignee.avatar_url} size="sm" />
                                   <span className="font-medium text-text-primary">{assignee.full_name}</span>
                                 </div>
                               ) : (
@@ -397,6 +409,7 @@ export const ProjectDetailPage: React.FC = () => {
                             <td className="p-3">
                               <Select
                                 value={t.status || 'To Do'}
+                                disabled={!canManageTasks}
                                 onChange={(e) => handleStatusChange(t.id, e.target.value)}
                                 options={[
                                   { value: 'To Do', label: 'To Do' },
@@ -421,8 +434,8 @@ export const ProjectDetailPage: React.FC = () => {
           </Card>
         )}
 
-        {/* KANBAN BOARD TAB */}
-        {activeTab === 'board' && (
+        {/* TASKS KANBAN TAB */}
+        {activeTab === 'tasks' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {['To Do', 'In Progress', 'Done'].map((colStatus) => {
               const colTasks = projectTasks.filter(t => (t.status || 'To Do') === colStatus);
@@ -453,7 +466,7 @@ export const ProjectDetailPage: React.FC = () => {
                               <div className="flex items-center justify-between text-[10px] pt-2 border-t border-border/60">
                                 {assignee ? (
                                   <div className="flex items-center gap-1">
-                                    <Avatar name={assignee.full_name} size="sm" />
+                                    <Avatar name={assignee.full_name} src={assignee.avatar_url} size="sm" />
                                     <span className="font-semibold text-text-primary truncate max-w-[80px]">{assignee.full_name}</span>
                                   </div>
                                 ) : (
@@ -603,6 +616,7 @@ export const ProjectDetailPage: React.FC = () => {
         projects={[project]}
         employees={employees}
         onSave={handleSaveTask}
+        canEdit={canManageTasks}
         isLoading={createTask.isPending || updateTask.isPending}
       />
     </div>

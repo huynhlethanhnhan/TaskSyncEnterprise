@@ -51,6 +51,9 @@ class DepartmentResponse(DepartmentBase):
     manager_avatar_url: str | None = None
     employee_count: int = 0
     team_count: int = 0
+    project_count: int = 0
+    completed_project_count: int = 0
+    sprint_count: int = 0
     is_active: bool
     created_at: datetime
 

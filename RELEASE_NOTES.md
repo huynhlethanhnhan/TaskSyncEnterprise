@@ -97,5 +97,5 @@ docker compose -f docker-compose.production.yml up -d --build
 ## Full Details
 
 - [CHANGELOG.md](CHANGELOG.md) — Complete change history.
-- [FINAL_PRODUCTION_AUDIT.md](docs/reports/final/FINAL_PRODUCTION_AUDIT.md) — Production audit report.
-- [RELEASE_CANDIDATE_RC1.md](docs/releases/RELEASE_CANDIDATE_RC1.md) — Formal release candidate document.
+- [CONSOLIDATED_AUDIT.md](docs/reports/CONSOLIDATED_AUDIT.md) — Báo cáo audit hợp nhất trên nhánh `develop`.
+- [AI_PRODUCT_ROADMAP.md](docs/roadmap/AI_PRODUCT_ROADMAP.md) — Roadmap phát triển tiếp theo trên nhánh `develop`.

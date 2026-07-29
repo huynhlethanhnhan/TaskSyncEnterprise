@@ -3,7 +3,6 @@ import {
   backlogApi,
   sprintsApi,
   type BacklogItem,
-  type SprintDetailItem,
   type SprintItem,
   type SprintPlanningData,
 } from '../api/services';
@@ -70,14 +69,6 @@ export const useSprints = (projectId?: number) => {
     queryKey: ['sprints', projectId],
     queryFn: () => sprintsApi.getAll(projectId ? { project_id: projectId } : undefined),
     enabled: projectId === undefined || isValidId(projectId),
-  });
-};
-
-export const useSprintDetail = (sprintId: number) => {
-  return useQuery<SprintDetailItem, Error>({
-    queryKey: ['sprints', 'detail', sprintId],
-    queryFn: () => sprintsApi.getById(sprintId),
-    enabled: isValidId(sprintId),
   });
 };
 

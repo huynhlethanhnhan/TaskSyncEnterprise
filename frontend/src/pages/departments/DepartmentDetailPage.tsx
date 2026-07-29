@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Building2, Users } from 'lucide-react';
+import { ArrowLeft, Briefcase, Building2, CircleCheckBig, RefreshCw, Users } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/common/Card';
@@ -93,6 +93,23 @@ export const DepartmentDetailPage: React.FC = () => {
               <div className="flex items-center justify-between py-2 border-b border-border/60">
                 <span className="text-text-muted">Tổng Số Nhân sự:</span>
                 <Badge variant="primary">{department.employee_count ?? deptEmployees.length} thành viên</Badge>
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                <div className="rounded-lg bg-primary/5 p-2 text-center">
+                  <Briefcase className="mx-auto h-4 w-4 text-primary" />
+                  <div className="mt-1 font-bold">{department.project_count ?? 0}</div>
+                  <div className="text-[10px] text-text-muted">Dự án</div>
+                </div>
+                <div className="rounded-lg bg-emerald-500/5 p-2 text-center">
+                  <CircleCheckBig className="mx-auto h-4 w-4 text-emerald-500" />
+                  <div className="mt-1 font-bold">{department.completed_project_count ?? 0}</div>
+                  <div className="text-[10px] text-text-muted">Đã xong</div>
+                </div>
+                <div className="rounded-lg bg-amber-500/5 p-2 text-center">
+                  <RefreshCw className="mx-auto h-4 w-4 text-amber-500" />
+                  <div className="mt-1 font-bold">{department.sprint_count ?? 0}</div>
+                  <div className="text-[10px] text-text-muted">Sprint</div>
+                </div>
               </div>
             </CardContent>
           </Card>

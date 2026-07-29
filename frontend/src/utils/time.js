@@ -40,39 +40,3 @@ export function formatRelativeTime(dateInput) {
   const dateStr = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
   return `${dateStr} lúc ${timeStr}`;
 }
-
-/**
- * Groups list of items by date categories: "Hôm nay", "Hôm qua", "Cũ hơn"
- * @param {Array} items
- * @param {string} dateField
- * @returns {Object} Object with keys "Hôm nay", "Hôm qua", "Cũ hơn" containing lists of items
- */
-export function groupNotificationsByDate(items, dateField = "created_at") {
-  const groups = {
-    today: [],
-    yesterday: [],
-    older: []
-  };
-  
-  const now = new Date();
-  const todayStr = now.toDateString();
-  
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  const yesterdayStr = yesterday.toDateString();
-  
-  items.forEach(item => {
-    const itemDate = new Date(item[dateField]);
-    const itemDateStr = itemDate.toDateString();
-    
-    if (itemDateStr === todayStr) {
-      groups.today.push(item);
-    } else if (itemDateStr === yesterdayStr) {
-      groups.yesterday.push(item);
-    } else {
-      groups.older.push(item);
-    }
-  });
-  
-  return groups;
-}

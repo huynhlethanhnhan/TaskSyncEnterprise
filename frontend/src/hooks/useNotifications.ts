@@ -37,6 +37,11 @@ export const useNotificationRealtime = () => {
           if (!baseUrl.includes('/ws/notifications')) {
             baseUrl = `${baseUrl.replace(/\/+$/, '')}/ws/notifications`;
           }
+        } else if (import.meta.env.DEV) {
+          // Keep Vite out of the WebSocket path in development. Uvicorn's
+          // hot-reload resets open sockets, and proxying those resets through
+          // Vite produces noisy `ws proxy error: ECONNRESET` messages.
+          baseUrl = 'ws://127.0.0.1:8000/ws/notifications';
         } else {
           const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
           baseUrl = `${protocol}//${window.location.host}/ws/notifications`;
@@ -56,8 +61,47 @@ export const useNotificationRealtime = () => {
           retryCount = 0;
         };
 
-        socket.onmessage = () => {
+        socket.onmessage = (event) => {
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          try {
+            const message = JSON.parse(event.data);
+            const eventType = message?.event;
+
+            if (eventType === 'task.changed') {
+              queryClient.invalidateQueries({ queryKey: ['tasks'] });
+              queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            } else if (eventType === 'employee.changed') {
+              queryClient.invalidateQueries({ queryKey: ['employees'] });
+              queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            } else if (eventType === 'project.changed') {
+              queryClient.invalidateQueries({ queryKey: ['projects'] });
+            } else if (eventType === 'sprint.changed') {
+              queryClient.invalidateQueries({ queryKey: ['sprints'] });
+              queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            } else if (eventType === 'backlog.changed') {
+              queryClient.invalidateQueries({ queryKey: ['backlog'] });
+            } else if (eventType === 'team.changed') {
+              queryClient.invalidateQueries({ queryKey: ['teams'] });
+            } else if (eventType === 'department.changed') {
+              queryClient.invalidateQueries({ queryKey: ['departments'] });
+            } else if (eventType === 'topic.changed') {
+              queryClient.invalidateQueries({ queryKey: ['topics'] });
+            } else if (eventType === 'feedback.changed') {
+              queryClient.invalidateQueries({ queryKey: ['feedback'] });
+              queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            } else if (eventType === 'file.changed') {
+              queryClient.invalidateQueries({ queryKey: ['files'] });
+            } else if (eventType === 'vacation.changed') {
+              queryClient.invalidateQueries({ queryKey: ['vacations'] });
+              queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            }
+
+            window.dispatchEvent(
+              new CustomEvent('tasksync:domain-event', { detail: message }),
+            );
+          } catch {
+            // Existing notification payloads do not need a domain event field.
+          }
         };
 
         socket.onclose = () => {

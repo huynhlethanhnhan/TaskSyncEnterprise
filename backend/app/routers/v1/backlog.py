@@ -1,5 +1,5 @@
 # 📂 FILE: app/routers/v1/backlog.py
-from fastapi import APIRouter, Depends, HTTPException, status as http_status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select, or_
 

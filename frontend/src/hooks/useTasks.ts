@@ -1,19 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi, type TaskItem } from '../api/services';
-import { isValidEntityId } from '../utils/entityId';
 
 export const useTasks = (isStaff = false) => {
   return useQuery<TaskItem[], Error>({
     queryKey: ['tasks', { isStaff }],
     queryFn: () => (isStaff ? tasksApi.getMyTasks() : tasksApi.getAll()),
-  });
-};
-
-export const useTaskDetail = (id: number) => {
-  return useQuery<TaskItem, Error>({
-    queryKey: ['tasks', id],
-    queryFn: () => tasksApi.getById(id),
-    enabled: isValidEntityId(id),
   });
 };
 

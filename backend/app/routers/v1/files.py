@@ -219,6 +219,7 @@ def delete_file(
 
     db.delete(att)
     db.commit()
+    CacheInvalidator.invalidate_file(file_id)
     return {"success": True, "message": "File deleted successfully"}
 
 
@@ -259,6 +260,7 @@ def upload_file(
             CacheInvalidator.invalidate_task(
                 task.id, project_id=task.project_id, employee_id=task.employee_id
             )
+    CacheInvalidator.invalidate_file(db_attachment.id)
 
     return {
         "success": True,

@@ -7,6 +7,7 @@ from sqlalchemy import or_
 
 
 from app.database import get_db
+from app.cache import CacheInvalidator
 from app.models.employee import Employee
 from app.models.discussion_topic import DiscussionTopic
 from app.models.discussion_reply import DiscussionReply
@@ -117,6 +118,7 @@ def create_topic(
     db.add(topic)
     db.commit()
     db.refresh(topic)
+    CacheInvalidator.invalidate_topic(topic.id)
 
     resp = DiscussionTopicResponse.model_validate(topic)
     resp.reply_count = 0
@@ -181,6 +183,7 @@ def update_topic(
 
     db.commit()
     db.refresh(topic)
+    CacheInvalidator.invalidate_topic(topic.id)
 
     return get_topic(topic_id, current_user, db)
 
@@ -205,6 +208,7 @@ def delete_topic(
     topic.deleted_at = datetime.now(UTC).replace(tzinfo=None)
     topic.deleted_by_id = current_user.id
     db.commit()
+    CacheInvalidator.invalidate_topic(topic.id)
 
     return {"success": True, "message": "Topic deleted"}
 
@@ -230,6 +234,7 @@ def create_reply(
     db.add(reply)
     db.commit()
     db.refresh(reply)
+    CacheInvalidator.invalidate_topic(topic_id)
     return reply
 
 
@@ -255,6 +260,7 @@ def update_reply(
     reply.content = data.content
     db.commit()
     db.refresh(reply)
+    CacheInvalidator.invalidate_topic(topic_id)
     return reply
 
 
@@ -279,5 +285,6 @@ def delete_reply(
     reply.deleted_at = datetime.now(UTC).replace(tzinfo=None)
     reply.deleted_by_id = current_user.id
     db.commit()
+    CacheInvalidator.invalidate_topic(topic_id)
 
     return {"success": True, "message": "Reply deleted"}

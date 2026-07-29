@@ -28,18 +28,6 @@ export const useCreateTopic = () => {
   });
 };
 
-export const useUpdateTopic = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<TopicItem> }) =>
-      topicsApi.update(id, payload),
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['topics'] });
-      queryClient.invalidateQueries({ queryKey: ['topics', id] });
-    },
-  });
-};
-
 export const useDeleteTopic = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -57,17 +45,6 @@ export const useCreateReply = () => {
       topicsApi.createReply(topicId, payload),
     onSuccess: (_, { topicId }) => {
       queryClient.invalidateQueries({ queryKey: ['topics'] });
-      queryClient.invalidateQueries({ queryKey: ['topics', topicId] });
-    },
-  });
-};
-
-export const useUpdateReply = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ topicId, replyId, payload }: { topicId: number; replyId: number; payload: { content: string } }) =>
-      topicsApi.updateReply(topicId, replyId, payload),
-    onSuccess: (_, { topicId }) => {
       queryClient.invalidateQueries({ queryKey: ['topics', topicId] });
     },
   });

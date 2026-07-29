@@ -7,6 +7,9 @@ import {
   Users,
   UserCheck,
   ShieldAlert,
+  Briefcase,
+  RefreshCw,
+  CircleCheckBig,
 } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
@@ -241,6 +244,20 @@ const DepartmentPage: React.FC = () => {
                     <span>
                       <strong>{dept.team_count ?? 0}</strong> nhóm
                     </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
+                    <div className="flex items-center gap-1" title="Tổng dự án có thành viên phòng ban tham gia">
+                      <Briefcase className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span><strong>{dept.project_count ?? 0}</strong> dự án</span>
+                    </div>
+                    <div className="flex items-center gap-1" title="Số dự án đã hoàn thành">
+                      <CircleCheckBig className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      <span><strong>{dept.completed_project_count ?? 0}</strong> xong</span>
+                    </div>
+                    <div className="flex items-center gap-1" title="Tổng Sprint thuộc các dự án phòng ban tham gia">
+                      <RefreshCw className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      <span><strong>{dept.sprint_count ?? 0}</strong> Sprint</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>

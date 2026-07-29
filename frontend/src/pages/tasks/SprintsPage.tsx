@@ -14,7 +14,8 @@ export const SprintsPage: React.FC = () => {
 
   React.useEffect(() => {
     if (projects.length > 0 && !selectedProjectId) {
-      setSelectedProjectId(String(projects[0].id));
+      const activeProject = projects.find((project) => project.status === 'Active');
+      setSelectedProjectId(String((activeProject || projects[0]).id));
     }
   }, [projects, selectedProjectId]);
 
@@ -76,7 +77,10 @@ export const SprintsPage: React.FC = () => {
               <Select
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
-                options={projects.map((p) => ({ value: String(p.id), label: p.name }))}
+                options={projects.map((p) => ({
+                  value: String(p.id),
+                  label: `${p.name}${p.status === 'Completed' ? ' (Đã hoàn tất)' : ''}`,
+                }))}
               />
             </div>
           </div>

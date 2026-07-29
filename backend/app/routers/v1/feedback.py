@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app.database import get_db
+from app.cache import CacheInvalidator
 from app.models.employee import Employee
 from app.models.user_feedback import UserFeedback
 from app.core.deps import get_current_user
@@ -43,6 +44,7 @@ def submit_feedback(
     db.add(feedback)
     db.commit()
     db.refresh(feedback)
+    CacheInvalidator.invalidate_feedback(feedback.id)
     return format_feedback(feedback, current_user)
 
 
@@ -106,4 +108,5 @@ def review_feedback(
     feedback.reviewer_id = current_user.id
     db.commit()
     db.refresh(feedback)
+    CacheInvalidator.invalidate_feedback(feedback.id)
     return format_feedback(feedback, current_user)

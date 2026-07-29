@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useTheme } from "../../providers/ThemeProvider";
+import { useAuth } from "../../providers/AuthProvider";
+import { useToast } from "../../providers/ToastProvider";
 
 const languages = [
   { value: "vi", label: "Tiếng Việt" },
@@ -18,6 +21,7 @@ const dictionary = {
     appearanceDesc: "Thay đổi giao diện ứng dụng để phù hợp với môi trường của bạn.",
     light: "Chế độ Sáng (Light)",
     dark: "Chế độ Tối (Dark)",
+    system: "Theo cài đặt thiết bị",
     langTime: "Ngôn ngữ & Múi giờ",
     langTimeDesc: "Tùy chỉnh ngôn ngữ hiển thị và định dạng thời gian toàn cầu.",
     language: "Ngôn ngữ hiển thị",
@@ -39,6 +43,7 @@ const dictionary = {
     appearanceDesc: "Switch between light and dark modes to suit your work environment.",
     light: "Light Mode",
     dark: "Dark Mode",
+    system: "Use Device Setting",
     langTime: "Language & Timezone",
     langTimeDesc: "Customize display language and global date/time formatting.",
     language: "Display Language",
@@ -56,90 +61,56 @@ const dictionary = {
 };
 
 export default function SettingsPage() {
-  const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
-  const [language, setLanguage] = useState(localStorage.getItem("language") || "vi");
-  const [timezone, setTimezone] = useState(localStorage.getItem("timezone") || "Asia/Ho_Chi_Minh");
-  const [syncing, setSyncing] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
+  const toast = useToast();
+  const [language, setLanguage] = useState(localStorage.getItem("tasksync_language") || "vi");
+  const [timezone, setTimezone] = useState(localStorage.getItem("tasksync_timezone") || "Asia/Ho_Chi_Minh");
 
   const t = dictionary[language] || dictionary.vi;
-
-  useEffect(() => {
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-    localStorage.setItem("theme", theme);
-  }, [theme]);
+  const roleId = Number(user?.role_id);
+  const canViewSystemPolicy = roleId === 1 || roleId === 2;
+  const pageTitle = canViewSystemPolicy ? t.title : (language === "vi" ? "Cài đặt cá nhân" : "Personal Settings");
+  const pageSubtitle = canViewSystemPolicy
+    ? t.subtitle
+    : (language === "vi"
+      ? "Tùy chỉnh giao diện, ngôn ngữ, múi giờ và bảo mật cho tài khoản của bạn."
+      : "Customize appearance, language, timezone, and security for your account.");
 
   const handleLanguageChange = (val) => {
-    setSyncing(true);
-    setTimeout(() => {
-      setLanguage(val);
-      localStorage.setItem("language", val);
-      // Dispatch a custom event so other components (like sidebar) reload localized strings if needed
-      window.dispatchEvent(new Event("language_changed"));
-      setSyncing(false);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2500);
-    }, 600);
+    setLanguage(val);
+    localStorage.setItem("tasksync_language", val);
+    window.dispatchEvent(new Event("language_changed"));
+    toast.success(dictionary[val]?.toastSaved || dictionary.vi.toastSaved);
   };
 
   const handleThemeChange = (val) => {
-    setSyncing(true);
-    setTimeout(() => {
-      setTheme(val);
-      setSyncing(false);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2500);
-    }, 500);
+    setTheme(val);
+    toast.success(t.toastSaved);
   };
 
   const handleTimezoneChange = (val) => {
-    setSyncing(true);
-    setTimeout(() => {
-      setTimezone(val);
-      localStorage.setItem("timezone", val);
-      setSyncing(false);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2500);
-    }, 500);
+    setTimezone(val);
+    localStorage.setItem("tasksync_timezone", val);
+    window.dispatchEvent(new CustomEvent("timezone_changed", { detail: { timezone: val } }));
+    toast.success(t.toastSaved);
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 relative max-w-5xl mx-auto font-sans">
-      
-      {/* 🚀 TOAST NOTIFICATION */}
-      {showToast && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-3 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-xl shadow-emerald-100 border border-emerald-500/30 animate-bounce transition-all">
-          <span>✨</span>
-          <span className="text-sm font-semibold">{t.toastSaved}</span>
-        </div>
-      )}
-
-      {/* 🔄 SYNCING OVERLAY */}
-      {syncing && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all duration-300">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface shadow-xl border border-border">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
-          <p className="mt-4 text-sm font-bold text-text-primary bg-surface px-4 py-2 rounded-2xl shadow-lg border border-border">{t.saving}</p>
-        </div>
-      )}
+    <div className="relative mx-auto max-w-6xl space-y-6 pb-12 font-sans">
 
       {/* HEADER HERO */}
-      <div className="rounded-[32px] border border-border bg-surface p-6 sm:p-8 shadow-sm relative overflow-hidden">
+      <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-5 shadow-sm sm:p-6">
         <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-primary/10 blur-3xl -z-10" />
-        <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">{t.title}</h1>
-        <p className="mt-2 text-xs text-text-muted font-medium">{t.subtitle}</p>
+        <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">{pageTitle}</h1>
+        <p className="mt-2 text-sm text-text-muted font-medium">{pageSubtitle}</p>
       </div>
 
       {/* SETTINGS PANELS */}
       <div className="grid gap-6 md:grid-cols-2">
         
         {/* APPEARANCE CARD */}
-        <div className="rounded-[32px] border border-border bg-surface p-6 shadow-sm flex flex-col justify-between min-h-[260px]">
+        <div className="flex min-h-[260px] flex-col justify-between rounded-xl border border-border bg-surface p-6 shadow-sm">
           <div>
             <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">🎨 {t.appearance}</h2>
             <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">{t.appearanceDesc}</p>
@@ -169,11 +140,23 @@ export default function SettingsPage() {
               <span>🌙 {t.dark}</span>
               {theme === "dark" && <span className="text-primary">✓</span>}
             </button>
+
+            <button
+              onClick={() => handleThemeChange("system")}
+              className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border text-sm font-bold transition-all ${
+                theme === "system"
+                  ? "border-primary/20 bg-primary/10 text-primary shadow-sm"
+                  : "border-border bg-accent/20 text-text-secondary hover:bg-accent/40"
+              }`}
+            >
+              <span>💻 {t.system}</span>
+              {theme === "system" && <span className="text-primary">✓</span>}
+            </button>
           </div>
         </div>
 
         {/* REGIONAL / LOCALIZATION CARD */}
-        <div className="rounded-[32px] border border-border bg-surface p-6 shadow-sm flex flex-col justify-between min-h-[260px]">
+        <div className="flex min-h-[260px] flex-col justify-between rounded-xl border border-border bg-surface p-6 shadow-sm">
           <div>
             <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">🌐 {t.langTime}</h2>
             <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">{t.langTimeDesc}</p>
@@ -211,7 +194,7 @@ export default function SettingsPage() {
       </div>
 
       {/* SECURITY METRICS */}
-      <div className="rounded-[32px] border border-border bg-surface p-6 shadow-sm relative overflow-hidden">
+      <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-6 shadow-sm">
         <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">🛡️ {t.security}</h2>
         <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">{t.securityDesc}</p>
         
@@ -235,7 +218,8 @@ export default function SettingsPage() {
       </div>
 
       {/* 📋 ROLE & PERMISSION MATRIX */}
-      <div className="rounded-[32px] border border-border bg-surface p-6 shadow-sm relative overflow-hidden">
+      {canViewSystemPolicy && (
+      <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-6 shadow-sm">
         <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">📋 Bảng phân quyền hệ thống (Role Matrix)</h2>
         <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">
           Tra cứu quyền hạn thao tác dữ liệu được cấu hình cứng theo vai trò (Role-Based Access Control)
@@ -261,7 +245,7 @@ export default function SettingsPage() {
                 { label: "Khởi tạo, Sửa & Xóa Task công việc", admin: true, manager: true, employee: false },
                 { label: "Tạo & Đăng ký đơn Nghỉ phép (Vacation)", admin: true, manager: true, employee: true },
                 { label: "Duyệt Đơn nghỉ phép của cấp dưới", admin: true, manager: true, employee: false },
-                { label: "Cập nhật trạng thái Task (assignee)", admin: true, manager: true, employee: true },
+                { label: "Cập nhật trạng thái Task (assignee)", admin: true, manager: true, employee: false },
               ].map((row, idx) => (
                 <tr key={idx} className="hover:bg-accent/20 transition-colors">
                   <td className="p-3 text-text-primary font-medium">{row.label}</td>
@@ -292,6 +276,7 @@ export default function SettingsPage() {
           </table>
         </div>
       </div>
+      )}
 
     </div>
   );

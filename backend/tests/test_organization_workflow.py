@@ -9,6 +9,9 @@ from app.crud import employee as crud_employee
 from app.crud import team as crud_team
 from app.models.department import Department
 from app.models.employee import Employee
+from app.models.project import Project
+from app.models.project_member import ProjectMember
+from app.models.sprint import Sprint
 from app.models.team import Team
 from app.schemas.employee import EmployeeUpdate
 
@@ -118,6 +121,98 @@ def test_manager_team_visibility_is_limited_to_own_department(db):
     assert [department["id"] for department in visible_departments] == [
         first_department.id
     ]
+
+
+def test_employee_team_list_includes_every_team_they_lead(db):
+    department = _department("OPS", "Vận hành")
+    db.add(department)
+    db.flush()
+
+    first_team = _team(department.id, "OPS-1", "Vận hành — Nhóm 1")
+    second_team = _team(department.id, "OPS-2", "Vận hành — Nhóm 2")
+    db.add_all([first_team, second_team])
+    db.flush()
+
+    leader = _employee(
+        "EMP-LEAD",
+        "leader@example.com",
+        ROLE_EMPLOYEE,
+        department.id,
+        second_team.id,
+    )
+    db.add(leader)
+    db.flush()
+    first_team.leader_id = leader.id
+    second_team.leader_id = leader.id
+    db.commit()
+
+    teams = crud_team.get_all(db, current_user=leader)
+
+    assert {team["id"] for team in teams} == {first_team.id, second_team.id}
+
+
+def test_department_metrics_follow_project_membership(db):
+    department = _department("OPS", "Vận hành")
+    db.add(department)
+    db.flush()
+    member = _employee(
+        "EMP-1",
+        "employee@example.com",
+        ROLE_EMPLOYEE,
+        department.id,
+    )
+    db.add(member)
+    db.flush()
+
+    active_project = Project(
+        project_code="PRJ-1",
+        name="Active project",
+        status="In Progress",
+        priority="Medium",
+        progress_percent=20,
+        is_deleted=False,
+        created_at=datetime(2026, 1, 1),
+    )
+    completed_project = Project(
+        project_code="PRJ-2",
+        name="Completed project",
+        status="Completed",
+        priority="Medium",
+        progress_percent=100,
+        is_deleted=False,
+        created_at=datetime(2026, 1, 1),
+    )
+    db.add_all([active_project, completed_project])
+    db.flush()
+    db.add_all(
+        [
+            ProjectMember(project_id=active_project.id, employee_id=member.id),
+            ProjectMember(project_id=completed_project.id, employee_id=member.id),
+            Sprint(
+                project_id=active_project.id,
+                name="Sprint 1",
+                status="Active",
+                capacity=10,
+                is_deleted=False,
+                created_at=datetime(2026, 1, 1),
+            ),
+            Sprint(
+                project_id=completed_project.id,
+                name="Sprint 2",
+                status="Completed",
+                capacity=10,
+                is_deleted=False,
+                created_at=datetime(2026, 1, 1),
+            ),
+        ]
+    )
+    db.commit()
+
+    result = crud_department.get_all(db, current_user=member)[0]
+
+    assert result["project_count"] == 2
+    assert result["completed_project_count"] == 1
+    assert result["sprint_count"] == 2
 
 
 def test_department_move_clears_an_incompatible_team(db):

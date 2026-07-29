@@ -106,10 +106,10 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
   };
 
   const handleReopen = async (id: number) => {
-    if (!window.confirm('Xác nhận mở lại Sprint này? Sprint sẽ được đưa trở lại trạng thái Active.')) return;
+    if (!window.confirm('Xác nhận mở lại Sprint này? Sprint sẽ trở về trạng thái Planned để có thể lập kế hoạch lại.')) return;
     try {
       await reopenMutation.mutateAsync(id);
-      toast.success('Sprint đã được mở lại', 'Sprint đã chuyển về trạng thái Active.');
+      toast.success('Sprint đã được mở lại', 'Sprint đã chuyển về trạng thái Planned.');
     } catch (err: any) {
       toast.error('Lỗi mở lại Sprint', err.response?.data?.detail || 'Không thể mở lại Sprint.');
     }
@@ -284,6 +284,7 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
                       sprintId={sprint.id}
                       projectId={projectId}
                       isManagerOrAdmin={isManagerOrAdmin}
+                      sprintStatus={sprint.status}
                     />
                   )}
 
@@ -421,10 +422,16 @@ const SprintPlanningPanel: React.FC<{
 };
 
 // Sub-component for rendering Jira-style Task Table inside Sprint (Matching Image 3)
-const SprintJiraTaskTable: React.FC<{ sprintId: number; projectId: number; isManagerOrAdmin: boolean }> = ({
+const SprintJiraTaskTable: React.FC<{
+  sprintId: number;
+  projectId: number;
+  isManagerOrAdmin: boolean;
+  sprintStatus: string;
+}> = ({
   sprintId,
   projectId,
   isManagerOrAdmin,
+  sprintStatus,
 }) => {
   const toast = useToast();
   const { data: allTasks = [] } = useTasks();
@@ -433,6 +440,7 @@ const SprintJiraTaskTable: React.FC<{ sprintId: number; projectId: number; isMan
 
   const updateTaskMutation = useUpdateTask();
   const updateStatusMutation = useUpdateTaskStatus();
+  const isSprintMutable = sprintStatus === 'Active';
 
   const assignedTasks = React.useMemo(() => {
     return allTasks.filter((t) => t.project_id === projectId && t.sprint_id === sprintId);
@@ -546,6 +554,7 @@ const SprintJiraTaskTable: React.FC<{ sprintId: number; projectId: number; isMan
                   <select
                     value={t.status}
                     onChange={(e) => handleStatusChange(t.id, e.target.value)}
+                    disabled={!isSprintMutable}
                     className={`h-7 px-2 rounded font-bold text-[10px] uppercase border cursor-pointer focus:outline-none ${t.status === 'Done'
                       ? 'bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400'
                       : t.status === 'In Progress'
@@ -563,6 +572,7 @@ const SprintJiraTaskTable: React.FC<{ sprintId: number; projectId: number; isMan
                     type="number"
                     defaultValue={t.story_points || 0}
                     onBlur={(e) => handleSPChange(t.id, Number(e.target.value))}
+                    disabled={!isManagerOrAdmin || !isSprintMutable}
                     className="w-10 h-7 text-center rounded border border-input bg-surface text-xs font-bold font-mono"
                     title="Story Points"
                     min={0}
@@ -587,7 +597,7 @@ const SprintJiraTaskTable: React.FC<{ sprintId: number; projectId: number; isMan
                   )}
 
                   {/* Remove Action */}
-                  {isManagerOrAdmin && (
+                  {isManagerOrAdmin && isSprintMutable && (
                     <button
                       type="button"
                       onClick={() => handleUnassignTask(t.id)}
@@ -605,7 +615,7 @@ const SprintJiraTaskTable: React.FC<{ sprintId: number; projectId: number; isMan
       )}
 
       {/* Inline Assign Task Picker */}
-      {isManagerOrAdmin && unassignedTasks.length > 0 && (
+      {isManagerOrAdmin && isSprintMutable && unassignedTasks.length > 0 && (
         <div className="pt-1">
           <select
             onChange={(e) => {

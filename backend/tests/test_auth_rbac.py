@@ -69,8 +69,8 @@ def test_employee_access_denied(client, db):
     assert response.status_code == 403
 
 
-# 🧪 TEST CASE 4: Task Ownership - Authorized status update
-def test_update_assigned_task_success(client, db):
+# 🧪 TEST CASE 4: Regular employees are read-only even when assigned
+def test_update_assigned_task_denied_for_regular_employee(client, db):
     email = "worker@example.com"
     user = create_mock_user(db, email, ROLE_EMPLOYEE)
     headers = get_auth_headers(client, email)
@@ -106,14 +106,13 @@ def test_update_assigned_task_success(client, db):
     db.add(assignment)
     db.commit()
 
-    # Employee attempts to update status of their assigned task
+    # Assigned employees can view and collaborate, but only managers/leaders save task fields.
     response = client.put(
         f"/api/v1/tasks/my-task/{task.id}",
         json={"status": "In Progress", "progress_percent": 50.0},
         headers=headers,
     )
-    assert response.status_code == 200
-    assert response.json()["status"] == "In Progress"
+    assert response.status_code == 403
 
 
 # 🧪 TEST CASE 5: Task Ownership Failure - Modify unauthorized task (Negative Test)
