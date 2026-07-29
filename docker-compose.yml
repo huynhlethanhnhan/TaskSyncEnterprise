@@ -8,18 +8,20 @@ services:
       - "8000:8000"
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
-      - SECRET_KEY=${SECRET_KEY:-task_sync_enterprise_secret_key_chuandry_2026}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required; copy .env.example to .env}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - MSSQL_HOST=${MSSQL_HOST:-sqlserver}
       - MSSQL_PORT=${MSSQL_PORT:-1433}
       - MSSQL_DATABASE=${MSSQL_DATABASE:-TaskSyncEnterprise}
       - MSSQL_USER=${MSSQL_USER:-sa}
-      - MSSQL_PASSWORD=${MSSQL_SA_PASSWORD:-TaskSync@2026}
+      - MSSQL_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}
     depends_on:
       redis:
         condition: service_healthy
       sqlserver:
         condition: service_healthy
+      sqlserver-init:
+        condition: service_completed_successfully
     restart: always
 
   redis:
@@ -43,7 +45,7 @@ services:
       - "1433:1433"
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:-TaskSync@2026}
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}
     volumes:
       - mssql_data:/var/opt/mssql
     healthcheck:
@@ -57,6 +59,23 @@ services:
       retries: 10
       start_period: 30s
     restart: always
+
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: tasksync-sqlserver-init
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}
+      - MSSQL_DATABASE=${MSSQL_DATABASE:-TaskSyncEnterprise}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - >
+        /opt/mssql-tools18/bin/sqlcmd
+        -S sqlserver -U sa -P "$${MSSQL_SA_PASSWORD}" -C
+        -Q "IF DB_ID(N'$${MSSQL_DATABASE}') IS NULL CREATE DATABASE [$${MSSQL_DATABASE}]"
+    restart: "no"
 
 volumes:
   redis_data:

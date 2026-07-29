@@ -1,5 +1,0 @@
-Generated: 2026-07-22T15:12:08Z
-Environment: local production Compose audit
-Action: e2e-notification-multidevice.mjs removed its temporary task and notification records in its finally cleanup path.
-Result: cleanup completed; demo accounts were preserved.
-No avatar, leave, profile, project, or password mutation was performed during Phase 4.8.
