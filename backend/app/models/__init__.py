@@ -27,3 +27,5 @@ from app.models.sprint_snapshot import SprintDailySnapshot
 from app.models.discussion_topic import DiscussionTopic
 from app.models.discussion_reply import DiscussionReply
 from app.models.user_feedback import UserFeedback
+from app.models.user_preference import UserPreference
+from app.models.system_setting import SystemSetting

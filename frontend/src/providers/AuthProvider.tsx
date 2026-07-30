@@ -8,6 +8,7 @@ interface UserProfile {
   email: string;
   role: string;
   role_id?: number | null;
+  employee_code?: string | null;
   avatar_url?: string | null;
   full_name?: string;
   job_title?: string | null;

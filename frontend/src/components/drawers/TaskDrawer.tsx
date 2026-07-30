@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
+import { getDeadlineDisplay } from '../../utils/deadline';
 
 interface TaskDrawerProps {
   isOpen: boolean;
@@ -276,29 +277,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   };
 
   const isEditMode = Boolean(task);
-
-  // Compute Deadline Badge Info
-  const getDeadlineBadgeInfo = () => {
-    if (!deadline) return { text: 'No deadline', variant: 'default' as const };
-    const deadlineDate = new Date(deadline);
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    const diffTime = deadlineDate.getTime() - todayDate.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (status === 'Done') {
-      return { text: 'Completed', variant: 'success' as const };
-    }
-    if (diffDays < 0) {
-      return { text: `Overdue by ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'day' : 'days'}`, variant: 'danger' as const };
-    }
-    if (diffDays === 0) {
-      return { text: 'Due today', variant: 'warning' as const };
-    }
-    return { text: `Remaining: ${diffDays} ${diffDays === 1 ? 'day' : 'days'}`, variant: 'primary' as const };
-  };
-
-  const deadlineBadge = getDeadlineBadgeInfo();
+  const deadlineInfo = getDeadlineDisplay(deadline, status);
 
   return (
     <Drawer
@@ -645,11 +624,13 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block mb-1">Thời hạn (Deadline)</span>
                       <div className="flex items-center justify-between gap-2 bg-secondary/30 px-3 py-2 rounded-lg border border-border/40">
                         <span className="text-xs font-bold text-text-primary">
-                          {deadline ? `Deadline: ${new Date(deadline).toLocaleDateString('vi-VN')}` : 'No deadline'}
+                          {deadlineInfo.formattedDeadline}
                         </span>
-                        <Badge variant={deadlineBadge.variant}>
-                          {deadlineBadge.text}
-                        </Badge>
+                        {deadlineInfo.badge && (
+                          <Badge variant={deadlineInfo.badge.variant}>
+                            {deadlineInfo.badge.text}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>

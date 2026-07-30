@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTheme } from "../../providers/ThemeProvider";
 import { useAuth } from "../../providers/AuthProvider";
 import { useToast } from "../../providers/ToastProvider";
+import api from "../../api/axios";
+import { Button } from "../../components/ui/Button";
 
 interface LanguageOption {
   value: string;
@@ -13,27 +15,28 @@ interface TimezoneOption {
   label: string;
 }
 
-interface DictionaryEntry {
-  title: string;
-  subtitle: string;
-  appearance: string;
-  appearanceDesc: string;
-  light: string;
-  dark: string;
-  system: string;
-  langTime: string;
-  langTimeDesc: string;
+interface UserPreferences {
+  theme: string;
   language: string;
   timezone: string;
-  security: string;
-  securityDesc: string;
-  changePass: string;
-  changePassVal: string;
-  sessionInfo: string;
-  sessionInfoVal: string;
-  toastSaved: string;
-  saving: string;
-  saveBtn: string;
+  date_format: string;
+  page_size: number;
+  compact_mode: boolean;
+  in_app_notifications: boolean;
+  email_notifications: boolean;
+  task_assigned_notify: boolean;
+  task_deadline_notify: boolean;
+  sprint_status_notify: boolean;
+  project_update_notify: boolean;
+}
+
+interface SystemSettingsData {
+  system_name: string;
+  default_sprint_capacity: number;
+  default_task_page_size: number;
+  deadline_reminder_days: number;
+  allow_employee_status_update: boolean;
+  maintenance_mode: boolean;
 }
 
 const languages: LanguageOption[] = [
@@ -46,159 +49,182 @@ const timezones: TimezoneOption[] = [
   { value: "UTC", label: "UTC" },
 ];
 
-const dictionary: Record<string, DictionaryEntry> = {
-  vi: {
-    title: "Cài đặt hệ thống",
-    subtitle: "Quản lý chủ đề, ngôn ngữ, múi giờ và bảo mật tài khoản của bạn.",
-    appearance: "Giao diện & Chủ đề",
-    appearanceDesc: "Thay đổi giao diện ứng dụng để phù hợp với môi trường của bạn.",
-    light: "Chế độ Sáng (Light)",
-    dark: "Chế độ Tối (Dark)",
-    system: "Theo cài đặt thiết bị",
-    langTime: "Ngôn ngữ & Múi giờ",
-    langTimeDesc: "Tùy chỉnh ngôn ngữ hiển thị và định dạng thời gian toàn cầu.",
-    language: "Ngôn ngữ hiển thị",
-    timezone: "Múi giờ hệ thống",
-    security: "Bảo mật & Phiên kết nối",
-    securityDesc: "Quản lý mật khẩu cá nhân và giám sát hoạt động của các phiên truy cập.",
-    changePass: "Mật khẩu đăng nhập",
-    changePassVal: "Đã thiết lập",
-    sessionInfo: "Hoạt động thiết bị",
-    sessionInfoVal: "Thiết bị hiện tại",
-    toastSaved: "Cài đặt đã được đồng bộ hóa thành công!",
-    saving: "Đang đồng bộ cài đặt...",
-    saveBtn: "Lưu thay đổi",
-  },
-  en: {
-    title: "System Settings",
-    subtitle: "Manage application theme, language, timezone, and account security.",
-    appearance: "Appearance & Theme",
-    appearanceDesc: "Switch between light and dark modes to suit your work environment.",
-    light: "Light Mode",
-    dark: "Dark Mode",
-    system: "Use Device Setting",
-    langTime: "Language & Timezone",
-    langTimeDesc: "Customize display language and global date/time formatting.",
-    language: "Display Language",
-    timezone: "System Timezone",
-    security: "Security & Active Sessions",
-    securityDesc: "Manage account credentials and monitor connected devices.",
-    changePass: "Account Password",
-    changePassVal: "Configured",
-    sessionInfo: "Device Activity",
-    sessionInfoVal: "Active Session",
-    toastSaved: "Settings synchronized successfully!",
-    saving: "Syncing settings...",
-    saveBtn: "Save Changes",
-  },
-};
-
 export default function SettingsPage(): React.ReactElement {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const toast = useToast();
-  const [language, setLanguage] = useState<string>(
-    localStorage.getItem("tasksync_language") || "vi"
-  );
-  const [timezone, setTimezone] = useState<string>(
-    localStorage.getItem("tasksync_timezone") || "Asia/Ho_Chi_Minh"
-  );
 
-  const t: DictionaryEntry = dictionary[language] || dictionary.vi;
+  const [loading, setLoading] = useState<boolean>(true);
+  const [savingUser, setSavingUser] = useState<boolean>(false);
+  const [savingSystem, setSavingSystem] = useState<boolean>(false);
+
+  // User preferences state
+  const [prefs, setPrefs] = useState<UserPreferences>({
+    theme: theme || "system",
+    language: localStorage.getItem("tasksync_language") || "vi",
+    timezone: localStorage.getItem("tasksync_timezone") || "Asia/Ho_Chi_Minh",
+    date_format: "DD/MM/YYYY",
+    page_size: 20,
+    compact_mode: false,
+    in_app_notifications: true,
+    email_notifications: true,
+    task_assigned_notify: true,
+    task_deadline_notify: true,
+    sprint_status_notify: true,
+    project_update_notify: true,
+  });
+
+  // Admin system settings state
+  const [sysSettings, setSysSettings] = useState<SystemSettingsData>({
+    system_name: "TaskSync Enterprise",
+    default_sprint_capacity: 30,
+    default_task_page_size: 20,
+    deadline_reminder_days: 3,
+    allow_employee_status_update: true,
+    maintenance_mode: false,
+  });
+
   const roleId = Number(user?.role_id);
-  const canViewSystemPolicy = roleId === 1 || roleId === 2;
-  const pageTitle = canViewSystemPolicy
-    ? t.title
-    : language === "vi"
-    ? "Cài đặt cá nhân"
-    : "Personal Settings";
-  const pageSubtitle = canViewSystemPolicy
-    ? t.subtitle
-    : language === "vi"
-    ? "Tùy chỉnh giao diện, ngôn ngữ, múi giờ và bảo mật cho tài khoản của bạn."
-    : "Customize appearance, language, timezone, and security for your account.";
+  const isAdmin = roleId === 1 || user?.role === "admin";
 
-  const handleLanguageChange = (val: string) => {
-    setLanguage(val);
-    localStorage.setItem("tasksync_language", val);
-    window.dispatchEvent(new Event("language_changed"));
-    toast.success(dictionary[val]?.toastSaved || dictionary.vi.toastSaved);
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        setLoading(true);
+        const meRes = await api.get("/settings/me").catch(() => null);
+        if (meRes?.data) {
+          setPrefs(meRes.data);
+          if (meRes.data.theme) setTheme(meRes.data.theme as any);
+          if (meRes.data.language) {
+            localStorage.setItem("tasksync_language", meRes.data.language);
+          }
+          if (meRes.data.timezone) {
+            localStorage.setItem("tasksync_timezone", meRes.data.timezone);
+          }
+        }
+
+        if (isAdmin) {
+          const sysRes = await api.get("/settings/system").catch(() => null);
+          if (sysRes?.data) {
+            setSysSettings(sysRes.data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, [isAdmin, setTheme]);
+
+  const handleSaveUserPrefs = async (updated: Partial<UserPreferences>) => {
+    try {
+      setSavingUser(true);
+      const newPrefs = { ...prefs, ...updated };
+      setPrefs(newPrefs);
+
+      if (updated.theme) {
+        setTheme(updated.theme as any);
+      }
+      if (updated.language) {
+        localStorage.setItem("tasksync_language", updated.language);
+        window.dispatchEvent(new Event("language_changed"));
+      }
+      if (updated.timezone) {
+        localStorage.setItem("tasksync_timezone", updated.timezone);
+        window.dispatchEvent(
+          new CustomEvent("timezone_changed", { detail: { timezone: updated.timezone } })
+        );
+      }
+
+      await api.patch("/settings/me", updated);
+      toast.success("Cài đặt cá nhân đã được lưu", "Thông tin cài đặt đã đồng bộ vào cơ sở dữ liệu.");
+    } catch {
+      toast.error("Lỗi lưu cài đặt", "Không thể lưu cài đặt cá nhân.");
+    } finally {
+      setSavingUser(false);
+    }
   };
 
-  const handleThemeChange = (val: "light" | "dark" | "system") => {
-    setTheme(val);
-    toast.success(t.toastSaved);
+  const handleSaveSystemSettings = async () => {
+    try {
+      setSavingSystem(true);
+      const res = await api.patch("/settings/system", sysSettings);
+      if (res.data) setSysSettings(res.data);
+      toast.success("Cấu hình Hệ thống đã cập nhật", "Thông số hệ thống quản trị đã lưu thành công.");
+    } catch (err: any) {
+      toast.error("Lỗi cập nhật Cấu hình Hệ thống", err.response?.data?.detail || "Không thể cập nhật.");
+    } finally {
+      setSavingSystem(false);
+    }
   };
 
-  const handleTimezoneChange = (val: string) => {
-    setTimezone(val);
-    localStorage.setItem("tasksync_timezone", val);
-    window.dispatchEvent(
-      new CustomEvent("timezone_changed", { detail: { timezone: val } })
-    );
-    toast.success(t.toastSaved);
-  };
+  if (loading) {
+    return <div className="p-8 text-center text-xs text-text-muted">Đang tải cài đặt hệ thống...</div>;
+  }
 
   return (
-    <div className="relative mx-auto max-w-6xl space-y-6 pb-12 font-sans">
+    <div className="relative mx-auto max-w-6xl space-y-6 pb-12 font-sans text-xs">
       {/* HEADER HERO */}
       <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-5 shadow-sm sm:p-6">
         <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-primary/10 blur-3xl -z-10" />
         <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">
-          {pageTitle}
+          {isAdmin ? "Cài đặt & Quản trị Hệ thống" : "Cài đặt Cá nhân"}
         </h1>
-        <p className="mt-2 text-sm text-text-muted font-medium">{pageSubtitle}</p>
+        <p className="mt-2 text-sm text-text-muted font-medium">
+          {isAdmin
+            ? "Tùy chỉnh giao diện cá nhân, thông báo và cấu hình thông số vận hành cho toàn bộ hệ thống Enterprise."
+            : "Tùy chỉnh giao diện, ngôn ngữ, múi giờ và cài đặt thông báo cho tài khoản của bạn."}
+        </p>
       </div>
 
-      {/* SETTINGS PANELS */}
+      {/* USER PREFERENCES GRID */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* APPEARANCE CARD */}
         <div className="flex min-h-[260px] flex-col justify-between rounded-xl border border-border bg-surface p-6 shadow-sm">
           <div>
             <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
-              🎨 {t.appearance}
+              🎨 Giao diện & Chủ đề (Appearance)
             </h2>
             <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">
-              {t.appearanceDesc}
+              Thay đổi chủ đề màu sắc ứng dụng và chế độ xem nhỏ gọn (Compact Mode).
             </p>
           </div>
 
           <div className="mt-6 space-y-3">
-            <button
-              onClick={() => handleThemeChange("light")}
-              className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border text-sm font-bold transition-all cursor-pointer ${
-                theme === "light"
-                  ? "border-primary/20 bg-primary/10 text-primary shadow-sm"
-                  : "border-border bg-accent/20 text-text-secondary hover:bg-accent/40"
-              }`}
-            >
-              <span>☀️ {t.light}</span>
-              {theme === "light" && <span className="text-primary">✓</span>}
-            </button>
+            <div className="grid grid-cols-3 gap-2">
+              {(["light", "dark", "system"] as const).map((tVal) => (
+                <button
+                  key={tVal}
+                  type="button"
+                  onClick={() => handleSaveUserPrefs({ theme: tVal })}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border font-bold transition-all cursor-pointer ${
+                    prefs.theme === tVal
+                      ? "border-primary/40 bg-primary/10 text-primary shadow-xs"
+                      : "border-border bg-accent/20 text-text-secondary hover:bg-accent/40"
+                  }`}
+                >
+                  <span className="text-base">
+                    {tVal === "light" ? "☀️" : tVal === "dark" ? "🌙" : "💻"}
+                  </span>
+                  <span className="mt-1 capitalize text-[11px]">{tVal}</span>
+                </button>
+              ))}
+            </div>
 
-            <button
-              onClick={() => handleThemeChange("dark")}
-              className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border text-sm font-bold transition-all cursor-pointer ${
-                theme === "dark"
-                  ? "border-primary/20 bg-primary/10 text-primary shadow-sm"
-                  : "border-border bg-accent/20 text-text-secondary hover:bg-accent/40"
-              }`}
-            >
-              <span>🌙 {t.dark}</span>
-              {theme === "dark" && <span className="text-primary">✓</span>}
-            </button>
-
-            <button
-              onClick={() => handleThemeChange("system")}
-              className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border text-sm font-bold transition-all cursor-pointer ${
-                theme === "system"
-                  ? "border-primary/20 bg-primary/10 text-primary shadow-sm"
-                  : "border-border bg-accent/20 text-text-secondary hover:bg-accent/40"
-              }`}
-            >
-              <span>💻 {t.system}</span>
-              {theme === "system" && <span className="text-primary">✓</span>}
-            </button>
+            <div className="pt-3 border-t border-border/40 flex items-center justify-between">
+              <div>
+                <p className="font-bold text-text-primary">Chế độ hiển thị nhỏ gọn (Compact Mode)</p>
+                <p className="text-[10px] text-text-muted">Thu gọn lề bảng và danh sách để tăng diện tích hiển thị.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={prefs.compact_mode}
+                onChange={(e) => handleSaveUserPrefs({ compact_mode: e.target.checked })}
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+              />
+            </div>
           </div>
         </div>
 
@@ -206,22 +232,22 @@ export default function SettingsPage(): React.ReactElement {
         <div className="flex min-h-[260px] flex-col justify-between rounded-xl border border-border bg-surface p-6 shadow-sm">
           <div>
             <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
-              🌐 {t.langTime}
+              🌐 Ngôn ngữ & Định dạng (Regional)
             </h2>
             <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">
-              {t.langTimeDesc}
+              Tùy chỉnh ngôn ngữ hiển thị giao diện và múi giờ hệ thống của bạn.
             </p>
           </div>
 
           <div className="mt-6 space-y-4">
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                {t.language}
+                Ngôn ngữ hiển thị
               </label>
               <select
-                value={language}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-xs outline-none font-semibold text-text-primary focus:border-primary transition-colors cursor-pointer"
+                value={prefs.language}
+                onChange={(e) => handleSaveUserPrefs({ language: e.target.value })}
+                className="mt-1.5 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-xs outline-none font-semibold text-text-primary focus:border-primary transition-colors cursor-pointer"
               >
                 {languages.map((lang) => (
                   <option key={lang.value} value={lang.value}>
@@ -233,12 +259,12 @@ export default function SettingsPage(): React.ReactElement {
 
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                {t.timezone}
+                Múi giờ làm việc
               </label>
               <select
-                value={timezone}
-                onChange={(e) => handleTimezoneChange(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-xs outline-none font-semibold text-text-primary focus:border-primary transition-colors cursor-pointer"
+                value={prefs.timezone}
+                onChange={(e) => handleSaveUserPrefs({ timezone: e.target.value })}
+                className="mt-1.5 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-xs outline-none font-semibold text-text-primary focus:border-primary transition-colors cursor-pointer"
               >
                 {timezones.map((zone) => (
                   <option key={zone.value} value={zone.value}>
@@ -251,165 +277,141 @@ export default function SettingsPage(): React.ReactElement {
         </div>
       </div>
 
-      {/* SECURITY METRICS */}
-      <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-6 shadow-sm">
+      {/* NOTIFICATION PREFERENCES CARD */}
+      <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-6 shadow-sm space-y-4">
         <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
-          🛡️ {t.security}
+          🔔 Tùy chọn Nhận Thông báo (Notification Preferences)
         </h2>
-        <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">
-          {t.securityDesc}
+        <p className="text-xs text-text-muted font-medium leading-relaxed">
+          Cấu hình nhận thông báo qua ứng dụng, email và sự kiện liên quan đến công việc.
         </p>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-3xl border border-border bg-accent/10 p-5 flex items-center justify-between hover:bg-accent/20 transition-colors duration-300">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                {t.changePass}
-              </p>
-              <p className="mt-2 text-2xl font-extrabold text-text-primary">
-                {t.changePassVal}
-              </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pt-2">
+          {[
+            { key: "in_app_notifications", label: "Thông báo Trong Ứng dụng (In-app)", desc: "Hiển thị chuông thông báo trực tiếp trên màn hình." },
+            { key: "email_notifications", label: "Thông báo qua Email", desc: "Gửi thư điện tử cho các sự kiện quan trọng." },
+            { key: "task_assigned_notify", label: "Khi được gán Task mới", desc: "Thông báo khi quản lý phân công task cho bạn." },
+            { key: "task_deadline_notify", label: "Nhắc nhở Hạn chót Task", desc: "Cảnh báo khi task sắp đến hạn hoặc quá hạn." },
+            { key: "sprint_status_notify", label: "Thay đổi Trạng thái Sprint", desc: "Thông báo khi Sprint được kích hoạt hoặc hoàn thành." },
+            { key: "project_update_notify", label: "Cập nhật Dự án", desc: "Thông báo khi thông tin dự án được điều chỉnh." },
+          ].map((item) => (
+            <div key={item.key} className="p-3.5 rounded-xl border border-border/80 bg-accent/10 flex items-start justify-between gap-3">
+              <div>
+                <p className="font-bold text-text-primary text-xs">{item.label}</p>
+                <p className="text-[10px] text-text-muted mt-0.5 leading-normal">{item.desc}</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={(prefs as any)[item.key]}
+                onChange={(e) => handleSaveUserPrefs({ [item.key]: e.target.checked })}
+                className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer shrink-0"
+              />
             </div>
-            <span className="text-2xl text-primary">🛡️</span>
+          ))}
+        </div>
+      </div>
+
+      {/* ACCOUNT INFO & SECURITY */}
+      <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-6 shadow-sm">
+        <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
+          👤 Thông tin Tài khoản (Account Details)
+        </h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-border/60 bg-accent/10 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Họ và tên</p>
+            <p className="mt-1 text-sm font-extrabold text-text-primary">{user?.full_name || "N/A"}</p>
           </div>
 
-          <div className="rounded-3xl border border-border bg-accent/10 p-5 flex items-center justify-between hover:bg-accent/20 transition-colors duration-300">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                {t.sessionInfo}
-              </p>
-              <p className="mt-2 text-2xl font-extrabold text-text-primary">
-                {t.sessionInfoVal}
-              </p>
-            </div>
-            <span className="text-2xl text-primary">💻</span>
+          <div className="rounded-xl border border-border/60 bg-accent/10 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Email làm việc</p>
+            <p className="mt-1 text-sm font-extrabold text-text-primary">{user?.email || "N/A"}</p>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-accent/10 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Mã nhân sự & Vai trò</p>
+            <p className="mt-1 text-sm font-extrabold text-primary">
+              {user?.employee_code || `#EMP-${user?.id}`} ({user?.role || "Employee"})
+            </p>
           </div>
         </div>
       </div>
 
-      {/* 📋 ROLE & PERMISSION MATRIX */}
-      {canViewSystemPolicy && (
-        <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-6 shadow-sm">
-          <h2 className="text-sm font-bold text-text-primary flex items-center gap-2">
-            📋 Bảng phân quyền hệ thống (Role Matrix)
-          </h2>
-          <p className="mt-2 text-xs text-text-muted font-medium leading-relaxed">
-            Tra cứu quyền hạn thao tác dữ liệu được cấu hình cứng theo vai trò
-            (Role-Based Access Control)
-          </p>
+      {/* ADMIN SYSTEM SETTINGS (ADMIN ONLY) */}
+      {isAdmin && (
+        <div className="relative overflow-hidden rounded-xl border border-primary/30 bg-surface p-6 shadow-sm space-y-6">
+          <div>
+            <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+              ⚙️ Cấu hình Hệ thống Quản trị (Admin System Settings)
+            </h2>
+            <p className="mt-1 text-xs text-text-muted font-medium">
+              Chỉ Quản trị viên (Admin) mới có quyền chỉnh sửa các thông số vận hành này.
+            </p>
+          </div>
 
-          <div className="mt-6 overflow-x-auto border border-border rounded-2xl">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-accent/40 text-text-secondary border-b border-border">
-                  <th className="p-3 font-semibold">Quyền hạn thao tác</th>
-                  <th className="p-3 font-semibold text-center w-28">
-                    Admin (Quản trị)
-                  </th>
-                  <th className="p-3 font-semibold text-center w-28">
-                    Manager (Quản lý)
-                  </th>
-                  <th className="p-3 font-semibold text-center w-28">
-                    Employee (Nhân viên)
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {[
-                  {
-                    label: "Xem & Cấu hình Nhật ký Hệ thống (Audit Logs)",
-                    admin: true,
-                    manager: false,
-                    employee: false,
-                  },
-                  {
-                    label: "Thêm, Sửa, Xóa Nhân viên & Vai trò",
-                    admin: true,
-                    manager: false,
-                    employee: false,
-                  },
-                  {
-                    label: "Xóa Dự án (Projects)",
-                    admin: true,
-                    manager: false,
-                    employee: false,
-                  },
-                  {
-                    label: "Quản lý Phòng ban (Departments)",
-                    admin: true,
-                    manager: true,
-                    employee: false,
-                  },
-                  {
-                    label: "Khởi tạo & Sửa Dự án",
-                    admin: true,
-                    manager: true,
-                    employee: false,
-                  },
-                  {
-                    label: "Khởi tạo, Sửa & Xóa Task công việc",
-                    admin: true,
-                    manager: true,
-                    employee: false,
-                  },
-                  {
-                    label: "Tạo & Đăng ký đơn Nghỉ phép (Vacation)",
-                    admin: true,
-                    manager: true,
-                    employee: true,
-                  },
-                  {
-                    label: "Duyệt Đơn nghỉ phép của cấp dưới",
-                    admin: true,
-                    manager: true,
-                    employee: false,
-                  },
-                  {
-                    label: "Cập nhật trạng thái Task được gán",
-                    admin: true,
-                    manager: true,
-                    employee: true,
-                  },
-                ].map((row, idx) => (
-                  <tr key={idx} className="hover:bg-accent/20 transition-colors">
-                    <td className="p-3 text-text-primary font-medium">{row.label}</td>
-                    <td className="p-3 text-center">
-                      {row.admin ? (
-                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 font-bold">
-                          ✓
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-500 dark:text-rose-400 font-bold">
-                          ✗
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3 text-center">
-                      {row.manager ? (
-                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 font-bold">
-                          ✓
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-500 dark:text-rose-400 font-bold">
-                          ✗
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3 text-center">
-                      {row.employee ? (
-                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 font-bold">
-                          ✓
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-rose-50 dark:bg-rose-950/20 text-rose-500 dark:text-rose-400 font-bold">
-                          ✗
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Tên Hệ thống Enterprise</label>
+              <input
+                type="text"
+                value={sysSettings.system_name}
+                onChange={(e) => setSysSettings({ ...sysSettings, system_name: e.target.value })}
+                className="mt-1.5 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-xs text-text-primary font-semibold outline-none focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Default Sprint Capacity (Story Points)</label>
+              <input
+                type="number"
+                value={sysSettings.default_sprint_capacity}
+                onChange={(e) => setSysSettings({ ...sysSettings, default_sprint_capacity: Number(e.target.value) })}
+                className="mt-1.5 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-xs text-text-primary font-semibold outline-none focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Default Page Size</label>
+              <input
+                type="number"
+                value={sysSettings.default_task_page_size}
+                onChange={(e) => setSysSettings({ ...sysSettings, default_task_page_size: Number(e.target.value) })}
+                className="mt-1.5 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-xs text-text-primary font-semibold outline-none focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Deadline Reminder Days</label>
+              <input
+                type="number"
+                value={sysSettings.deadline_reminder_days}
+                onChange={(e) => setSysSettings({ ...sysSettings, deadline_reminder_days: Number(e.target.value) })}
+                className="mt-1.5 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-xs text-text-primary font-semibold outline-none focus:border-primary"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-border/60 flex items-center justify-between">
+            <div>
+              <p className="font-bold text-text-primary">Cho phép Employee tự đổi trạng thái Task được gán</p>
+              <p className="text-[10px] text-text-muted">Nhân viên được gán trực tiếp công việc có thể chuyển đổi To Do ➔ In Progress ➔ Done.</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={sysSettings.allow_employee_status_update}
+              onChange={(e) => setSysSettings({ ...sysSettings, allow_employee_status_update: e.target.checked })}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+            />
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="primary"
+              size="sm"
+              isLoading={savingSystem}
+              onClick={handleSaveSystemSettings}
+            >
+              Lưu Cấu hình Quản trị
+            </Button>
           </div>
         </div>
       )}

@@ -21,6 +21,7 @@ from app.routers.v1 import (
     feedback,
     files,
     reports,
+    settings,
 )
 
 api_router = APIRouter()
@@ -47,3 +48,4 @@ api_router.include_router(topics.router)
 api_router.include_router(feedback.router)
 api_router.include_router(files.router)
 api_router.include_router(reports.router)
+api_router.include_router(settings.router)
