@@ -31,6 +31,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { Avatar } from '../common/Avatar';
+import { Badge } from '../common/Badge';
 
 interface TaskDrawerProps {
   isOpen: boolean;
@@ -190,27 +191,39 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
     }
   }, [task, isOpen, projects]);
 
+  const isAssignedToCurrentUser = Boolean(
+    task && (Number(task.assigned_to) === Number(currentUser?.id) || task.assigned_to === currentUser?.id)
+  );
+  const canUpdateStatus = canEdit || isAssignedToCurrentUser;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canEdit) return;
-    if (!title.trim()) return;
+    if (!canEdit && !isAssignedToCurrentUser) return;
+    if (canEdit && !title.trim()) return;
 
-    await onSave({
-      title: title.trim(),
-      name: title.trim(),
-      description: description.trim() || null,
-      status,
-      priority,
-      project_id: projectId ? Number(projectId) : null,
-      assigned_to: assignedTo ? Number(assignedTo) : null,
-      sprint_id: sprintId ? Number(sprintId) : null,
-      topic_id: topicId ? Number(topicId) : null,
-      deadline: deadline || null,
-      story_points: Number(storyPoints),
-    });
+    if (canEdit) {
+      await onSave({
+        title: title.trim(),
+        name: title.trim(),
+        description: description.trim() || null,
+        status,
+        priority,
+        project_id: projectId ? Number(projectId) : null,
+        assigned_to: assignedTo ? Number(assignedTo) : null,
+        sprint_id: sprintId ? Number(sprintId) : null,
+        topic_id: topicId ? Number(topicId) : null,
+        deadline: deadline || null,
+        story_points: Number(storyPoints),
+      });
+    } else if (isAssignedToCurrentUser && task) {
+      await onSave({
+        status,
+        progress_percent: status === 'Done' ? 100 : task.progress_percent || 0,
+      });
+    }
   };
 
-  // Attachment Upload Handler (Vật lý - kết nối API thực tế)
+  // Attachment Upload Handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!task || !e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -241,7 +254,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
     }
   };
 
-  // Attachment Delete Handler (Vật lý - kết nối API thực tế)
+  // Attachment Delete Handler
   const handleDeleteAttachment = async (attachmentId: number) => {
     if (!task) return;
     if (!window.confirm('Xác nhận xóa tài liệu đính kèm này?')) return;
@@ -264,6 +277,29 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
 
   const isEditMode = Boolean(task);
 
+  // Compute Deadline Badge Info
+  const getDeadlineBadgeInfo = () => {
+    if (!deadline) return { text: 'No deadline', variant: 'default' as const };
+    const deadlineDate = new Date(deadline);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const diffTime = deadlineDate.getTime() - todayDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (status === 'Done') {
+      return { text: 'Completed', variant: 'success' as const };
+    }
+    if (diffDays < 0) {
+      return { text: `Overdue by ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'day' : 'days'}`, variant: 'danger' as const };
+    }
+    if (diffDays === 0) {
+      return { text: 'Due today', variant: 'warning' as const };
+    }
+    return { text: `Remaining: ${diffDays} ${diffDays === 1 ? 'day' : 'days'}`, variant: 'primary' as const };
+  };
+
+  const deadlineBadge = getDeadlineBadgeInfo();
+
   return (
     <Drawer
       isOpen={isOpen}
@@ -277,7 +313,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
           <Button variant="outline" size="sm" onClick={onClose} type="button">
             Hủy bỏ
           </Button>
-          {canEdit && (
+          {(canEdit || (isEditMode && isAssignedToCurrentUser)) && (
             <Button variant="primary" size="sm" onClick={handleSubmit} isLoading={isLoading}>
               {isEditMode ? 'Lưu thay đổi' : 'Tạo Mới'}
             </Button>
@@ -507,7 +543,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
 
             {/* Right Column: Metadata Sidebar */}
             <div className="space-y-4">
-              <fieldset disabled={!canEdit} className="border border-border rounded-xl p-4 bg-surface space-y-4">
+              <div className="border border-border rounded-xl p-4 bg-surface space-y-4">
                 <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider border-b border-border pb-2">
                   Thuộc tính & Metadata
                 </h3>
@@ -515,6 +551,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Trạng thái"
                   value={status}
+                  disabled={!canUpdateStatus}
                   onChange={(e) => setStatus(e.target.value)}
                   options={[
                     { value: 'To Do', label: 'To Do' },
@@ -526,6 +563,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Độ ưu tiên"
                   value={priority}
+                  disabled={!canEdit}
                   onChange={(e) => setPriority(e.target.value)}
                   options={[
                     { value: 'High', label: 'Cao (High)' },
@@ -537,6 +575,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Thuộc Dự án"
                   value={String(projectId)}
+                  disabled={!canEdit}
                   onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
                   options={[
                     { value: '', label: '-- Chọn Dự án --' },
@@ -547,6 +586,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Người Thực hiện"
                   value={String(assignedTo)}
+                  disabled={!canEdit}
                   onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : '')}
                   options={[
                     { value: '', label: '-- Chọn Người thực hiện --' },
@@ -557,6 +597,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Gán vào Sprint"
                   value={String(sprintId)}
+                  disabled={!canEdit}
                   onChange={(e) => setSprintId(e.target.value ? Number(e.target.value) : '')}
                   options={[
                     { value: '', label: '-- Không thuộc Sprint --' },
@@ -567,6 +608,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Thuộc Epic / Chủ đề"
                   value={String(topicId)}
+                  disabled={!canEdit}
                   onChange={(e) => setTopicId(e.target.value ? Number(e.target.value) : '')}
                   options={[
                     { value: '', label: '-- Không thuộc Epic --' },
@@ -574,20 +616,45 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                   ]}
                 />
 
-                <Input
-                  label="Thời hạn (Deadline)"
-                  type="date"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                />
+                {canEdit ? (
+                  <>
+                    <Input
+                      label="Thời hạn (Deadline)"
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                    />
 
-                <Input
-                  label="Story Points (Jira Estimation)"
-                  type="number"
-                  value={String(storyPoints)}
-                  onChange={(e) => setStoryPoints(Number(e.target.value))}
-                />
-              </fieldset>
+                    <Input
+                      label="Story Points (Jira Estimation)"
+                      type="number"
+                      value={String(storyPoints)}
+                      onChange={(e) => setStoryPoints(Number(e.target.value))}
+                    />
+                  </>
+                ) : (
+                  <div className="space-y-3 pt-3 border-t border-border/40">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block mb-1">Story Points</span>
+                      <div className="text-xs font-bold text-text-primary bg-secondary/30 px-3 py-2 rounded-lg border border-border/40">
+                        {storyPoints > 0 ? `Story Point: ${storyPoints}` : 'Not estimated'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block mb-1">Thời hạn (Deadline)</span>
+                      <div className="flex items-center justify-between gap-2 bg-secondary/30 px-3 py-2 rounded-lg border border-border/40">
+                        <span className="text-xs font-bold text-text-primary">
+                          {deadline ? `Deadline: ${new Date(deadline).toLocaleDateString('vi-VN')}` : 'No deadline'}
+                        </span>
+                        <Badge variant={deadlineBadge.variant}>
+                          {deadlineBadge.text}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Quick Info summary */}
               <div className="text-[10px] text-text-muted space-y-1 p-3 border border-border/60 rounded-xl bg-accent/20">

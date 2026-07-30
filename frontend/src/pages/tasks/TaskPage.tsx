@@ -448,7 +448,7 @@ const TaskPage: React.FC = () => {
                               <div className="w-36 shrink-0">
                                 <Select
                                   value={task.status || 'To Do'}
-                                  disabled={!canManageTasks}
+                                  disabled={!canManageTasks && Number(task.assigned_to) !== Number(user?.id)}
                                   onClick={(e) => e.stopPropagation()}
                                   onChange={(e) => handleStatusChange(task.id, e.target.value, e)}
                                   options={[
