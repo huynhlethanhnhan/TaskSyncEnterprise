@@ -1,6 +1,9 @@
 ## [Unreleased] — Phase 4.5: Enterprise UI/UX Redesign and Workflow Integration
 
 ### Added
+- Department and Team membership management for Admin, Manager, and Team Leader roles, including add, remove, and transfer workflows with server-side scope enforcement.
+- Dedicated membership candidate and transfer-target APIs so the UI only exposes valid organizational choices.
+- Regression coverage for Admin/Manager/Team Leader membership permissions, self-removal protection, cross-scope access, and organization consistency.
 - Complete enterprise design system with CSS custom properties, typography tokens, spacing scale, and component primitives
 - ApplicationShell with domain-oriented sidebar navigation (Overview, Work Management, Collaboration, Employee Self-Service, Reports, Administration)
 - Keyboard-navigable global search modal (Cmd+K / Ctrl+K) with debounced task and project lookup

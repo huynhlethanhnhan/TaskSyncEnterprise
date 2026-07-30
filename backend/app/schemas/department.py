@@ -31,6 +31,7 @@ class DepartmentMemberResponse(BaseModel):
     job_title: str | None = None
     avatar_url: str | None = None
     team_id: int | None = None
+    role_id: int
     is_active: bool
 
 

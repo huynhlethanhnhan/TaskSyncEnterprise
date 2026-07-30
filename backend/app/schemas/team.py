@@ -46,6 +46,7 @@ class TeamMemberResponse(BaseModel):
     email: str
     job_title: str | None = None
     avatar_url: str | None = None
+    role_id: int
     is_active: bool
 
 

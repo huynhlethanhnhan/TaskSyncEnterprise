@@ -51,3 +51,67 @@ export const useDeleteDepartment = () => {
     },
   });
 };
+
+export const useDepartmentMemberCandidates = (id: number, enabled: boolean) => {
+  return useQuery({
+    queryKey: ['departments', id, 'member-candidates'],
+    queryFn: () => departmentsApi.getMemberCandidates(id),
+    enabled: enabled && isValidEntityId(id),
+  });
+};
+
+export const useDepartmentTransferTargets = (id: number, enabled: boolean) => {
+  return useQuery({
+    queryKey: ['departments', id, 'transfer-targets'],
+    queryFn: () => departmentsApi.getTransferTargets(id),
+    enabled: enabled && isValidEntityId(id),
+  });
+};
+
+const invalidateDepartmentMembership = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  departmentIds: number[],
+) => {
+  queryClient.invalidateQueries({ queryKey: ['employees'] });
+  queryClient.invalidateQueries({ queryKey: ['teams'] });
+  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  departmentIds.forEach((id) => {
+    queryClient.invalidateQueries({ queryKey: ['departments', id] });
+  });
+  queryClient.invalidateQueries({ queryKey: ['departments'] });
+};
+
+export const useAddDepartmentMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, employeeId }: { id: number; employeeId: number }) =>
+      departmentsApi.addMember(id, employeeId),
+    onSuccess: (_, { id }) => invalidateDepartmentMembership(queryClient, [id]),
+  });
+};
+
+export const useRemoveDepartmentMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, employeeId }: { id: number; employeeId: number }) =>
+      departmentsApi.removeMember(id, employeeId),
+    onSuccess: (_, { id }) => invalidateDepartmentMembership(queryClient, [id]),
+  });
+};
+
+export const useTransferDepartmentMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      employeeId,
+      targetDepartmentId,
+    }: {
+      id: number;
+      employeeId: number;
+      targetDepartmentId: number;
+    }) => departmentsApi.transferMember(id, employeeId, targetDepartmentId),
+    onSuccess: (_, { id, targetDepartmentId }) =>
+      invalidateDepartmentMembership(queryClient, [id, targetDepartmentId]),
+  });
+};

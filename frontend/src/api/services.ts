@@ -105,7 +105,7 @@ export interface DepartmentItem {
   created_at: string;
 }
 
-interface DepartmentMemberItem {
+export interface DepartmentMemberItem {
   id: number;
   employee_code: string;
   full_name: string;
@@ -113,6 +113,7 @@ interface DepartmentMemberItem {
   job_title?: string | null;
   avatar_url?: string | null;
   team_id?: number | null;
+  role_id: number;
   is_active: boolean;
 }
 
@@ -129,6 +130,10 @@ export interface DepartmentDetailItem
   extends DepartmentItem {
   members: DepartmentMemberItem[];
   teams: DepartmentTeamItem[];
+}
+export interface MembershipTargetItem {
+  id: number;
+  name: string;
 }
 export interface NotificationItem {
   id: number;
@@ -247,6 +252,29 @@ export const departmentsApi = {
   delete: async (id: number): Promise<void> => {
     await api.delete(`/departments/${id}`);
   },
+  getMemberCandidates: async (id: number): Promise<EmployeeItem[]> => {
+    const res = await api.get(`/departments/${id}/member-candidates`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  getTransferTargets: async (id: number): Promise<MembershipTargetItem[]> => {
+    const res = await api.get(`/departments/${id}/transfer-targets`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  addMember: async (id: number, employeeId: number): Promise<void> => {
+    await api.post(`/departments/${id}/members/${employeeId}`);
+  },
+  removeMember: async (id: number, employeeId: number): Promise<void> => {
+    await api.delete(`/departments/${id}/members/${employeeId}`);
+  },
+  transferMember: async (
+    id: number,
+    employeeId: number,
+    targetDepartmentId: number,
+  ): Promise<void> => {
+    await api.post(`/departments/${id}/members/${employeeId}/transfer`, {
+      target_department_id: targetDepartmentId,
+    });
+  },
 };
 
 export const notificationsApi = {
@@ -281,13 +309,14 @@ export interface TeamItem {
   created_at: string;
 }
 
-interface TeamMemberItem {
+export interface TeamMemberItem {
   id: number;
   employee_code: string;
   full_name: string;
   email: string;
   job_title?: string | null;
   avatar_url?: string | null;
+  role_id: number;
   is_active: boolean;
 }
 
@@ -314,6 +343,29 @@ export const teamsApi = {
   },
   delete: async (id: number): Promise<void> => {
     await api.delete(`/teams/${id}`);
+  },
+  getMemberCandidates: async (id: number): Promise<EmployeeItem[]> => {
+    const res = await api.get(`/teams/${id}/member-candidates`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  getTransferTargets: async (id: number): Promise<MembershipTargetItem[]> => {
+    const res = await api.get(`/teams/${id}/transfer-targets`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  addMember: async (id: number, employeeId: number): Promise<void> => {
+    await api.post(`/teams/${id}/members/${employeeId}`);
+  },
+  removeMember: async (id: number, employeeId: number): Promise<void> => {
+    await api.delete(`/teams/${id}/members/${employeeId}`);
+  },
+  transferMember: async (
+    id: number,
+    employeeId: number,
+    targetTeamId: number,
+  ): Promise<void> => {
+    await api.post(`/teams/${id}/members/${employeeId}/transfer`, {
+      target_team_id: targetTeamId,
+    });
   },
 };
 

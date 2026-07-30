@@ -280,6 +280,7 @@ def get_detail(db: Session, department_id: int):
             "job_title": m.job_title,
             "avatar_url": m.avatar_url,
             "team_id": m.team_id,
+            "role_id": m.role_id,
             "is_active": bool(m.is_active),
         }
         for m in members

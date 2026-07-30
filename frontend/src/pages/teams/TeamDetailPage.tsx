@@ -1,10 +1,14 @@
 import * as React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { AxiosError } from 'axios';
 import {
   ArrowLeft,
+  ArrowRightLeft,
   Building2,
   Tag,
   UserCheck,
+  UserMinus,
+  UserPlus,
   Users,
 } from 'lucide-react';
 
@@ -17,18 +21,36 @@ import {
   CardContent,
 } from '../../components/common/Card';
 import { Button } from '../../components/ui/Button';
+import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/common/Badge';
 import { Avatar } from '../../components/common/Avatar';
+import { Modal } from '../../components/common/Modal';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { ErrorState } from '../../components/feedback/ErrorState';
 
-import { useTeamDetail } from '../../hooks/useTeams';
+import {
+  useAddTeamMember,
+  useRemoveTeamMember,
+  useTeamDetail,
+  useTeamMemberCandidates,
+  useTeamTransferTargets,
+  useTransferTeamMember,
+} from '../../hooks/useTeams';
+import { useAuth } from '../../providers/AuthProvider';
+import { useToast } from '../../providers/ToastProvider';
+import type { TeamMemberItem } from '../../api/services';
 
 const TeamDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const toast = useToast();
 
   const teamId = Number(id);
+  const [addOpen, setAddOpen] = React.useState(false);
+  const [selectedCandidate, setSelectedCandidate] = React.useState('');
+  const [transferMember, setTransferMember] = React.useState<TeamMemberItem | null>(null);
+  const [targetTeamId, setTargetTeamId] = React.useState('');
 
   const {
     data: team,
@@ -36,6 +58,65 @@ const TeamDetailPage: React.FC = () => {
     isError,
     refetch,
   } = useTeamDetail(teamId);
+  const { data: candidates = [], isLoading: candidatesLoading } =
+    useTeamMemberCandidates(teamId, addOpen);
+  const { data: transferTargets = [] } =
+    useTeamTransferTargets(teamId, Boolean(transferMember));
+  const addMember = useAddTeamMember();
+  const removeMember = useRemoveTeamMember();
+  const transferTeamMember = useTransferTeamMember();
+
+  const role = (user?.role || '').toLowerCase();
+  const isAdmin = role === 'admin' || Number(user?.role_id) === 1;
+  const isManager = role === 'manager' || Number(user?.role_id) === 2;
+  const isLeader = Number(user?.id) === Number(team?.leader_id);
+  const canManageMembers = isAdmin || isManager || isLeader;
+  const canManageMember = (member: TeamMemberItem) =>
+    canManageMembers &&
+    (isAdmin || (member.role_id === 3 && Number(member.id) !== Number(user?.id)));
+
+  const errorMessage = (error: unknown) =>
+    error instanceof AxiosError
+      ? error.response?.data?.detail || 'Không thể thực hiện thao tác thành viên.'
+      : 'Không thể thực hiện thao tác thành viên.';
+
+  const handleAddMember = async () => {
+    if (!selectedCandidate) return;
+    try {
+      await addMember.mutateAsync({ id: teamId, employeeId: Number(selectedCandidate) });
+      toast.success('Đã thêm thành viên', 'Nhân viên đã được thêm vào team.');
+      setSelectedCandidate('');
+      setAddOpen(false);
+    } catch (error) {
+      toast.error('Không thể thêm thành viên', errorMessage(error));
+    }
+  };
+
+  const handleRemoveMember = async (member: TeamMemberItem) => {
+    if (!window.confirm(`Đưa "${member.full_name}" ra khỏi team? Nhân viên vẫn thuộc phòng ban hiện tại.`)) return;
+    try {
+      await removeMember.mutateAsync({ id: teamId, employeeId: member.id });
+      toast.success('Đã gỡ thành viên', 'Nhân viên không còn thuộc team này.');
+    } catch (error) {
+      toast.error('Không thể gỡ thành viên', errorMessage(error));
+    }
+  };
+
+  const handleTransferMember = async () => {
+    if (!transferMember || !targetTeamId) return;
+    try {
+      await transferTeamMember.mutateAsync({
+        id: teamId,
+        employeeId: transferMember.id,
+        targetTeamId: Number(targetTeamId),
+      });
+      toast.success('Đã chuyển team', `${transferMember.full_name} đã được chuyển sang team mới.`);
+      setTransferMember(null);
+      setTargetTeamId('');
+    } catch (error) {
+      toast.error('Không thể chuyển team', errorMessage(error));
+    }
+  };
 
   if (isLoading) {
     return (
@@ -192,11 +273,20 @@ const TeamDetailPage: React.FC = () => {
         </div>
 
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <CardTitle className="flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
               Danh sách Thành viên ({members.length})
             </CardTitle>
+            {canManageMembers && (
+              <Button
+                size="sm"
+                leftIcon={<UserPlus className="h-4 w-4" />}
+                onClick={() => setAddOpen(true)}
+              >
+                Thêm thành viên
+              </Button>
+            )}
           </CardHeader>
 
           <CardContent className="space-y-3">
@@ -234,7 +324,7 @@ const TeamDetailPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {member.id === team.leader_id && (
                       <Badge variant="success">
                         Trưởng nhóm
@@ -252,6 +342,27 @@ const TeamDetailPage: React.FC = () => {
                         ? 'Hoạt động'
                         : 'Ngừng hoạt động'}
                     </Badge>
+                    {canManageMember(member) && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          leftIcon={<ArrowRightLeft className="h-3.5 w-3.5" />}
+                          onClick={() => setTransferMember(member)}
+                        >
+                          Chuyển
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          leftIcon={<UserMinus className="h-3.5 w-3.5" />}
+                          onClick={() => handleRemoveMember(member)}
+                          isLoading={removeMember.isPending}
+                        >
+                          Gỡ
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
@@ -259,6 +370,78 @@ const TeamDetailPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Modal
+        isOpen={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="Thêm thành viên vào team"
+        description="Chỉ hiển thị nhân viên cùng phòng ban và đang chưa thuộc team nào."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Hủy</Button>
+            <Button
+              onClick={handleAddMember}
+              disabled={!selectedCandidate}
+              isLoading={addMember.isPending}
+            >
+              Thêm thành viên
+            </Button>
+          </>
+        }
+      >
+        <Select
+          label="Nhân viên"
+          value={selectedCandidate}
+          onChange={(event) => setSelectedCandidate(event.target.value)}
+          disabled={candidatesLoading}
+          options={[
+            {
+              value: '',
+              label: candidatesLoading
+                ? 'Đang tải danh sách...'
+                : candidates.length
+                  ? 'Chọn nhân viên'
+                  : 'Không có nhân viên phù hợp',
+            },
+            ...candidates.map((candidate) => ({
+              value: String(candidate.id),
+              label: `${candidate.full_name} (${candidate.employee_code || candidate.email})`,
+            })),
+          ]}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(transferMember)}
+        onClose={() => setTransferMember(null)}
+        title="Chuyển thành viên sang team khác"
+        description={transferMember ? `Nhân viên: ${transferMember.full_name}. Chỉ chuyển trong cùng phòng ban.` : undefined}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setTransferMember(null)}>Hủy</Button>
+            <Button
+              onClick={handleTransferMember}
+              disabled={!targetTeamId}
+              isLoading={transferTeamMember.isPending}
+            >
+              Xác nhận chuyển
+            </Button>
+          </>
+        }
+      >
+        <Select
+          label="Team đích"
+          value={targetTeamId}
+          onChange={(event) => setTargetTeamId(event.target.value)}
+          options={[
+            { value: '', label: 'Chọn team đích' },
+            ...transferTargets.map((item) => ({
+              value: String(item.id),
+              label: item.name,
+            })),
+          ]}
+        />
+      </Modal>
     </div>
   );
 };

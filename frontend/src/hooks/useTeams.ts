@@ -47,3 +47,67 @@ export const useTeamDetail = (id: number) => {
     enabled: isValidEntityId(id),
   });
 };
+
+export const useTeamMemberCandidates = (id: number, enabled: boolean) => {
+  return useQuery({
+    queryKey: ['teams', id, 'member-candidates'],
+    queryFn: () => teamsApi.getMemberCandidates(id),
+    enabled: enabled && isValidEntityId(id),
+  });
+};
+
+export const useTeamTransferTargets = (id: number, enabled: boolean) => {
+  return useQuery({
+    queryKey: ['teams', id, 'transfer-targets'],
+    queryFn: () => teamsApi.getTransferTargets(id),
+    enabled: enabled && isValidEntityId(id),
+  });
+};
+
+const invalidateTeamMembership = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  teamIds: number[],
+) => {
+  queryClient.invalidateQueries({ queryKey: ['employees'] });
+  queryClient.invalidateQueries({ queryKey: ['departments'] });
+  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  teamIds.forEach((id) => {
+    queryClient.invalidateQueries({ queryKey: ['teams', id] });
+  });
+  queryClient.invalidateQueries({ queryKey: ['teams'] });
+};
+
+export const useAddTeamMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, employeeId }: { id: number; employeeId: number }) =>
+      teamsApi.addMember(id, employeeId),
+    onSuccess: (_, { id }) => invalidateTeamMembership(queryClient, [id]),
+  });
+};
+
+export const useRemoveTeamMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, employeeId }: { id: number; employeeId: number }) =>
+      teamsApi.removeMember(id, employeeId),
+    onSuccess: (_, { id }) => invalidateTeamMembership(queryClient, [id]),
+  });
+};
+
+export const useTransferTeamMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      employeeId,
+      targetTeamId,
+    }: {
+      id: number;
+      employeeId: number;
+      targetTeamId: number;
+    }) => teamsApi.transferMember(id, employeeId, targetTeamId),
+    onSuccess: (_, { id, targetTeamId }) =>
+      invalidateTeamMembership(queryClient, [id, targetTeamId]),
+  });
+};
