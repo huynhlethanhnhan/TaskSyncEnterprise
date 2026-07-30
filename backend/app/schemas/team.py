@@ -1,6 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TeamBase(BaseModel):
@@ -9,6 +8,13 @@ class TeamBase(BaseModel):
     name: str
     description: str | None = None
     leader_id: int | None = None
+
+    @field_validator("leader_id", "department_id", mode="before", check_fields=False)
+    @classmethod
+    def empty_to_none(cls, v):
+        if v == "" or v == 0:
+            return None
+        return v
 
 
 class TeamCreate(TeamBase):
@@ -21,6 +27,13 @@ class TeamUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     leader_id: int | None = None
+
+    @field_validator("leader_id", "department_id", mode="before", check_fields=False)
+    @classmethod
+    def empty_to_none(cls, v):
+        if v == "" or v == 0:
+            return None
+        return v
 
 
 class TeamResponse(TeamBase):

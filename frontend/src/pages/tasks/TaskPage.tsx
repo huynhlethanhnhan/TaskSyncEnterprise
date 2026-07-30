@@ -23,6 +23,7 @@ import { useDepartments } from '../../hooks/useDepartments';
 import { useTeams } from '../../hooks/useTeams';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
+import { extractApiError } from '../../utils/errorHelpers';
 import { type TaskItem } from '../../api/services';
 
 const STATUS_COLUMNS = ['To Do', 'In Progress', 'Done'];
@@ -104,9 +105,9 @@ const TaskPage: React.FC = () => {
     try {
       await updateTaskStatus.mutateAsync({ id: taskId, status: newStatus });
       toast.success('Cập nhật trạng thái công việc', `Đã chuyển task sang "${newStatus}".`);
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Không thể thay đổi trạng thái task.';
-      toast.error('Lỗi cập nhật trạng thái', message);
+    } catch (err: any) {
+      const apiError = extractApiError(err, 'Không thể thay đổi trạng thái task.');
+      toast.error(`Lỗi [${apiError.status}]`, apiError.message);
     }
   };
 
@@ -117,8 +118,9 @@ const TaskPage: React.FC = () => {
     try {
       await deleteTask.mutateAsync(task.id);
       toast.success('Đã xóa task thành công');
-    } catch {
-      toast.error('Lỗi khi xóa task');
+    } catch (err) {
+      const apiError = extractApiError(err, 'Lỗi khi xóa task');
+      toast.error(`Lỗi [${apiError.status}]`, apiError.message);
     }
   };
 
@@ -132,8 +134,9 @@ const TaskPage: React.FC = () => {
         toast.success('Tạo công việc mới thành công');
       }
       setIsDrawerOpen(false);
-    } catch {
-      toast.error('Lỗi lưu công việc');
+    } catch (err) {
+      const apiError = extractApiError(err, 'Lỗi lưu công việc');
+      toast.error(`Lỗi [${apiError.status}]`, apiError.message);
     }
   };
 

@@ -145,6 +145,7 @@ def start_sprint(db: Session, sprint: Sprint) -> Sprint:
         )
         or 0
     )
+    # Sprints must have at least one Task or Backlog Item before activation
     if backlog_count == 0 and task_count == 0:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

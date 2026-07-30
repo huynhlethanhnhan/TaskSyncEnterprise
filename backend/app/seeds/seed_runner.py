@@ -18,6 +18,7 @@ from app.seeds.seed_comments import seed_comments
 from app.seeds.seed_notifications import seed_notifications
 from app.seeds.seed_vacations import seed_vacations
 from app.seeds.seed_settings import seed_settings
+from app.seeds.seed_topics import seed_topics
 
 # Order of tables to reset respecting Foreign Key constraints
 TABLES_TO_RESET = [
@@ -110,6 +111,10 @@ def run_seed_pipeline(db: Session) -> dict[str, int]:
     projects = seed_projects(db, employees)
     print(f"  [OK] Seeded Projects: {len(projects)} (Includes PRJ-SPRINT-TEST)")
 
+    # 4.5 Seed Topics
+    topics = seed_topics(db, projects, employees)
+    print(f"  [OK] Seeded Topics: {len(topics)}")
+
     # 5. Seed Sprints
     sprints = seed_sprints(db, projects)
     print(f"  [OK] Seeded Sprints: {len(sprints)} (Includes Sprint A, B, C)")
@@ -139,6 +144,7 @@ def run_seed_pipeline(db: Session) -> dict[str, int]:
         "Departments": len(departments),
         "Employees": len(employees),
         "Projects": len(projects),
+        "Topics": len(topics),
         "Sprints": len(sprints),
         "Tasks": len(tasks),
         "Comments": num_comments,

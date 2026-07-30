@@ -55,7 +55,7 @@ export default function SettingsPage(): React.ReactElement {
   const toast = useToast();
 
   const [loading, setLoading] = useState<boolean>(true);
-  const [savingUser, setSavingUser] = useState<boolean>(false);
+  const [_savingUser, setSavingUser] = useState<boolean>(false);
   const [savingSystem, setSavingSystem] = useState<boolean>(false);
 
   // User preferences state

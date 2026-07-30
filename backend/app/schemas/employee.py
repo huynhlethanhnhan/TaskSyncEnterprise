@@ -4,7 +4,6 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 
 class EmployeeBase(BaseModel):
 
-    employee_code: str
     full_name: str
     email: EmailStr
 
@@ -25,7 +24,7 @@ class EmployeeBase(BaseModel):
 
 
 class EmployeeCreate(EmployeeBase):
-
+    employee_code: str | None = None
     password: str
 
 
@@ -50,6 +49,7 @@ class EmployeeResponse(EmployeeBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    employee_code: str
     avatar_url: str | None
     is_active: bool
     created_at: datetime

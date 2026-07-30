@@ -15,6 +15,7 @@ import { useDepartments } from '../../hooks/useDepartments';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
+import { extractApiError } from '../../utils/errorHelpers';
 import { useNavigate } from 'react-router-dom';
 
 const TeamPage: React.FC = () => {
@@ -118,8 +119,9 @@ const TeamPage: React.FC = () => {
         toast.success('Thành công', `Đã tạo nhóm mới ${payload.name}.`);
       }
       setIsDrawerOpen(false);
-    } catch {
-      toast.error('Lỗi lưu trữ', 'Không thể đồng bộ thông tin nhóm với máy chủ.');
+    } catch (err) {
+      const apiError = extractApiError(err, 'Không thể đồng bộ thông tin nhóm với máy chủ.');
+      toast.error(`Lỗi [${apiError.status}]`, apiError.message);
     }
   };
 
@@ -128,8 +130,9 @@ const TeamPage: React.FC = () => {
       await deleteTeam.mutateAsync(id);
       toast.success('Đã xóa nhóm', 'Thông tin nhóm đã được gỡ bỏ khỏi hệ thống.');
       setDeletingTeamId(null);
-    } catch {
-      toast.error('Lỗi khi xóa', 'Không thể xóa nhóm này. Vui lòng thử lại sau.');
+    } catch (err) {
+      const apiError = extractApiError(err, 'Không thể xóa nhóm này. Vui lòng thử lại sau.');
+      toast.error(`Lỗi [${apiError.status}]`, apiError.message);
     }
   };
 

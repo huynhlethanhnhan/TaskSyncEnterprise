@@ -16,6 +16,13 @@ class TaskCreate(BaseModel):
     sprint_id: int | None = None
     topic_id: int | None = None
 
+    @field_validator("sprint_id", "topic_id", "assigned_to", "project_id", mode="before", check_fields=False)
+    @classmethod
+    def empty_to_none(cls, v):
+        if v == "" or v == 0:
+            return None
+        return v
+
 
 class TaskUpdate(BaseModel):
     title: str | None = None
@@ -28,6 +35,13 @@ class TaskUpdate(BaseModel):
     assigned_to: int | None = None
     sprint_id: int | None = None
     topic_id: int | None = None
+
+    @field_validator("sprint_id", "topic_id", "assigned_to", "project_id", mode="before", check_fields=False)
+    @classmethod
+    def empty_to_none(cls, v):
+        if v == "" or v == 0:
+            return None
+        return v
 
     @field_validator("status")
     @classmethod

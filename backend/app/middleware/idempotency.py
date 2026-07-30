@@ -1,6 +1,5 @@
 import base64
 import json
-import logging
 import asyncio
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
@@ -8,8 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.cache.redis_client import RedisClient
 from app.config import settings
 from app.core.request_context import get_request_context
-
-logger = logging.getLogger("idempotency")
+from app.logging import app_logger as logger
 
 
 def serialize_response(status_code: int, headers: dict, body: bytes) -> str:
@@ -98,8 +96,8 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             try:
                 response = await call_next(request)
 
-                # Delete key for server-side anomalies so the client can retry
-                if response.status_code >= 500:
+                # Delete key for server-side anomalies or client validation errors so the client can retry
+                if response.status_code >= 400:
                     client.delete(redis_key)
                     return response
 

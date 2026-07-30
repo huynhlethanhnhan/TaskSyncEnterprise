@@ -57,8 +57,14 @@ def create(db: Session, data: EmployeeCreate):
         team_id=data.team_id,
     )
 
+    import uuid
+    emp_code = data.employee_code
+    if not emp_code:
+        # Generate a unique employee code
+        emp_code = f"EMP-{str(uuid.uuid4())[:8].upper()}"
+
     obj = Employee(
-        employee_code=data.employee_code,
+        employee_code=emp_code,
         full_name=data.full_name,
         email=data.email,
         phone=data.phone,
