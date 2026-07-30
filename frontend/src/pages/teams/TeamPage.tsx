@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Plus, Search, Building2, ShieldAlert, Edit, Trash2, Tag } from 'lucide-react';
+import { Plus, Search, Building2, ShieldAlert, Tag, UserCheck } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/common/Card';
@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/common/Badge';
 import { Drawer } from '../../components/common/Drawer';
+import { Avatar } from '../../components/common/Avatar';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam } from '../../hooks/useTeams';
 import { type TeamItem } from '../../api/services';
@@ -14,8 +15,10 @@ import { useDepartments } from '../../hooks/useDepartments';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
+import { useNavigate } from 'react-router-dom';
 
-export const TeamPage: React.FC = () => {
+const TeamPage: React.FC = () => {
+  const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || Number(user?.role_id) === 1;
@@ -26,6 +29,7 @@ export const TeamPage: React.FC = () => {
 
   // Queries
   const { data: teams = [], isLoading } = useTeams();
+
   const { data: departments = [] } = useDepartments();
   const { data: employees = [] } = useEmployees();
 
@@ -42,6 +46,7 @@ export const TeamPage: React.FC = () => {
   const [name, setName] = React.useState('');
   const [code, setCode] = React.useState('');
   const [departmentId, setDepartmentId] = React.useState('');
+  const [leaderId, setLeaderId] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [isActive, setIsActive] = React.useState(true);
 
@@ -53,12 +58,14 @@ export const TeamPage: React.FC = () => {
       setName(editingTeam.name);
       setCode(editingTeam.team_code);
       setDepartmentId(String(editingTeam.department_id));
+      setLeaderId(editingTeam.leader_id ? String(editingTeam.leader_id) : '');
       setDescription(editingTeam.description || '');
       setIsActive(editingTeam.is_active);
     } else {
       setName('');
       setCode('');
-      setDepartmentId(departments[0] ? String(departments[0].id) : '');
+      setDepartmentId(''); // Đã fix: Để chuỗi rỗng mặc định thay vì lấy phòng ban đầu tiên
+      setLeaderId('');
       setDescription('');
       setIsActive(true);
     }
@@ -97,6 +104,7 @@ export const TeamPage: React.FC = () => {
       name: name.trim(),
       team_code: code.trim().toUpperCase(),
       department_id: Number(departmentId),
+      leader_id: leaderId ? Number(leaderId) : null,
       description: description.trim() || null,
       is_active: isActive,
     };
@@ -201,7 +209,7 @@ export const TeamPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTeams.map((team) => {
             const dept = departments.find((d) => d.id === team.department_id);
-            const teamMembers = employees.filter((e) => e.department_id === team.department_id); // Approximation based on dept
+
             return (
               <Card key={team.id} className="relative flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-800 transition">
                 <CardHeader className="pb-2">
@@ -229,28 +237,75 @@ export const TeamPage: React.FC = () => {
                       <Building2 className="h-3.5 w-3.5 text-text-muted shrink-0" />
                       <span><strong>Phòng ban:</strong> {dept?.name || 'Không xác định'}</span>
                     </div>
+
+                    <div className="flex items-center justify-between gap-1.5 pt-1">
+                      <span className="flex items-center gap-1 font-semibold text-text-primary">
+                        <UserCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+                        Trưởng nhóm:
+                      </span>
+                      {team.leader_name ? (
+                        <div className="flex items-center gap-1.5 bg-secondary/60 px-2 py-0.5 rounded-full text-[10px]">
+                          <Avatar
+                            name={team.leader_name}
+                            src={team.leader_avatar_url}
+                            size="sm"
+                          />
+                          <span className="font-bold text-text-primary">
+                            {team.leader_name}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-text-muted italic">
+                          Chưa chỉ định
+                        </span>
+                      )}
+                    </div>
+
                     <div>
-                      <span><strong>Nhân sự thuộc phòng:</strong> {teamMembers.length} thành viên</span>
+                      <span>
+                        <strong>Nhân sự thuộc nhóm:</strong>
+                        {' '}
+                        {team.member_count ?? 0} thành viên</span>
                     </div>
                   </div>
                 </CardContent>
 
-                {isAdmin && (
-                  <CardContent className="border-t border-border/60 p-3 bg-accent/10 flex items-center justify-end gap-1.5">
-                    <Button variant="ghost" size="sm" leftIcon={<Edit className="h-3.5 w-3.5" />} onClick={() => handleOpenEdit(team)}>
-                      Sửa
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                      leftIcon={<Trash2 className="h-3.5 w-3.5" />}
-                      onClick={() => setDeletingTeamId(team.id)}
-                    >
-                      Xóa
-                    </Button>
-                  </CardContent>
-                )}
+                <CardContent className="border-t border-border/60 p-3 bg-accent/10">
+
+                  <div className="flex justify-end gap-2">
+
+                      <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/teams/${team.id}`)}
+                      >
+                          Chi tiết
+                      </Button>
+
+                      {isAdmin && (
+                          <>
+                              <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenEdit(team)}
+                              >
+                                  Sửa
+                              </Button>
+
+                              <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive"
+                                  onClick={() => setDeletingTeamId(team.id)}
+                              >
+                                  Xóa
+                              </Button>
+                          </>
+                      )}
+
+                  </div>
+
+                </CardContent>
               </Card>
             );
           })}
@@ -273,7 +328,7 @@ export const TeamPage: React.FC = () => {
               <Button variant="ghost" size="sm" onClick={() => setDeletingTeamId(null)}>
                 Hủy
               </Button>
-              <Button variant="danger" size="sm" onClick={() => handleDelete(deletingTeamId)}>
+              <Button variant="danger" size="sm" onClick={() => deletingTeamId !== null && handleDelete(deletingTeamId)}>
                 Xóa nhóm
               </Button>
             </div>
@@ -319,6 +374,7 @@ export const TeamPage: React.FC = () => {
               required
               className="flex h-10 w-full appearance-none rounded-md border border-input bg-surface px-3 py-2 text-sm text-text-primary transition-all duration-200 outline-none hover:border-slate-400 cursor-pointer"
             >
+              <option value="" disabled>-- Chọn phòng ban quản lý --</option>
               {departments.map((dept) => (
                 <option key={dept.id} value={dept.id}>
                   {dept.name}
@@ -328,12 +384,41 @@ export const TeamPage: React.FC = () => {
           </div>
 
           <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-text-secondary">Trưởng nhóm (Team Lead)</label>
+              {departmentId && (
+                <span className="text-[10px] text-primary font-medium">
+                  Lọc theo {departments.find((d) => String(d.id) === String(departmentId))?.name}
+                </span>
+              )}
+            </div>
+            <select
+              value={leaderId}
+              onChange={(e) => setLeaderId(e.target.value)}
+              className="flex h-10 w-full appearance-none rounded-md border border-input bg-surface px-3 py-2 text-sm text-text-primary transition-all duration-200 outline-none hover:border-slate-400 cursor-pointer"
+            >
+              <option value="">-- Chưa chỉ định Trưởng nhóm --</option>
+              {(() => {
+                const candidates = departmentId
+                  ? employees.filter((e) => String(e.department_id) === String(departmentId))
+                  : employees;
+                const list = candidates.length > 0 ? candidates : employees;
+                return list.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.full_name} ({emp.job_title || 'Thành viên'})
+                  </option>
+                ));
+              })()}
+            </select>
+          </div>
+
+          <div className="space-y-1">
             <label className="text-xs font-bold text-text-secondary">Mô tả chi tiết</label>
             <textarea
               placeholder="Nhập chức năng chính hoặc mô tả về hoạt động của nhóm..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full min-h-[80px] rounded-xl border border-input bg-background/50 px-3 py-2 text-xs text-text-primary outline-none focus:border-primary transition"
+              className="w-full min-h-80px rounded-xl border border-input bg-background/50 px-3 py-2 text-xs text-text-primary outline-none focus:border-primary transition"
             />
           </div>
 

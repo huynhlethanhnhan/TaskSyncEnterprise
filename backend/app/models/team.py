@@ -1,6 +1,15 @@
 from datetime import datetime
-from sqlalchemy import String, Unicode, UnicodeText, Boolean, DateTime, ForeignKey, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    String,
+    Unicode,
+    UnicodeText,
+    Boolean,
+    DateTime,
+    Integer,
+    ForeignKey,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -18,8 +27,25 @@ class Team(Base):
 
     description: Mapped[str | None] = mapped_column(UnicodeText)
 
+    leader_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey(
+            "employees.id",
+            name="fk_teams_leader_id_employees",
+            use_alter=True,
+        ),
+        nullable=True,
+    )
+
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=text("SYSUTCDATETIME()")
+    )
+
+    leader = relationship("Employee", foreign_keys=[leader_id])
+
+    department = relationship(
+        "Department",
+        foreign_keys=[department_id],
     )

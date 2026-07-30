@@ -75,12 +75,52 @@ export interface EmployeeItem {
   date_of_birth?: string | null;
   start_date?: string | null;
   department_id?: number | null;
+  department_name?: string | null;
+  team_id?: number | null;
+  team_name?: string | null;
   role_id?: number | null;
   manager_id?: number | null;
   job_title?: string | null;
   is_active: boolean;
   avatar_url?: string | null;
   created_at?: string;
+}
+
+export interface DepartmentMemberItem {
+  id: number;
+  employee_code: string;
+  full_name: string;
+  email: string;
+  job_title?: string | null;
+  avatar_url?: string | null;
+  team_id?: number | null;
+  role_id: number;
+  is_active: boolean;
+}
+
+interface DepartmentTeamItem {
+  id: number;
+  team_code: string;
+  name: string;
+  leader_id?: number | null;
+  leader_name?: string | null;
+  member_count: number;
+}
+
+export interface DepartmentDetailItem extends DepartmentItem {
+  manager_name?: string | null;
+  manager_avatar_url?: string | null;
+  team_count?: number;
+  project_count?: number;
+  completed_project_count?: number;
+  sprint_count?: number;
+  members: DepartmentMemberItem[];
+  teams: DepartmentTeamItem[];
+}
+
+export interface MembershipTargetItem {
+  id: number;
+  name: string;
 }
 
 export interface DepartmentItem {
@@ -191,7 +231,7 @@ export const departmentsApi = {
     const res = await api.get('/departments');
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
-  getById: async (id: number): Promise<DepartmentItem> => {
+  getById: async (id: number): Promise<DepartmentDetailItem> => {
     const res = await api.get(`/departments/${id}`);
     return res.data?.data || res.data;
   },
@@ -205,6 +245,29 @@ export const departmentsApi = {
   },
   delete: async (id: number): Promise<void> => {
     await api.delete(`/departments/${id}`);
+  },
+  getMemberCandidates: async (id: number): Promise<EmployeeItem[]> => {
+    const res = await api.get(`/departments/${id}/member-candidates`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  getTransferTargets: async (id: number): Promise<MembershipTargetItem[]> => {
+    const res = await api.get(`/departments/${id}/transfer-targets`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  addMember: async (id: number, employeeId: number): Promise<void> => {
+    await api.post(`/departments/${id}/members/${employeeId}`);
+  },
+  removeMember: async (id: number, employeeId: number): Promise<void> => {
+    await api.delete(`/departments/${id}/members/${employeeId}`);
+  },
+  transferMember: async (
+    id: number,
+    employeeId: number,
+    targetDepartmentId: number,
+  ): Promise<void> => {
+    await api.post(`/departments/${id}/members/${employeeId}/transfer`, {
+      target_department_id: targetDepartmentId,
+    });
   },
 };
 
@@ -224,11 +287,31 @@ export const notificationsApi = {
 export interface TeamItem {
   id: number;
   department_id: number;
+  department_name?: string | null;
   team_code: string;
   name: string;
   description?: string | null;
+  leader_id?: number | null;
+  leader_name?: string | null;
+  leader_avatar_url?: string | null;
+  member_count?: number;
   is_active: boolean;
   created_at: string;
+}
+
+export interface TeamMemberItem {
+  id: number;
+  employee_code: string;
+  full_name: string;
+  email: string;
+  job_title?: string | null;
+  avatar_url?: string | null;
+  role_id: number;
+  is_active: boolean;
+}
+
+export interface TeamDetailItem extends TeamItem {
+  members: TeamMemberItem[];
 }
 
 export const teamsApi = {
@@ -236,7 +319,7 @@ export const teamsApi = {
     const res = await api.get('/teams', { params });
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
-  getById: async (id: number): Promise<TeamItem> => {
+  getById: async (id: number): Promise<TeamDetailItem> => {
     const res = await api.get(`/teams/${id}`);
     return res.data?.data || res.data;
   },
@@ -250,5 +333,28 @@ export const teamsApi = {
   },
   delete: async (id: number): Promise<void> => {
     await api.delete(`/teams/${id}`);
+  },
+  getMemberCandidates: async (id: number): Promise<EmployeeItem[]> => {
+    const res = await api.get(`/teams/${id}/member-candidates`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  getTransferTargets: async (id: number): Promise<MembershipTargetItem[]> => {
+    const res = await api.get(`/teams/${id}/transfer-targets`);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  addMember: async (id: number, employeeId: number): Promise<void> => {
+    await api.post(`/teams/${id}/members/${employeeId}`);
+  },
+  removeMember: async (id: number, employeeId: number): Promise<void> => {
+    await api.delete(`/teams/${id}/members/${employeeId}`);
+  },
+  transferMember: async (
+    id: number,
+    employeeId: number,
+    targetTeamId: number,
+  ): Promise<void> => {
+    await api.post(`/teams/${id}/members/${employeeId}/transfer`, {
+      target_team_id: targetTeamId,
+    });
   },
 };

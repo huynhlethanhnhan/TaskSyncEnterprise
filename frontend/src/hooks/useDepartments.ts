@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { departmentsApi, type DepartmentItem } from '../api/services';
+import { departmentsApi, type DepartmentItem, type DepartmentDetailItem } from '../api/services';
+import { isValidEntityId } from '../utils/entityId';
 
 export const useDepartments = () => {
   return useQuery<DepartmentItem[], Error>({
@@ -9,10 +10,10 @@ export const useDepartments = () => {
 };
 
 export const useDepartmentDetail = (id: number) => {
-  return useQuery<DepartmentItem, Error>({
+  return useQuery<DepartmentDetailItem, Error>({
     queryKey: ['departments', id],
     queryFn: () => departmentsApi.getById(id),
-    enabled: Boolean(id),
+    enabled: isValidEntityId(id),
   });
 };
 
@@ -48,5 +49,69 @@ export const useDeleteDepartment = () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
+  });
+};
+
+export const useDepartmentMemberCandidates = (id: number, enabled: boolean) => {
+  return useQuery({
+    queryKey: ['departments', id, 'member-candidates'],
+    queryFn: () => departmentsApi.getMemberCandidates(id),
+    enabled: enabled && isValidEntityId(id),
+  });
+};
+
+export const useDepartmentTransferTargets = (id: number, enabled: boolean) => {
+  return useQuery({
+    queryKey: ['departments', id, 'transfer-targets'],
+    queryFn: () => departmentsApi.getTransferTargets(id),
+    enabled: enabled && isValidEntityId(id),
+  });
+};
+
+const invalidateDepartmentMembership = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  departmentIds: number[],
+) => {
+  queryClient.invalidateQueries({ queryKey: ['employees'] });
+  queryClient.invalidateQueries({ queryKey: ['teams'] });
+  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  departmentIds.forEach((id) => {
+    queryClient.invalidateQueries({ queryKey: ['departments', id] });
+  });
+  queryClient.invalidateQueries({ queryKey: ['departments'] });
+};
+
+export const useAddDepartmentMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, employeeId }: { id: number; employeeId: number }) =>
+      departmentsApi.addMember(id, employeeId),
+    onSuccess: (_, { id }) => invalidateDepartmentMembership(queryClient, [id]),
+  });
+};
+
+export const useRemoveDepartmentMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, employeeId }: { id: number; employeeId: number }) =>
+      departmentsApi.removeMember(id, employeeId),
+    onSuccess: (_, { id }) => invalidateDepartmentMembership(queryClient, [id]),
+  });
+};
+
+export const useTransferDepartmentMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      employeeId,
+      targetDepartmentId,
+    }: {
+      id: number;
+      employeeId: number;
+      targetDepartmentId: number;
+    }) => departmentsApi.transferMember(id, employeeId, targetDepartmentId),
+    onSuccess: (_, { id, targetDepartmentId }) =>
+      invalidateDepartmentMembership(queryClient, [id, targetDepartmentId]),
   });
 };

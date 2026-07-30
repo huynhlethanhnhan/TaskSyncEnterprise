@@ -76,6 +76,8 @@ class Employee(Base):
     updated_at: Mapped[datetime | None]
 
     manager = relationship("Employee", remote_side=[id])
+    department = relationship("Department", foreign_keys=[department_id])
+    team = relationship("Team", foreign_keys=[team_id])
 
     notifications: Mapped[list["Notification"]] = relationship(
         "Notification", back_populates="employee", cascade="all, delete-orphan"
@@ -86,3 +88,11 @@ class Employee(Base):
         back_populates="employee",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def department_name(self) -> str | None:
+        return self.department.name if self.department else None
+
+    @property
+    def team_name(self) -> str | None:
+        return self.team.name if self.team else None
