@@ -59,8 +59,8 @@
 
 | Gate | Kết quả |
 |---|---|
-| Test phân quyền và workflow mục tiêu | **17 passed** |
-| Toàn bộ backend test suite | **340 passed** |
+| Test phân quyền và workflow mục tiêu | **develop: 17 passed; master: 9 passed** |
+| Toàn bộ backend test suite | **develop: 340 passed; master: 297 passed** |
 | Backend coverage | **76% tổng thể; service mới 79%** |
 | Ruff | **Passed** |
 | Bandit mức Medium/High | **0 issue** |
