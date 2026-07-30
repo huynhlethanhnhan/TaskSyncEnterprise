@@ -1,5 +1,6 @@
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "../pages/auth/LoginPage.tsx";
+import LoginPage from "../pages/auth/LoginPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
 import { UnauthorizedPage } from "../pages/auth/UnauthorizedPage";
 import { NotFoundPage } from "../pages/auth/NotFoundPage";
@@ -7,36 +8,33 @@ import { ComponentShowcasePage } from "../pages/dev/ComponentShowcasePage";
 import { ApplicationShell } from "../layouts/ApplicationShell";
 import ProtectedRoute from "./ProtectedRoute";
 
-// Canonical TypeScript workspace pages. Explicit extensions prevent Vite from
-// resolving same-named legacy JSX modules first.
-import DashboardPage from "../pages/dashboard/DashboardPage.tsx";
-import ProjectPage from "../pages/projects/ProjectPage.tsx";
-import ProjectDetailPage from "../pages/projects/ProjectDetailPage.tsx";
-import TaskPage from "../pages/tasks/TaskPage.tsx";
+import DashboardPage from "../pages/dashboard/DashboardPage";
+import ProjectPage from "../pages/projects/ProjectPage";
+import ProjectDetailPage from "../pages/projects/ProjectDetailPage";
+import TaskPage from "../pages/tasks/TaskPage";
 import CalendarPage from "../pages/calendar/CalendarPage";
-import DepartmentPage from "../pages/departments/DepartmentPage.tsx";
-import DepartmentDetailPage from "../pages/departments/DepartmentDetailPage.tsx";
-import EmployeePage from "../pages/employees/EmployeePage.tsx";
-import EmployeeDetailPage from "../pages/employees/EmployeeDetailPage.tsx";
-import NotificationsPage from "../pages/notifications/NotificationsPage.tsx";
+import DepartmentPage from "../pages/departments/DepartmentPage";
+import DepartmentDetailPage from "../pages/departments/DepartmentDetailPage";
+import EmployeePage from "../pages/employees/EmployeePage";
+import EmployeeDetailPage from "../pages/employees/EmployeeDetailPage";
+import NotificationsPage from "../pages/notifications/NotificationsPage";
 import VacationPage from "../pages/vacations/VacationPage";
 import VacationDetailPage from "../pages/vacations/VacationDetailPage";
 import SettingsPage from "../pages/settings/SettingsPage";
-import ProfilePage from "../pages/profile/ProfilePage.tsx";
-import AuditLogPage from "../pages/audit/AuditLogPage.tsx";
-import TeamPage from "../pages/teams/TeamPage.tsx";
-import TeamDetailPage from "../pages/teams/TeamDetailPage.tsx";
+import ProfilePage from "../pages/profile/ProfilePage";
+import AuditLogPage from "../pages/audit/AuditLogPage";
+import TeamPage from "../pages/teams/TeamPage";
+import TeamDetailPage from "../pages/teams/TeamDetailPage";
 
-// New Workspaces Redesign imports
-import MyWorkPage from "../pages/dashboard/MyWorkPage.tsx";
-import BacklogPage from "../pages/tasks/BacklogPage.tsx";
-import SprintsPage from "../pages/tasks/SprintsPage.tsx";
-import TopicsPage from "../pages/profile/TopicsPage.tsx";
-import FeedbackPage from "../pages/profile/FeedbackPage.tsx";
-import FilesPage from "../pages/profile/FilesPage.tsx";
-import ReportsPage from "../pages/profile/ReportsPage.tsx";
+import MyWorkPage from "../pages/dashboard/MyWorkPage";
+import BacklogPage from "../pages/tasks/BacklogPage";
+import SprintsPage from "../pages/tasks/SprintsPage";
+import TopicsPage from "../pages/profile/TopicsPage";
+import FeedbackPage from "../pages/profile/FeedbackPage";
+import FilesPage from "../pages/profile/FilesPage";
+import ReportsPage from "../pages/profile/ReportsPage";
 
-export default function AppRouter() {
+export default function AppRouter(): React.ReactElement {
   return (
     <BrowserRouter>
       <Routes>

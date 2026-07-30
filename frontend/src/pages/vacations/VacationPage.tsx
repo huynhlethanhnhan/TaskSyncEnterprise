@@ -13,7 +13,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import api from '../../api/axios';
-import VacationFormModal from './VacationFormModal';
+import VacationFormModal, { type VacationFormData } from './VacationFormModal';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/common/Card';
@@ -22,9 +22,28 @@ import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/common/EmptyState';
 import { useToast } from '../../providers/ToastProvider';
 
-const STATUS_BADGES = {
+interface VacationItem {
+  id: number;
+  type: string;
+  start_date: string;
+  end_date: string;
+  reason?: string;
+  status: string;
+  requested_by: number;
+  requested_by_name?: string;
+}
+
+interface EmployeeSummary {
+  id: number;
+  full_name: string;
+}
+
+const STATUS_BADGES: Record<
+  string,
+  { variant: 'warning' | 'primary' | 'success' | 'danger' | 'outline' | 'default'; label: string; icon: React.ReactNode }
+> = {
   Pending: { variant: 'warning', label: 'Chờ duyệt', icon: <Clock className="h-3 w-3" /> },
-  'Manager Approved': { variant: 'info', label: 'Manager Đã Duyệt', icon: <UserCheck className="h-3 w-3" /> },
+  'Manager Approved': { variant: 'primary', label: 'Manager Đã Duyệt', icon: <UserCheck className="h-3 w-3" /> },
   'HR Approved': { variant: 'success', label: 'HR Đã Duyệt', icon: <CheckCircle2 className="h-3 w-3" /> },
   Approved: { variant: 'success', label: 'Đã Duyệt', icon: <CheckCircle2 className="h-3 w-3" /> },
   Rejected: { variant: 'danger', label: 'Từ chối', icon: <XCircle className="h-3 w-3" /> },
@@ -34,23 +53,29 @@ const STATUS_BADGES = {
   Cancelled: { variant: 'default', label: 'Hủy đơn', icon: <Undo2 className="h-3 w-3" /> },
 };
 
-export default function VacationPage() {
-  const currentUser = useMemo(() => JSON.parse(localStorage.getItem('user') || '{}'), []);
+export default function VacationPage(): React.ReactElement {
+  const currentUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
   const toast = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [vacations, setVacations] = useState([]);
-  const [employees, setEmployees] = useState([]);
+  const [vacations, setVacations] = useState<VacationItem[]>([]);
+  const [employees, setEmployees] = useState<EmployeeSummary[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filterTab, setFilterTab] = useState('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'approved'>('all');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
       setIsModalOpen(true);
     }
   }, [searchParams]);
-  const [loading, setLoading] = useState(true);
 
   const isManager = currentUser.role === 'manager' || Number(currentUser.role_id) === 2;
   const isAdmin = currentUser.role === 'admin' || Number(currentUser.role_id) === 1;
@@ -76,8 +101,9 @@ export default function VacationPage() {
   }, [loadData]);
 
   useEffect(() => {
-    const refreshVacations = (event) => {
-      if (["vacation.changed", "employee.changed"].includes(event.detail?.event)) {
+    const refreshVacations = (event: Event) => {
+      const customEvent = event as CustomEvent<{ event?: string }>;
+      if (["vacation.changed", "employee.changed"].includes(customEvent.detail?.event || "")) {
         loadData();
       }
     };
@@ -85,8 +111,7 @@ export default function VacationPage() {
     return () => window.removeEventListener("tasksync:domain-event", refreshVacations);
   }, [loadData]);
 
-
-  const handleSave = async (data) => {
+  const handleSave = async (data: VacationFormData) => {
     try {
       await api.post('/vacations', {
         type: data.type,
@@ -103,7 +128,7 @@ export default function VacationPage() {
     }
   };
 
-  const handleUpdateStatus = async (vacationId, newStatus) => {
+  const handleUpdateStatus = async (vacationId: number, newStatus: string) => {
     try {
       await api.patch(`/vacations/${vacationId}`, { status: newStatus });
       toast.success('Cập nhật trạng thái thành công', `Đơn nghỉ phép đã được chuyển sang "${newStatus}".`);
@@ -116,7 +141,6 @@ export default function VacationPage() {
   const filteredVacations = useMemo(() => {
     if (filterTab === 'pending') return vacations.filter((v) => v.status === 'Pending' || v.status === 'Manager Approved');
     if (filterTab === 'approved') return vacations.filter((v) => v.status === 'Approved' || v.status === 'HR Approved');
-    if (filterTab === 'rejected') return vacations.filter((v) => v.status === 'Rejected');
     return vacations;
   }, [vacations, filterTab]);
 
@@ -221,7 +245,7 @@ export default function VacationPage() {
               <button
                 type="button"
                 onClick={() => setFilterTab('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   filterTab === 'all' ? 'bg-surface text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
                 }`}
               >
@@ -230,7 +254,7 @@ export default function VacationPage() {
               <button
                 type="button"
                 onClick={() => setFilterTab('pending')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   filterTab === 'pending' ? 'bg-surface text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
                 }`}
               >
@@ -239,7 +263,7 @@ export default function VacationPage() {
               <button
                 type="button"
                 onClick={() => setFilterTab('approved')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   filterTab === 'approved' ? 'bg-surface text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
                 }`}
               >
@@ -344,7 +368,7 @@ export default function VacationPage() {
                         {isAdmin && (vacation.status === 'Pending' || vacation.status === 'Manager Approved') && (
                           <>
                             <Button
-                              variant="destructive"
+                              variant="danger"
                               size="sm"
                               onClick={() => handleUpdateStatus(vacation.id, 'Rejected')}
                             >

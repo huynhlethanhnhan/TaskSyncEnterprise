@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import api from "../../api/axios";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Breadcrumb } from "../../components/navigation/Breadcrumb";
@@ -7,12 +7,53 @@ import { Badge } from "../../components/common/Badge";
 import { Avatar } from "../../components/common/Avatar";
 import { Calendar as CalendarIcon, CheckSquare, Users } from "lucide-react";
 
-const getCalendarDays = (year, month) => {
+interface CalendarTask {
+  id: number;
+  title?: string;
+  name?: string;
+  status: string;
+  priority?: string;
+  project_id?: number | null;
+  assigned_to?: number | null;
+  deadline?: string | null;
+  due_date?: string | null;
+  employee?: {
+    id: number;
+    full_name?: string;
+    name?: string;
+  } | null;
+}
+
+interface CalendarProject {
+  id: number;
+  name: string;
+}
+
+interface CalendarEmployee {
+  id: number;
+  full_name: string;
+}
+
+interface CalendarVacation {
+  id: number;
+  requested_by: number;
+  type: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+}
+
+interface DayCell {
+  date: Date;
+  isCurrentMonth: boolean;
+}
+
+const getCalendarDays = (year: number, month: number): DayCell[] => {
   const startOfMonth = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startDay = startOfMonth.getDay();
   const prevMonthDays = new Date(year, month, 0).getDate();
-  const days = [];
+  const days: DayCell[] = [];
 
   for (let i = startDay - 1; i >= 0; i -= 1) {
     days.push({
@@ -33,23 +74,24 @@ const getCalendarDays = (year, month) => {
   return days;
 };
 
-const formatDayKey = (date) => {
+const formatDayKey = (date: Date | string): string => {
   const d = new Date(date);
   const month = `${d.getMonth() + 1}`.padStart(2, '0');
   const day = `${d.getDate()}`.padStart(2, '0');
   return `${d.getFullYear()}-${month}-${day}`;
 };
 
-const formatLabel = (date) => date.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" });
+const formatLabel = (date: Date): string =>
+  date.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" });
 
-export default function CalendarPage() {
+export default function CalendarPage(): React.ReactElement {
   const today = useMemo(() => new Date(), []);
-  const [displayDate, setDisplayDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
-  const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [employees] = useState([]);
-  const [vacations, setVacations] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [displayDate, setDisplayDate] = useState<Date>(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [tasks, setTasks] = useState<CalendarTask[]>([]);
+  const [projects, setProjects] = useState<CalendarProject[]>([]);
+  const [employees] = useState<CalendarEmployee[]>([]);
+  const [vacations, setVacations] = useState<CalendarVacation[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const loadData = useCallback(async () => {
     try {
@@ -58,13 +100,17 @@ export default function CalendarPage() {
         api.get("/projects"),
         api.get("/vacations").catch(() => ({ data: [] })),
       ]);
-      const rawTasks = Array.isArray(taskRes.data) ? taskRes.data : taskRes.data?.data || [];
-      const rawProjects = Array.isArray(projectRes.data) ? projectRes.data : projectRes.data?.data || [];
-      const rawVacations = Array.isArray(vacationRes.data) ? vacationRes.data : vacationRes.data?.data || [];
+      const rawTasks: CalendarTask[] = Array.isArray(taskRes.data) ? taskRes.data : taskRes.data?.data || [];
+      const rawProjects: CalendarProject[] = Array.isArray(projectRes.data) ? projectRes.data : projectRes.data?.data || [];
+      const rawVacations: CalendarVacation[] = Array.isArray(vacationRes.data) ? vacationRes.data : vacationRes.data?.data || [];
 
-      setTasks(rawTasks.map(task => ({ ...task, deadline: task.deadline || task.due_date || null })));
+      setTasks(rawTasks.map((task) => ({ ...task, deadline: task.deadline || task.due_date || null })));
       setProjects(rawProjects);
-      setVacations(rawVacations.filter(v => v.status === "Approved" || v.status === "HR Approved" || v.status === "Manager Approved"));
+      setVacations(
+        rawVacations.filter(
+          (v) => v.status === "Approved" || v.status === "HR Approved" || v.status === "Manager Approved"
+        )
+      );
     } catch (err) {
       console.error("Lỗi tải dữ liệu Calendar:", err);
     }
@@ -75,8 +121,9 @@ export default function CalendarPage() {
   }, [loadData]);
 
   useEffect(() => {
-    const refreshCalendar = (event) => {
-      if (["task.changed", "project.changed", "vacation.changed"].includes(event.detail?.event)) {
+    const refreshCalendar = (event: Event) => {
+      const customEvent = event as CustomEvent<{ event?: string }>;
+      if (["task.changed", "project.changed", "vacation.changed"].includes(customEvent.detail?.event || "")) {
         loadData();
       }
     };
@@ -87,7 +134,7 @@ export default function CalendarPage() {
   const dayCells = useMemo(() => getCalendarDays(displayDate.getFullYear(), displayDate.getMonth()), [displayDate]);
 
   const tasksByDate = useMemo(() => {
-    return tasks.reduce((acc, task) => {
+    return tasks.reduce<Record<string, CalendarTask[]>>((acc, task) => {
       if (!task.deadline) return acc;
       const key = formatDayKey(task.deadline);
       if (!acc[key]) acc[key] = [];
@@ -97,13 +144,13 @@ export default function CalendarPage() {
   }, [tasks]);
 
   const vacationsByDate = useMemo(() => {
-    return dayCells.reduce((acc, cell) => {
+    return dayCells.reduce<Record<string, CalendarVacation[]>>((acc, cell) => {
       const key = formatDayKey(cell.date);
       const cellDateStr = key;
 
-      const activeVacations = vacations.filter(vac => {
-        const startStr = vac.start_date.substring(0, 10);
-        const endStr = vac.end_date.substring(0, 10);
+      const activeVacations = vacations.filter((vac) => {
+        const startStr = vac.start_date ? vac.start_date.substring(0, 10) : "";
+        const endStr = vac.end_date ? vac.end_date.substring(0, 10) : "";
         return cellDateStr >= startStr && cellDateStr <= endStr;
       });
 
@@ -114,16 +161,18 @@ export default function CalendarPage() {
     }, {});
   }, [vacations, dayCells]);
 
-  const getTaskIndicator = (dayTasks) => {
-    if (!dayTasks?.length) return null;
-    const statusSet = new Set(dayTasks.map((task) => {
-      const deadlineDate = new Date(task.deadline);
-      const todayDate = new Date(formatDayKey(today));
-      if (task.deadline && deadlineDate < todayDate) {
-        return task.status === "Done" ? "Done" : "Overdue";
-      }
-      return task.status;
-    }));
+  const getTaskIndicator = (dayTasks: CalendarTask[]): string => {
+    if (!dayTasks?.length) return "";
+    const statusSet = new Set(
+      dayTasks.map((task) => {
+        const deadlineDate = task.deadline ? new Date(task.deadline) : null;
+        const todayDate = new Date(formatDayKey(today));
+        if (deadlineDate && deadlineDate < todayDate) {
+          return task.status === "Done" ? "Done" : "Overdue";
+        }
+        return task.status;
+      })
+    );
     if (statusSet.has("Overdue")) return "bg-rose-500";
     if (statusSet.has("In Progress")) return "bg-sky-500";
     if (statusSet.has("Done")) return "bg-emerald-500";
@@ -163,19 +212,19 @@ export default function CalendarPage() {
           <div className="flex items-center gap-1.5 p-1 rounded-xl bg-accent border border-border">
             <button
               onClick={() => setDisplayDate(new Date(displayDate.getFullYear(), displayDate.getMonth() - 1, 1))}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface transition-all"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface transition-all cursor-pointer"
             >
               Tháng trước
             </button>
             <button
               onClick={() => setDisplayDate(new Date(today.getFullYear(), today.getMonth(), 1))}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface transition-all"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface transition-all cursor-pointer"
             >
               Tháng này
             </button>
             <button
               onClick={() => setDisplayDate(new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 1))}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface transition-all"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface transition-all cursor-pointer"
             >
               Tháng sau
             </button>
@@ -246,16 +295,14 @@ export default function CalendarPage() {
                     </div>
 
                     <div className="space-y-1 w-full text-[9px] text-left pt-2">
-                      {/* Show short snippet of first leave */}
                       {dayLeaves.slice(0, 1).map((vac) => {
-                        const employee = employees.find(e => e.id === vac.requested_by);
+                        const employee = employees.find((e) => e.id === vac.requested_by);
                         return (
                           <div key={vac.id} className="px-1 py-0.5 rounded-sm bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200/30 truncate">
                             Nghỉ: {employee?.full_name || 'Nhân sự'}
                           </div>
                         );
                       })}
-                      {/* Show tasks count badge */}
                       {dayTasks.length > 0 && (
                         <div className="px-1 py-0.5 rounded-sm bg-accent text-text-secondary truncate">
                           {dayTasks.length} nhiệm vụ
@@ -284,7 +331,6 @@ export default function CalendarPage() {
               )}
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Vacations section */}
               {selectedVacations.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1">
@@ -292,12 +338,12 @@ export default function CalendarPage() {
                   </h4>
                   <div className="space-y-2">
                     {selectedVacations.map((vac) => {
-                      const employee = employees.find(e => e.id === vac.requested_by);
+                      const employee = employees.find((e) => e.id === vac.requested_by);
                       return (
                         <div key={vac.id} className="p-2.5 rounded-xl border border-indigo-100 bg-indigo-50/20 dark:bg-indigo-950/10 flex items-center gap-2">
                           <Avatar name={employee?.full_name || 'Staff'} size="sm" />
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-text-primary">{employee?.full_name}</p>
+                            <p className="text-xs font-bold text-text-primary">{employee?.full_name || `Nhân sự #${vac.requested_by}`}</p>
                             <p className="text-[10px] text-text-muted mt-0.5">Nghỉ phép ({vac.type})</p>
                           </div>
                         </div>
@@ -307,7 +353,6 @@ export default function CalendarPage() {
                 </div>
               )}
 
-              {/* Tasks list section */}
               <div className="space-y-2">
                 <h4 className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
                   <CheckSquare className="h-3 w-3" /> Công việc ({selectedTasks.length})
@@ -335,7 +380,7 @@ export default function CalendarPage() {
                             {employee && (
                               <div className="flex items-center gap-1 mt-1">
                                 <strong className="text-text-primary shrink-0">Người thực hiện:</strong>
-                                <span className="truncate">{employee.full_name || employee.name}</span>
+                                <span className="truncate">{employee.full_name}</span>
                               </div>
                             )}
                             <div><strong className="text-text-primary">Độ ưu tiên:</strong> {task.priority || 'Medium'}</div>

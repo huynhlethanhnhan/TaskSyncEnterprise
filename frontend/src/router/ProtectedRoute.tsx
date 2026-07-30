@@ -1,7 +1,16 @@
+import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../providers/AuthProvider";
 
-export default function ProtectedRoute({ children, allowedRoles }) {
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  allowedRoles?: (string | number)[];
+}
+
+export default function ProtectedRoute({
+  children,
+  allowedRoles,
+}: ProtectedRouteProps): React.ReactElement | null {
   const { isAuthenticated, user } = useAuth();
   const location = useLocation();
 
@@ -22,5 +31,5 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     }
   }
 
-  return children;
+  return <>{children}</>;
 }
