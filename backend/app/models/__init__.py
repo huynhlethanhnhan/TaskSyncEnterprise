@@ -21,3 +21,9 @@ from app.models.notification_preference import NotificationPreference
 from app.models.notification_log import NotificationLog
 from app.models.audit import AuditLog
 from app.models.vacation import Vacation
+from app.models.sprint import Sprint
+from app.models.backlog_item import BacklogItem
+from app.models.sprint_snapshot import SprintDailySnapshot
+from app.models.discussion_topic import DiscussionTopic
+from app.models.discussion_reply import DiscussionReply
+from app.models.user_feedback import UserFeedback

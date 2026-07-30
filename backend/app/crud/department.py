@@ -1,9 +1,12 @@
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.department import Department
 from app.models.employee import Employee
+from app.models.project import Project
+from app.models.project_member import ProjectMember
+from app.models.sprint import Sprint
 from app.models.team import Team
 from app.schemas.department import DepartmentCreate, DepartmentUpdate
 from app.core.constants import ROLE_ADMIN
@@ -38,8 +41,65 @@ def _get_work_metrics(
     db: Session,
     department_ids: list[int],
 ) -> dict[int, tuple[int, int, int]]:
-    del db
-    return {department_id: (0, 0, 0) for department_id in department_ids}
+    if not department_ids:
+        return {}
+
+    project_rows = db.execute(
+        select(
+            Employee.department_id,
+            func.count(func.distinct(Project.id)),
+            func.count(
+                func.distinct(
+                    case(
+                        (Project.status == "Completed", Project.id),
+                        else_=None,
+                    )
+                )
+            ),
+        )
+        .join(ProjectMember, ProjectMember.employee_id == Employee.id)
+        .join(Project, Project.id == ProjectMember.project_id)
+        .where(
+            Employee.department_id.in_(department_ids),
+            Employee.is_active == True,  # noqa: E712
+            Employee.is_deleted == False,  # noqa: E712
+            Project.is_deleted == False,  # noqa: E712
+        )
+        .group_by(Employee.department_id)
+    ).all()
+    sprint_rows = db.execute(
+        select(
+            Employee.department_id,
+            func.count(func.distinct(Sprint.id)),
+        )
+        .join(ProjectMember, ProjectMember.employee_id == Employee.id)
+        .join(Project, Project.id == ProjectMember.project_id)
+        .join(Sprint, Sprint.project_id == Project.id)
+        .where(
+            Employee.department_id.in_(department_ids),
+            Employee.is_active == True,  # noqa: E712
+            Employee.is_deleted == False,  # noqa: E712
+            Project.is_deleted == False,  # noqa: E712
+            Sprint.is_deleted == False,  # noqa: E712
+        )
+        .group_by(Employee.department_id)
+    ).all()
+
+    metrics = {
+        department_id: (project_count, completed_project_count, 0)
+        for department_id, project_count, completed_project_count in project_rows
+    }
+    for department_id, sprint_count in sprint_rows:
+        project_count, completed_project_count, _ = metrics.get(
+            department_id,
+            (0, 0, 0),
+        )
+        metrics[department_id] = (
+            project_count,
+            completed_project_count,
+            sprint_count,
+        )
+    return metrics
 
 
 def _serialize_department(

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
 from app.database import get_db
+from app.cache import CacheInvalidator
 from app.models.employee import Employee
 from app.models.vacation import Vacation
 from app.schemas.vacation import VacationCreate, VacationResponse, VacationUpdate
@@ -54,9 +55,7 @@ def create_vacation(
     db: Session = Depends(get_db),
 ):
     vacation = vacation_service.create_vacation(db, data, current_user)
-    from app.cache import CacheInvalidator
-
-    CacheInvalidator.invalidate_dashboard()
+    CacheInvalidator.invalidate_vacation(vacation.id)
     return _format_vacation(vacation)
 
 
@@ -70,7 +69,5 @@ def patch_vacation(
     vacation = vacation_service.update_vacation_status(
         db, vacation_id, data.status, current_user
     )
-    from app.cache import CacheInvalidator
-
-    CacheInvalidator.invalidate_dashboard()
+    CacheInvalidator.invalidate_vacation(vacation.id)
     return _format_vacation(vacation)

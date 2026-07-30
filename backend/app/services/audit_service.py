@@ -7,9 +7,13 @@ from app.models.audit import AuditLog
 
 
 def get_all_audit_logs(
-    db: Session, skip: int = 0, limit: int = settings.DEFAULT_PAGE_SIZE
+    db: Session,
+    skip: int = 0,
+    limit: int = settings.DEFAULT_PAGE_SIZE,
+    employee_id: int | None = None,
 ) -> list[AuditLog]:
-    stmt = (
-        select(AuditLog).order_by(AuditLog.timestamp.desc()).offset(skip).limit(limit)
-    )
+    stmt = select(AuditLog)
+    if employee_id is not None:
+        stmt = stmt.where(AuditLog.employee_id == employee_id)
+    stmt = stmt.order_by(AuditLog.timestamp.desc()).offset(skip).limit(limit)
     return db.scalars(stmt).all()

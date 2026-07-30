@@ -19,13 +19,17 @@ import app.models  # noqa: F401 - register every mapped table before reset
 from app.core.security import get_password_hash
 from app.database import Base, SessionLocal
 from app.models.audit import AuditLog
+from app.models.backlog_item import BacklogItem
 from app.models.department import Department
+from app.models.discussion_reply import DiscussionReply
+from app.models.discussion_topic import DiscussionTopic
 from app.models.employee import Employee
 from app.models.notification import Notification
 from app.models.notification_preference import NotificationPreference
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.role import Role
+from app.models.sprint import Sprint
 from app.models.task import Task
 from app.models.task_assignment import TaskAssignment
 from app.models.task_checklist import TaskChecklist
@@ -36,11 +40,9 @@ from app.models.vacation import Vacation
 DEMO_PASSWORD = "TaskSync@2026"
 
 DEPARTMENTS = [
-    ("EXEC", "Ban điều hành", "Điều phối chiến lược và vận hành toàn doanh nghiệp"),
     ("IT", "Công nghệ thông tin", "Phát triển sản phẩm và vận hành nền tảng số"),
     ("PRODUCT", "Sản phẩm", "Nghiên cứu người dùng và quản lý vòng đời sản phẩm"),
     ("HR", "Nhân sự", "Tuyển dụng, phát triển và chăm sóc nhân sự"),
-    ("FIN", "Tài chính - Kế toán", "Ngân sách, kế toán và kiểm soát tài chính"),
     ("SALES", "Kinh doanh", "Phát triển khách hàng và tăng trưởng doanh thu"),
     ("OPS", "Vận hành", "Chuẩn hóa quy trình và chất lượng dịch vụ"),
 ]
@@ -69,57 +71,39 @@ MANAGERS = [
     ),
     (
         "MGR004",
-        "Phạm Ngọc Mai",
-        "manager.finance@tasksync.example.com",
-        "FIN",
-        "Trưởng phòng Tài chính",
-    ),
-    (
-        "MGR005",
         "Vũ Quốc Bảo",
         "manager.sales@tasksync.example.com",
         "SALES",
         "Giám đốc Kinh doanh",
     ),
     (
-        "MGR006",
+        "MGR005",
         "Đặng Thanh Tâm",
         "manager.ops@tasksync.example.com",
         "OPS",
         "Trưởng phòng Vận hành",
     ),
-    (
-        "MGR007",
-        "Bùi Gia Hân",
-        "manager.exec@tasksync.example.com",
-        "EXEC",
-        "Quản lý Điều hành",
-    ),
 ]
 
 STAFF_BY_DEPARTMENT = {
-    "EXEC": ["Huỳnh Lê Thành Nhân", "Đỗ Minh Châu", "Nguyễn Hải Yến", "Trần Gia Bảo"],
-    "IT": ["Lê Đức Anh", "Phạm Tuấn Kiệt", "Nguyễn Thảo Vy", "Võ Minh Trí"],
-    "PRODUCT": ["Trần Khánh Linh", "Nguyễn Quốc Huy", "Đặng Ngọc Ánh", "Lê Thanh Bình"],
-    "HR": ["Phan Mỹ Duyên", "Vũ Thùy Trang", "Ngô Đức Mạnh", "Bùi Hoài Nam"],
-    "FIN": ["Nguyễn Phương Thảo", "Trần Nhật Minh", "Lâm Bảo Ngọc", "Đỗ Quốc Trung"],
-    "SALES": ["Hoàng Minh Quân", "Phạm Khánh An", "Lý Tuệ Nhi", "Nguyễn Thành Đạt"],
-    "OPS": ["Trương Gia Linh", "Võ Anh Tú", "Đinh Ngọc Huyền", "Phan Hoàng Long"],
+    "IT": ["Huỳnh Lê Thành Nhân", "Lê Đức Anh", "Nguyễn Thảo Vy"],
+    "PRODUCT": ["Trần Khánh Linh", "Nguyễn Quốc Huy", "Đặng Ngọc Ánh"],
+    "HR": ["Phan Mỹ Duyên", "Vũ Thùy Trang", "Ngô Đức Mạnh"],
+    "SALES": ["Hoàng Minh Quân", "Phạm Khánh An", "Lý Tuệ Nhi"],
+    "OPS": ["Trương Gia Linh", "Võ Anh Tú", "Phan Hoàng Long"],
 }
 
 PROJECT_NAMES = [
     "Nền tảng TaskSync Enterprise 2026",
-    "Ứng dụng nhân sự nội bộ",
-    "Kho dữ liệu báo cáo quản trị",
-    "Chuẩn hóa quy trình tuyển dụng",
-    "Tự động hóa đối soát tài chính",
-    "Cổng chăm sóc khách hàng doanh nghiệp",
-    "Tối ưu vận hành đa chi nhánh",
-    "Chương trình phát triển quản lý",
-    "Hệ thống cảnh báo SLA thời gian thực",
     "Nâng cấp bảo mật và phân quyền",
-    "Phân tích hiệu suất phòng ban",
     "Trung tâm thông báo hợp nhất",
+    "Kho dữ liệu báo cáo quản trị sản phẩm",
+    "Chuẩn hóa quy trình tuyển dụng",
+    "Chương trình phát triển quản lý",
+    "Cổng chăm sóc khách hàng doanh nghiệp",
+    "Phân tích hiệu suất kinh doanh",
+    "Tối ưu vận hành đa chi nhánh",
+    "Hệ thống cảnh báo SLA thời gian thực",
 ]
 
 TASK_TEMPLATES = [
@@ -136,6 +120,17 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
 
 
+def _clear_application_cache() -> None:
+    """Remove stale entity IDs after a destructive demo-data reset."""
+    try:
+        from app.cache import cache_service
+
+        cache_service.clear_pattern("*")
+    except Exception:
+        # Seeding must still work when Redis is not installed or is unavailable.
+        pass
+
+
 def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
     now = now or _utc_now()
     employees: list[dict] = [
@@ -144,7 +139,7 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
             "full_name": "Quản trị viên Hệ thống",
             "email": "admin@tasksync.example.com",
             "role": "admin",
-            "department_code": "EXEC",
+            "department_code": None,
             "job_title": "System Administrator",
         },
         {
@@ -152,7 +147,7 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
             "full_name": "Quản trị viên Vận hành",
             "email": "operations.admin@tasksync.example.com",
             "role": "admin",
-            "department_code": "EXEC",
+            "department_code": None,
             "job_title": "Operations Administrator",
         },
     ]
@@ -185,19 +180,22 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
                     "department_code": department_code,
                     "manager_code": manager_by_department[department_code],
                     "job_title": f"Chuyên viên {DEPARTMENTS[[d[0] for d in DEPARTMENTS].index(department_code)][1]}",
-                    "team_index": (index - 1) % 2,
+                    "team_index": 0,
                 }
             )
             staff_number += 1
 
     projects: list[dict] = []
+    topics: list[dict] = []
+    sprints: list[dict] = []
     tasks: list[dict] = []
+    backlog_items: list[dict] = []
     department_codes = [item[0] for item in DEPARTMENTS]
     for project_index, name in enumerate(PROJECT_NAMES, start=1):
-        department_code = department_codes[(project_index - 1) % len(department_codes)]
+        department_code = department_codes[(project_index - 1) // 2]
         manager_code = manager_by_department[department_code]
-        status = ("Active", "Planning", "Active", "Completed")[project_index % 4]
-        progress = {"Planning": 20, "Active": 58, "Completed": 100}[status]
+        status = "Active" if project_index % 2 == 1 else "Completed"
+        progress = 58 if status == "Active" else 100
         project_code = f"PRJ{project_index:03d}"
         projects.append(
             {
@@ -211,6 +209,52 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
                 "progress_percent": progress,
             }
         )
+
+        topic_codes: list[str] = []
+        for topic_index, topic_title in enumerate(
+            ("Nền tảng cốt lõi", "Trải nghiệm người dùng", "Phát hành và vận hành"),
+            start=1,
+        ):
+            topic_code = f"{project_code}-EPIC{topic_index}"
+            topic_codes.append(topic_code)
+            topics.append(
+                {
+                    "topic_code": topic_code,
+                    "project_code": project_code,
+                    "title": f"{topic_title} — {name}",
+                    "content": (
+                        "Epic dữ liệu mẫu liên kết trực tiếp Project, Product Backlog, "
+                        "Sprint và Task."
+                    ),
+                    "status": "Closed" if status == "Completed" else "Open",
+                    "created_by_code": manager_code,
+                }
+            )
+
+        sprint_codes: list[str] = []
+        if status == "Active":
+            sprint_specs = (
+                ("SPR1", "Completed", -42, -29),
+                ("SPR2", "Active", -7, 7),
+                ("SPR3", "Planned", 14, 28),
+            )
+            for suffix, sprint_status, start_offset, end_offset in sprint_specs:
+                sprint_code = f"{project_code}-{suffix}"
+                sprint_codes.append(sprint_code)
+                sprints.append(
+                    {
+                        "sprint_code": sprint_code,
+                        "project_code": project_code,
+                        "name": f"{suffix.replace('SPR', 'Sprint ')} — {name}",
+                        "goal": f"Hoàn thành mục tiêu {suffix} của {name}",
+                        "status": sprint_status,
+                        "capacity": 24,
+                        "start_date": now + timedelta(days=start_offset),
+                        "end_date": now + timedelta(days=end_offset),
+                        "created_by_code": manager_code,
+                    }
+                )
+
         department_staff = [
             item
             for item in employees
@@ -220,6 +264,25 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
         for task_index, (title, priority, task_status, task_progress) in enumerate(
             TASK_TEMPLATES, start=1
         ):
+            sprint_code = None
+            if status == "Active":
+                sprint_code = (
+                    sprint_codes[0]
+                    if task_index <= 2
+                    else (
+                        sprint_codes[1]
+                        if task_index <= 4
+                        else (sprint_codes[2] if task_index == 5 else None)
+                    )
+                )
+                task_status, task_progress = (
+                    ("Done", 100)
+                    if task_index <= 2
+                    else (("In Progress", 60) if task_index == 3 else ("To Do", 0))
+                )
+            else:
+                task_status, task_progress = ("Done", 100)
+
             assignee = department_staff[
                 (project_index + task_index) % len(department_staff)
             ]
@@ -239,6 +302,40 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
                     "deadline": now + timedelta(days=deadline_offset),
                     "created_by_code": manager_code,
                     "assignee_code": assignee["employee_code"],
+                    "topic_code": topic_codes[(task_index - 1) // 2],
+                    "sprint_code": sprint_code,
+                }
+            )
+            backlog_items.append(
+                {
+                    "backlog_code": f"{project_code}-BL{task_index:02d}",
+                    "project_code": project_code,
+                    "sprint_code": sprint_code,
+                    "topic_code": topic_codes[(task_index - 1) // 2],
+                    "task_code": f"{project_code}-T{task_index:02d}",
+                    "title": f"Backlog: {title}",
+                    "description": f"User Story liên kết với {name}.",
+                    "priority": priority,
+                    "status": "Converted",
+                    "story_points": (3, 5, 8, 5, 3, 2)[task_index - 1],
+                    "created_by_code": manager_code,
+                }
+            )
+
+        if status == "Active":
+            backlog_items.append(
+                {
+                    "backlog_code": f"{project_code}-BL07",
+                    "project_code": project_code,
+                    "sprint_code": None,
+                    "topic_code": topic_codes[2],
+                    "task_code": None,
+                    "title": "Backlog chưa lập kế hoạch",
+                    "description": "Hạng mục dùng để kiểm thử thao tác gán Epic và Sprint Planned.",
+                    "priority": "Medium",
+                    "status": "Backlog",
+                    "story_points": 5,
+                    "created_by_code": manager_code,
                 }
             )
 
@@ -294,7 +391,10 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
     return {
         "employees": employees,
         "projects": projects,
+        "topics": topics,
+        "sprints": sprints,
         "tasks": tasks,
+        "backlog_items": backlog_items,
         "notifications": notifications,
     }
 
@@ -306,9 +406,12 @@ EXPECTED_COUNTS = {
     + len(MANAGERS)
     + sum(len(names) for names in STAFF_BY_DEPARTMENT.values()),
     "departments": len(DEPARTMENTS),
-    "teams": len(DEPARTMENTS) * 2,
+    "teams": len(DEPARTMENTS),
     "projects": len(PROJECT_NAMES),
+    "topics": len(PROJECT_NAMES) * 3,
+    "sprints": len(DEPARTMENTS) * 3,
     "tasks": len(PROJECT_NAMES) * len(TASK_TEMPLATES),
+    "backlog_items": (len(PROJECT_NAMES) * len(TASK_TEMPLATES) + len(DEPARTMENTS)),
     "notifications": (
         2 + len(MANAGERS) + sum(len(names) for names in STAFF_BY_DEPARTMENT.values())
     )
@@ -317,6 +420,8 @@ EXPECTED_COUNTS = {
 
 
 def _reset_demo_data(db) -> None:
+    db.execute(update(Department).values(manager_id=None))
+    db.execute(update(Team).values(leader_id=None))
     db.execute(update(Employee).values(manager_id=None))
     db.flush()
     for table in reversed(Base.metadata.sorted_tables):
@@ -368,17 +473,16 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
             db.add(department)
             db.flush()
             departments[code] = department
-            for team_index in range(2):
-                team = Team(
-                    department_id=department.id,
-                    team_code=f"{code}-T{team_index + 1}",
-                    name=f"{name} — Nhóm {team_index + 1}",
-                    description=f"Nhóm demo số {team_index + 1} của {name}",
-                    is_active=True,
-                )
-                db.add(team)
-                db.flush()
-                teams[(code, team_index)] = team
+            team = Team(
+                department_id=department.id,
+                team_code=f"{code}-T1",
+                name=f"{name} — Nhóm 1",
+                description=f"Team nghiệp vụ mẫu của {name}",
+                is_active=True,
+            )
+            db.add(team)
+            db.flush()
+            teams[(code, 0)] = team
 
         password_hash = get_password_hash(DEMO_PASSWORD)
         employees: dict[str, Employee] = {}
@@ -423,6 +527,25 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
             db.flush()
             employees[record["employee_code"]] = employee
 
+        manager_code_by_department = {
+            department_code: code for code, _, _, department_code, _ in MANAGERS
+        }
+        hoang_long_code = next(
+            record["employee_code"]
+            for record in plan["employees"]
+            if record["full_name"] == "Phan Hoàng Long"
+        )
+        for department_code, department in departments.items():
+            manager = employees[manager_code_by_department[department_code]]
+            department.manager_id = manager.id
+            team = teams[(department_code, 0)]
+            team.leader_id = (
+                employees[hoang_long_code].id
+                if department_code == "OPS"
+                else manager.id
+            )
+        db.flush()
+
         projects: dict[str, Project] = {}
         for index, record in enumerate(plan["projects"]):
             manager = employees[record["manager_code"]]
@@ -452,9 +575,53 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
                 for code in member_codes
             )
 
+        topics: dict[str, DiscussionTopic] = {}
+        for record in plan["topics"]:
+            topic = DiscussionTopic(
+                project_id=projects[record["project_code"]].id,
+                title=record["title"],
+                content=record["content"],
+                status=record["status"],
+                created_by_id=employees[record["created_by_code"]].id,
+                is_deleted=False,
+            )
+            db.add(topic)
+            db.flush()
+            topics[record["topic_code"]] = topic
+            db.add(
+                DiscussionReply(
+                    topic_id=topic.id,
+                    content="Phản hồi mẫu xác nhận phạm vi Epic và tiêu chí hoàn thành.",
+                    created_by_id=employees[record["created_by_code"]].id,
+                    is_deleted=False,
+                )
+            )
+
+        sprints: dict[str, Sprint] = {}
+        for record in plan["sprints"]:
+            sprint = Sprint(
+                project_id=projects[record["project_code"]].id,
+                name=record["name"],
+                goal=record["goal"],
+                start_date=record["start_date"],
+                end_date=record["end_date"],
+                status=record["status"],
+                capacity=record["capacity"],
+                created_by_id=employees[record["created_by_code"]].id,
+                is_deleted=False,
+            )
+            db.add(sprint)
+            db.flush()
+            sprints[record["sprint_code"]] = sprint
+
+        tasks: dict[str, Task] = {}
         for index, record in enumerate(plan["tasks"]):
             task = Task(
                 project_id=projects[record["project_code"]].id,
+                sprint_id=(
+                    sprints[record["sprint_code"]].id if record["sprint_code"] else None
+                ),
+                topic_id=topics[record["topic_code"]].id,
                 title=record["title"],
                 description=record["description"],
                 priority=record["priority"],
@@ -467,6 +634,7 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
             )
             db.add(task)
             db.flush()
+            tasks[record["task_code"]] = task
             assignee = employees[record["assignee_code"]]
             db.add(TaskAssignment(task_id=task.id, employee_id=assignee.id))
             db.add_all(
@@ -487,6 +655,29 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
                         content="Đã cập nhật tiến độ bằng dữ liệu demo tiếng Việt.",
                     ),
                 ]
+            )
+
+        for record in plan["backlog_items"]:
+            db.add(
+                BacklogItem(
+                    project_id=projects[record["project_code"]].id,
+                    sprint_id=(
+                        sprints[record["sprint_code"]].id
+                        if record["sprint_code"]
+                        else None
+                    ),
+                    topic_id=topics[record["topic_code"]].id,
+                    task_id=(
+                        tasks[record["task_code"]].id if record["task_code"] else None
+                    ),
+                    title=record["title"],
+                    description=record["description"],
+                    priority=record["priority"],
+                    status=record["status"],
+                    story_points=record["story_points"],
+                    created_by_id=employees[record["created_by_code"]].id,
+                    is_deleted=False,
+                )
             )
 
         for record in plan["notifications"]:
@@ -560,6 +751,7 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
             )
 
         db.commit()
+        _clear_application_cache()
         counts = dict(EXPECTED_COUNTS)
         counts["vacations"] = 14
         print(json.dumps({"status": "ok", "counts": counts}, ensure_ascii=False))

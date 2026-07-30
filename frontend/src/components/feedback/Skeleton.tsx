@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { cn } from '../../utils/cn';
 
-export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
   width?: string | number;
   height?: string | number;
   circle?: boolean;
 }
 
-export const Skeleton: React.FC<SkeletonProps> = ({
+const Skeleton: React.FC<SkeletonProps> = ({
   className,
   width,
   height,

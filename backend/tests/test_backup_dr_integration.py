@@ -230,7 +230,7 @@ def test_e2e_upload_backup_deletion_and_restore_flow(tmp_path):
     # Extract to staging and restore
     staging = tmp_path / "staging"
     with tarfile.open(tar_path, "r:gz") as tar:
-        tar.extractall(staging)
+        tar.extractall(staging, filter="data")
 
     assert (staging / "doc.txt").read_bytes() == b"Important attachment file"
 

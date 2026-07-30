@@ -23,7 +23,7 @@ import VacationPage from "../pages/vacations/VacationPage";
 import VacationDetailPage from "../pages/vacations/VacationDetailPage";
 import SettingsPage from "../pages/settings/SettingsPage";
 import ProfilePage from "../pages/profile/ProfilePage.tsx";
-import { AuditLogPage } from "../pages/audit/AuditLogPage.tsx";
+import AuditLogPage from "../pages/audit/AuditLogPage.tsx";
 import TeamPage from "../pages/teams/TeamPage.tsx";
 import TeamDetailPage from "../pages/teams/TeamDetailPage.tsx";
 
@@ -137,7 +137,7 @@ export default function AppRouter() {
         <Route
           path="/employees"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'manager', 1, 2]}>
               <ApplicationShell>
                 <EmployeePage />
               </ApplicationShell>
@@ -147,7 +147,7 @@ export default function AppRouter() {
         <Route
           path="/employees/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'manager', 1, 2]}>
               <ApplicationShell>
                 <EmployeeDetailPage />
               </ApplicationShell>
@@ -212,7 +212,7 @@ export default function AppRouter() {
         <Route
           path="/audit"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 1]}>
               <ApplicationShell>
                 <AuditLogPage />
               </ApplicationShell>
@@ -230,6 +230,7 @@ export default function AppRouter() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/teams/:id"
           element={

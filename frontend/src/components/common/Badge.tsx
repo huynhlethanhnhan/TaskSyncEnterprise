@@ -2,7 +2,7 @@ import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../utils/cn';
 
-export const badgeVariants = cva(
+const badgeVariants = cva(
   'inline-flex items-center rounded-full font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 select-none',
   {
     variants: {
@@ -27,7 +27,7 @@ export const badgeVariants = cva(
 );
 
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {
   showDot?: boolean;
 }
@@ -41,7 +41,7 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props
 }) => {
   return (
-    <div className={cn(badgeVariants({ variant, size, className }))} {...props}>
+    <span className={cn(badgeVariants({ variant, size, className }))} {...props}>
       {showDot && (
         <span
           className={cn(
@@ -56,6 +56,6 @@ export const Badge: React.FC<BadgeProps> = ({
         />
       )}
       {children}
-    </div>
+    </span>
   );
 };

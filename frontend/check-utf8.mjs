@@ -7,7 +7,7 @@ const TEXT_EXTENSIONS = new Set([
   '.sql', '.toml', '.ts', '.tsx', '.txt', '.yaml', '.yml',
 ]);
 const EXCLUDED_SEGMENTS = new Set([
-  '.git', '.mypy_cache', '.pytest_cache', '.ruff_cache', '.venv', '__pycache__',
+  '.ci', '.git', '.mypy_cache', '.pytest_cache', '.ruff_cache', '.venv', '__pycache__',
   'build', 'coverage', 'dist', 'node_modules',
 ]);
 const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
@@ -23,7 +23,8 @@ export function inspectText(text) {
     if (line.includes('utf8-check: intentional-corrupt-fixture')) return;
     if (replacementPattern.test(line)) findings.push({ line: index + 1, reason: 'replacement-character' });
     if (mojibakePattern.test(line)) findings.push({ line: index + 1, reason: 'known-mojibake-sequence' });
-    if (vietnameseDiacriticPattern.test(line) && embeddedQuestionPattern.test(line)) {
+    const proseWithoutUrlQueries = line.replace(/(?:https?:\/\/|\/)[^\s'"]*\?[^\s'"]*/gu, '');
+    if (vietnameseDiacriticPattern.test(proseWithoutUrlQueries) && embeddedQuestionPattern.test(proseWithoutUrlQueries)) {
       findings.push({ line: index + 1, reason: 'question-mark-inside-vietnamese-word' });
     }
   });

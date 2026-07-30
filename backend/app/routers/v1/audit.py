@@ -17,6 +17,9 @@ router = APIRouter(
 def get_audit_logs(
     skip: int = 0,
     limit: int = settings.DEFAULT_PAGE_SIZE,
+    employee_id: int | None = None,
     db: Session = Depends(get_db),
 ):
-    return audit_service.get_all_audit_logs(db, skip=skip, limit=limit)
+    return audit_service.get_all_audit_logs(
+        db, skip=skip, limit=limit, employee_id=employee_id
+    )

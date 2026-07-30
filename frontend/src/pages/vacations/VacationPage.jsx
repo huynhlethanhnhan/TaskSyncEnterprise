@@ -75,6 +75,16 @@ export default function VacationPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const refreshVacations = (event) => {
+      if (["vacation.changed", "employee.changed"].includes(event.detail?.event)) {
+        loadData();
+      }
+    };
+    window.addEventListener("tasksync:domain-event", refreshVacations);
+    return () => window.removeEventListener("tasksync:domain-event", refreshVacations);
+  }, [loadData]);
+
 
   const handleSave = async (data) => {
     try {

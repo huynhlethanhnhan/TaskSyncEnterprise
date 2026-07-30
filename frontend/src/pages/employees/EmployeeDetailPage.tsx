@@ -27,12 +27,11 @@ import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { EmptyState } from '../../components/common/EmptyState';
 import { useEmployeeDetail } from '../../hooks/useEmployees';
-import { useDepartments } from '../../hooks/useDepartments';
 import { useTasks } from '../../hooks/useTasks';
 import { useProjects } from '../../hooks/useProjects';
 import api from '../../api/axios';
 
-export const EmployeeDetailPage: React.FC = () => {
+const EmployeeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const empId = Number(id);
@@ -42,13 +41,8 @@ export const EmployeeDetailPage: React.FC = () => {
   const [employeeAuditLogs, setEmployeeAuditLogs] = React.useState<any[]>([]);
 
   const { data: employee, isLoading, isError, refetch } = useEmployeeDetail(empId);
-  const { data: departments = [] } = useDepartments();
   const { data: allTasks = [] } = useTasks();
   const { data: allProjects = [] } = useProjects();
-
-  const dept = React.useMemo(() => {
-    return departments.find((d) => d.id === employee?.department_id);
-  }, [departments, employee?.department_id]);
 
   const assignedTasks = React.useMemo(() => {
     return allTasks.filter((t) => Number(t.assigned_to) === empId);
@@ -77,7 +71,7 @@ export const EmployeeDetailPage: React.FC = () => {
       })
       .catch(() => setEmployeeLeaves([]));
 
-    api.get(`/audit?employee_id=${empId}`)
+    api.get(`/audit-logs?employee_id=${empId}`)
       .then((res) => {
         const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
         setEmployeeAuditLogs(list);
@@ -149,7 +143,7 @@ export const EmployeeDetailPage: React.FC = () => {
                   </Badge>
                 </div>
                 <p className="text-xs text-text-muted mt-1">
-                  {employee.job_title || 'Chưa gán vị trí'} · Phòng ban: <strong className="text-text-primary">{dept?.name || 'Chưa gán'}</strong>
+                  {employee.job_title || 'Chưa gán vị trí'} · Phòng ban: <strong className="text-text-primary">{employee.department_name || 'Chưa gán'}</strong>
                 </p>
                 <div className="flex items-center gap-4 text-[11px] text-text-secondary mt-2">
                   <span>Mã NV: <strong className="font-mono text-text-primary">{employee.employee_code || `EMP-${employee.id}`}</strong></span>
@@ -276,11 +270,11 @@ export const EmployeeDetailPage: React.FC = () => {
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-text-secondary">
                       <Building className="h-4 w-4 text-text-muted shrink-0" />
-                      <span>Phòng ban: <strong className="text-text-primary">{dept?.name || 'Chưa gán'}</strong></span>
+                      <span>Phòng ban: <strong className="text-text-primary">{employee.department_name || 'Chưa gán'}</strong></span>
                     </div>
                     <div className="flex items-center gap-2 text-text-secondary">
                       <UserCheck className="h-4 w-4 text-text-muted shrink-0" />
-                      <span>Chức danh: <strong className="text-text-primary">{employee.job_title || 'Chưa gán'}</strong></span>
+                      <span>Nhóm (Team): <strong className="text-text-primary">{employee.team_name || (employee.team_id ? `Team #${employee.team_id}` : 'Chưa gán')}</strong></span>
                     </div>
                     <div className="flex items-center gap-2 text-text-secondary">
                       <ShieldCheck className="h-4 w-4 text-text-muted shrink-0" />

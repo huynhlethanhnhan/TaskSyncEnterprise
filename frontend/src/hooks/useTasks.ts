@@ -8,14 +8,6 @@ export const useTasks = (isStaff = false) => {
   });
 };
 
-export const useTaskDetail = (id: number) => {
-  return useQuery<TaskItem, Error>({
-    queryKey: ['tasks', id],
-    queryFn: () => tasksApi.getById(id),
-    enabled: Boolean(id),
-  });
-};
-
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -35,6 +27,8 @@ export const useUpdateTask = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['tasks', id] });
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
+      queryClient.invalidateQueries({ queryKey: ['sprint-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -47,6 +41,8 @@ export const useUpdateTaskStatus = () => {
       tasksApi.patchStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
+      queryClient.invalidateQueries({ queryKey: ['sprint-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });

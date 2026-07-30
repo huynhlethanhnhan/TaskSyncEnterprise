@@ -2,7 +2,7 @@ import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/cn';
 
-export interface DropdownItem {
+interface DropdownItem {
   key: string;
   label: string;
   icon?: React.ReactNode;

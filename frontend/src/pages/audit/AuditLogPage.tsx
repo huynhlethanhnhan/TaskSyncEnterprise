@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { auditApi } from '../../api/auditApi';
 import { exportToCsv } from '../../utils/csv';
+import { useAuth } from '../../providers/AuthProvider';
 
 const ACTION_BADGE_VARIANTS: Record<string, 'success' | 'primary' | 'warning' | 'danger' | 'outline'> = {
   LOGIN: 'success',
@@ -17,27 +18,41 @@ const ACTION_BADGE_VARIANTS: Record<string, 'success' | 'primary' | 'warning' | 
   DELETE: 'danger',
 };
 
-export const AuditLogPage: React.FC = () => {
+const AuditLogPage: React.FC = () => {
+  const { user } = useAuth();
+  const roleStr = (user?.role || '').toLowerCase();
+  const roleId = Number(user?.role_id);
+  const isAdmin = roleStr === 'admin' || roleId === 1;
+
   const [logs, setLogs] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState('');
 
   React.useEffect(() => {
+    if (!isAdmin) {
+      setLoading(false);
+      return;
+    }
+
     const fetchLogs = async () => {
       try {
         setLoading(true);
         const res = await auditApi.getLogs();
         const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
         setLogs(data);
-      } catch (err) {
-        console.error('Lỗi lấy nhật ký:', err);
+      } catch (err: any) {
+        if (err?.response?.status !== 403) {
+          console.error('Lỗi lấy nhật ký:', err);
+        }
         setLogs([]);
       } finally {
         setLoading(false);
       }
     };
     fetchLogs();
-  }, []);
+  }, [isAdmin]);
+
+
 
   const actionSummary = React.useMemo(() => {
     return logs.reduce(
@@ -92,6 +107,15 @@ export const AuditLogPage: React.FC = () => {
     ]);
     exportToCsv('AuditLogs_SecurityExport.csv', headers, rows);
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <h2 className="text-lg font-bold text-text-primary">Truy cập bị từ chối</h2>
+        <p className="text-xs text-text-muted">Bạn không có quyền truy cập vào trang Nhật ký hệ thống.</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

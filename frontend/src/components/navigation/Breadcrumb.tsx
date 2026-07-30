@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ChevronRight, Home } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
-export interface BreadcrumbItem {
+interface BreadcrumbItem {
   label: string;
   href?: string;
   icon?: React.ReactNode;

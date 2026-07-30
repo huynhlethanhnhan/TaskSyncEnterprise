@@ -51,7 +51,7 @@ import { type ProjectItem, type TaskItem } from '../../api/services';
 
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
-export const DashboardPage: React.FC = () => {
+const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();

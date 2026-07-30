@@ -23,3 +23,4 @@ class TaskComment(Base):
     )
 
     task = relationship("Task", back_populates="comments")
+    author = relationship("Employee")

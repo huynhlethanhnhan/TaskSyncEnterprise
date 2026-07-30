@@ -24,13 +24,13 @@ def get_statement_type(statement: str) -> str:
 
 
 @event.listens_for(Engine, "before_cursor_execute")
-def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+def before_cursor_execute(conn, cursor, statement, parameters, context, _executemany):
     """Binds start timestamp to connection context before running the query."""
     context._query_start_time = time.perf_counter()
 
 
 @event.listens_for(Engine, "after_cursor_execute")
-def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+def after_cursor_execute(conn, cursor, statement, parameters, context, _executemany):
     """Calculates query duration, logs warnings if execution is slow, and records metrics."""
     total_time = time.perf_counter() - context._query_start_time
 

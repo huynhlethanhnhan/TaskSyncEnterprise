@@ -13,6 +13,14 @@ from app.routers.v1 import (
     dashboard,
     vacations,
     notifications,
+    checklists,
+    comments,
+    backlog,
+    sprints,
+    topics,
+    feedback,
+    files,
+    reports,
 )
 
 api_router = APIRouter()
@@ -31,3 +39,11 @@ api_router.include_router(dashboard.router)
 api_router.include_router(vacations.router)
 api_router.include_router(notifications.router)
 api_router.include_router(notifications.preferences_router)
+api_router.include_router(checklists.router)
+api_router.include_router(comments.router)
+api_router.include_router(backlog.router)
+api_router.include_router(sprints.router)
+api_router.include_router(topics.router)
+api_router.include_router(feedback.router)
+api_router.include_router(files.router)
+api_router.include_router(reports.router)

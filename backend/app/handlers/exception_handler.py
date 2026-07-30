@@ -15,7 +15,6 @@ from app.core.exceptions import (
     AuthorizationException,
     ValidationException,
     BusinessRuleException,
-    ConflictException,
     ResourceNotFoundException,
     DatabaseException,
     UnexpectedApplicationException,

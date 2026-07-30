@@ -17,21 +17,35 @@ import { TaskDrawer } from '../../components/drawers/TaskDrawer';
 import { useTasks, useCreateTask, useUpdateTask, useUpdateTaskStatus, useDeleteTask } from '../../hooks/useTasks';
 import { useProjects } from '../../hooks/useProjects';
 import { useEmployees } from '../../hooks/useEmployees';
+import { useSprints } from '../../hooks/useSprintBacklog';
+import { useTopics } from '../../hooks/useTopics';
+import { useDepartments } from '../../hooks/useDepartments';
+import { useTeams } from '../../hooks/useTeams';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
 import { type TaskItem } from '../../api/services';
 
 const STATUS_COLUMNS = ['To Do', 'In Progress', 'Done'];
 
-export const TaskPage: React.FC = () => {
+const TaskPage: React.FC = () => {
   const { user } = useAuth();
   const toast = useToast();
-  const isStaff = user?.role === 'employee' || user?.role === 'staff';
-  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+  const role = (user?.role || '').toLowerCase();
+  const roleId = Number(user?.role_id);
+  const isStaff = role === 'employee' || role === 'staff' || roleId === 3;
+  const isAdminOrManager = role === 'admin' || role === 'manager' || roleId === 1 || roleId === 2;
 
   const { data: tasks = [], isLoading, isError, refetch } = useTasks(isStaff);
   const { data: projects = [] } = useProjects();
   const { data: employees = [] } = useEmployees();
+  const { data: allSprints = [] } = useSprints();
+  const { data: allTopics = [] } = useTopics();
+  const { data: departments = [] } = useDepartments();
+  const { data: teams = [] } = useTeams();
+  const isTeamLeader = teams.some((team) => Number(team.leader_id) === Number(user?.id));
+  const canManageTasks = isAdminOrManager || isTeamLeader;
+
+  const departmentMap = React.useMemo(() => new Map(departments.map((d) => [d.id, d])), [departments]);
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -90,8 +104,9 @@ export const TaskPage: React.FC = () => {
     try {
       await updateTaskStatus.mutateAsync({ id: taskId, status: newStatus });
       toast.success('Cập nhật trạng thái công việc', `Đã chuyển task sang "${newStatus}".`);
-    } catch {
-      toast.error('Lỗi cập nhật trạng thái', 'Không thể thay đổi trạng thái task.');
+    } catch (error: any) {
+      const message = error.response?.data?.detail || 'Không thể thay đổi trạng thái task.';
+      toast.error('Lỗi cập nhật trạng thái', message);
     }
   };
 
@@ -190,13 +205,92 @@ export const TaskPage: React.FC = () => {
       },
     },
     {
+      accessorKey: 'sprint_id',
+      header: 'Sprint',
+      cell: ({ row }: { row: { original: TaskItem } }) => {
+        const projectSprints = allSprints.filter((s) => s.project_id === row.original.project_id);
+        return (
+          <select
+            value={row.original.sprint_id || ''}
+            disabled={!canManageTasks}
+            onChange={async (e) => {
+              const val = e.target.value ? Number(e.target.value) : null;
+              try {
+                await updateTask.mutateAsync({
+                  id: row.original.id,
+                  payload: { sprint_id: val }
+                });
+                toast.success('Thành công', 'Đã cập nhật Sprint cho công việc.');
+              } catch {
+                toast.error('Lỗi', 'Không thể cập nhật Sprint.');
+              }
+            }}
+            className="text-[11px] bg-surface border border-border rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium min-w-[120px]"
+          >
+            <option value="">-- Chưa gán --</option>
+            {projectSprints.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        );
+      },
+    },
+    {
+      accessorKey: 'topic_id',
+      header: 'Epic / Chủ đề',
+      cell: ({ row }: { row: { original: TaskItem } }) => {
+        const projectTopics = allTopics.filter((t) => t.project_id === row.original.project_id);
+        return (
+          <select
+            value={row.original.topic_id || ''}
+            disabled={!canManageTasks}
+            onChange={async (e) => {
+              const val = e.target.value ? Number(e.target.value) : null;
+              try {
+                await updateTask.mutateAsync({
+                  id: row.original.id,
+                  payload: { topic_id: val }
+                });
+                toast.success('Thành công', 'Đã cập nhật Epic cho công việc.');
+              } catch {
+                toast.error('Lỗi', 'Không thể cập nhật Epic.');
+              }
+            }}
+            className="text-[11px] bg-surface border border-border rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium min-w-[120px]"
+          >
+            <option value="">-- Chưa gán --</option>
+            {projectTopics.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        );
+      },
+    },
+    {
+      id: 'department',
+      header: 'Phòng ban',
+      cell: ({ row }: { row: { original: TaskItem } }) => {
+        const emp = (row.original as any).assignee || employees.find((e) => e.id === row.original.assigned_to);
+        const dept = emp?.department_id ? departmentMap.get(emp.department_id) : null;
+        return dept ? (
+          <span className="font-semibold text-text-primary">{dept.name}</span>
+        ) : (
+          <span className="text-text-muted">—</span>
+        );
+      },
+    },
+    {
       accessorKey: 'assigned_to',
       header: 'Người thực hiện',
       cell: ({ row }: { row: { original: TaskItem } }) => {
-        const emp = employees.find((e) => e.id === row.original.assigned_to);
+        const emp = (row.original as any).assignee || employees.find((e) => e.id === row.original.assigned_to);
         return emp ? (
           <div className="flex items-center gap-2">
-            <Avatar name={emp.full_name} size="sm" />
+            <Avatar name={emp.full_name} src={emp.avatar_url} size="sm" />
             <span className="text-xs font-medium text-text-primary">{emp.full_name}</span>
           </div>
         ) : (
@@ -210,9 +304,9 @@ export const TaskPage: React.FC = () => {
       cell: ({ row }: { row: { original: TaskItem } }) => (
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={(e) => handleOpenEdit(row.original, e)}>
-            Sửa
+            {canManageTasks ? 'Sửa' : 'Xem'}
           </Button>
-          {isAdminOrManager && (
+          {canManageTasks && (
             <Button variant="danger" size="sm" onClick={(e) => handleDelete(row.original, e)}>
               Xóa
             </Button>
@@ -242,9 +336,8 @@ export const TaskPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('kanban')}
-                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 ${
-                  viewMode === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
-                }`}
+                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 ${viewMode === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
+                  }`}
               >
                 <LayoutGrid className="h-4 w-4" />
                 Kanban
@@ -252,16 +345,15 @@ export const TaskPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 ${
-                  viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
-                }`}
+                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
+                  }`}
               >
                 <List className="h-4 w-4" />
                 Bảng (Table)
               </button>
             </div>
 
-            {isAdminOrManager && (
+            {canManageTasks && (
               <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
                 Tạo Task Mới
               </Button>
@@ -323,9 +415,8 @@ export const TaskPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`h-3 w-3 rounded-full ${
-                        colStatus === 'Done' ? 'bg-emerald-500' : colStatus === 'In Progress' ? 'bg-sky-500' : 'bg-amber-500'
-                      }`}
+                      className={`h-3 w-3 rounded-full ${colStatus === 'Done' ? 'bg-emerald-500' : colStatus === 'In Progress' ? 'bg-sky-500' : 'bg-amber-500'
+                        }`}
                     />
                     <h3 className="text-sm font-bold text-text-primary">{colStatus}</h3>
                   </div>
@@ -340,7 +431,7 @@ export const TaskPage: React.FC = () => {
                   ) : (
                     colTasks.map((task) => {
                       const proj = projects.find((p) => p.id === task.project_id);
-                      const assignee = employees.find((e) => e.id === task.assigned_to);
+                      const assignee = (task as any).assignee || employees.find((e) => e.id === task.assigned_to);
 
                       return (
                         <Card
@@ -357,6 +448,7 @@ export const TaskPage: React.FC = () => {
                               <div className="w-36 shrink-0">
                                 <Select
                                   value={task.status || 'To Do'}
+                                  disabled={!canManageTasks}
                                   onClick={(e) => e.stopPropagation()}
                                   onChange={(e) => handleStatusChange(task.id, e.target.value, e)}
                                   options={[
@@ -373,7 +465,7 @@ export const TaskPage: React.FC = () => {
                             <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
                               {assignee ? (
                                 <div className="flex items-center gap-1.5">
-                                  <Avatar name={assignee.full_name} size="sm" />
+                                  <Avatar name={assignee.full_name} src={assignee.avatar_url} size="sm" />
                                   <span className="text-[11px] text-text-primary font-medium">{assignee.full_name}</span>
                                 </div>
                               ) : (
@@ -418,6 +510,7 @@ export const TaskPage: React.FC = () => {
         projects={projects}
         employees={employees}
         onSave={handleSave}
+        canEdit={canManageTasks}
         isLoading={createTask.isPending || updateTask.isPending}
       />
     </div>

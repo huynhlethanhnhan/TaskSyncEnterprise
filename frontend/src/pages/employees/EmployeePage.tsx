@@ -27,7 +27,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useToast } from '../../providers/ToastProvider';
 import { type EmployeeItem } from '../../api/services';
 
-export const EmployeePage: React.FC = () => {
+const EmployeePage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const permissions = usePermissions();

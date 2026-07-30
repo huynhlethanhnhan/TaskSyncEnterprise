@@ -2,7 +2,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.task import Task
+from app.models.employee import Employee
+from app.models.project import Project
 from app.schemas.task import TaskCreate, TaskUpdate
+from app.services.project_access import project_scope_predicate
+from app.services.task_service import validate_task_relationships
 
 
 def get_all(
@@ -11,9 +15,14 @@ def get_all(
     limit: int = 20,
     project_id: int | None = None,
     status: str | None = None,
+    current_user: Employee | None = None,
 ):
 
     stmt = select(Task).where(Task.is_deleted == False)
+    if current_user is not None:
+        scope = project_scope_predicate(current_user)
+        if scope is not None:
+            stmt = stmt.join(Project, Project.id == Task.project_id).where(scope)
     if project_id is not None:
         stmt = stmt.where(Task.project_id == project_id)
     if status is not None:
@@ -32,6 +41,13 @@ def get_by_id(db: Session, task_id: int):
 def create(db: Session, data: TaskCreate):
     task_data = data.model_dump()
     assigned_to = task_data.pop("assigned_to", None)
+    validate_task_relationships(
+        db,
+        project_id=task_data["project_id"],
+        sprint_id=task_data.get("sprint_id"),
+        assigned_to=assigned_to,
+        topic_id=task_data.get("topic_id"),
+    )
 
     obj = Task(**task_data)
     db.add(obj)
@@ -65,14 +81,27 @@ def create(db: Session, data: TaskCreate):
 def update(db: Session, obj: Task, data: TaskUpdate):
 
     task_data = data.model_dump(exclude_unset=True)
+    sprint_was_set = "sprint_id" in data.model_fields_set
+    assignee_was_set = "assigned_to" in data.model_fields_set
+    topic_was_set = "topic_id" in data.model_fields_set
     assigned_to = task_data.pop("assigned_to", None)
+    validate_task_relationships(
+        db,
+        project_id=obj.project_id,
+        sprint_id=task_data.get("sprint_id") if sprint_was_set else None,
+        assigned_to=assigned_to if assignee_was_set else None,
+        topic_id=task_data.get("topic_id") if topic_was_set else None,
+    )
+
+    if task_data.get("status") == "Done":
+        task_data["progress_percent"] = 100
 
     old_status = obj.status
     for k, v in task_data.items():
         setattr(obj, k, v)
     db.commit()
 
-    if "assigned_to" in data.model_fields_set:
+    if assignee_was_set:
         from app.models.task_assignment import TaskAssignment
         from sqlalchemy import delete
 

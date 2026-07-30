@@ -19,7 +19,6 @@ import {
   HeartHandshake,
   FolderOpen,
   Clock,
-  PlusCircle,
   BarChart3,
   Network,
 } from 'lucide-react';
@@ -83,6 +82,8 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
   const roleStr = (user?.role || '').toLowerCase();
   const roleId = Number(user?.role_id);
   const isAdmin = roleStr === 'admin' || roleId === 1;
+  const isManager = roleStr === 'manager' || roleId === 2;
+  const isAdminOrManager = isAdmin || isManager;
 
   const sidebarSections: SidebarSection[] = [
     {
@@ -115,12 +116,6 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
           key: '/tasks',
           label: 'Tasks List',
           icon: <CheckSquare className="h-4.5 w-4.5" />,
-          onClick: () => { navigate('/tasks?view=table'); setMobileDrawerOpen(false); },
-        },
-        {
-          key: '/kanban',
-          label: 'Kanban Board',
-          icon: <LayoutDashboard className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/tasks?view=kanban'); setMobileDrawerOpen(false); },
         },
         {
@@ -181,12 +176,6 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
           icon: <Clock className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/vacations'); setMobileDrawerOpen(false); },
         },
-        {
-          key: '/vacations-request',
-          label: 'Create Leave Request',
-          icon: <PlusCircle className="h-4.5 w-4.5" />,
-          onClick: () => { navigate('/vacations?new=true'); setMobileDrawerOpen(false); },
-        },
       ],
     },
     {
@@ -203,12 +192,12 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
     {
       title: 'Administration',
       items: [
-        {
+        ...(isAdminOrManager ? [{
           key: '/employees',
           label: 'Employees',
           icon: <Users className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/employees'); setMobileDrawerOpen(false); },
-        },
+        }] : []),
         {
           key: '/departments',
           label: 'Departments',
@@ -223,7 +212,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
         },
         {
           key: '/settings',
-          label: 'System Settings',
+          label: isAdminOrManager ? 'System Settings' : 'My Settings',
           icon: <Settings className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/settings'); setMobileDrawerOpen(false); },
         },
@@ -299,7 +288,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navbar Header */}
-        <div className="flex items-center">
+        <div className="flex items-center relative z-header sticky top-0">
           {/* Mobile hamburger menu trigger */}
           <button
             type="button"

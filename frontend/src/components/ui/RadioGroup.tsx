@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { cn } from '../../utils/cn';
 
-export interface RadioOption {
+interface RadioOption {
   value: string;
   label: string;
   description?: string;

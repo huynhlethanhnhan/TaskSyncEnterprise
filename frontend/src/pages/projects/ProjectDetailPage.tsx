@@ -5,7 +5,6 @@ import {
   Plus,
   Briefcase,
   CheckSquare,
-  LayoutGrid,
   Layers,
   RefreshCw,
   Calendar as CalendarIcon,
@@ -31,19 +30,34 @@ import { useEmployees } from '../../hooks/useEmployees';
 import { useToast } from '../../providers/ToastProvider';
 import { TaskDrawer } from '../../components/drawers/TaskDrawer';
 import { type TaskItem } from '../../api/services';
+import { JiraTimeline } from '../../components/timeline/JiraTimeline';
+import { BacklogManager } from '../../components/backlog/BacklogManager';
+import { SprintsManager } from '../../components/sprints/SprintsManager';
+import { TopicsManager } from '../../components/topics/TopicsManager';
+import { FilesManager } from '../../components/files/FilesManager';
+import { useAuth } from '../../providers/AuthProvider';
+import { useTeams } from '../../hooks/useTeams';
 
-export const ProjectDetailPage: React.FC = () => {
+const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
   const projectId = Number(id);
+  const role = (user?.role || '').toLowerCase();
+  const isStaff = role === 'employee' || role === 'staff' || Number(user?.role_id) === 3;
+  const isAdminOrManager =
+    role === 'admin' || role === 'manager' || Number(user?.role_id) === 1 || Number(user?.role_id) === 2;
 
   const [activeTab, setActiveTab] = React.useState('overview');
 
   // React Query Hooks
   const { data: project, isLoading: isProjectLoading, isError: isProjectError, refetch } = useProjectDetail(projectId);
-  const { data: allTasks = [], refetch: refetchTasks } = useTasks();
+  const { data: allTasks = [], refetch: refetchTasks } = useTasks(isStaff);
   const { data: employees = [] } = useEmployees();
+  const { data: teams = [] } = useTeams();
+  const isTeamLeader = teams.some((team) => Number(team.leader_id) === Number(user?.id));
+  const canManageTasks = isAdminOrManager || isTeamLeader;
   const updateProject = useUpdateProject();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -172,8 +186,8 @@ export const ProjectDetailPage: React.FC = () => {
   // Define dynamic project level tabs
   const tabs = [
     { id: 'overview', label: 'Overview', icon: <Briefcase className="h-4 w-4" /> },
-    { id: 'tasks', label: 'Tasks', icon: <CheckSquare className="h-4 w-4" /> },
-    { id: 'board', label: 'Kanban Board', icon: <LayoutGrid className="h-4 w-4" /> },
+    { id: 'timeline', label: 'Timeline (Jira)', icon: <CalendarIcon className="h-4 w-4" /> },
+    { id: 'tasks', label: 'Công việc (Kanban)', icon: <CheckSquare className="h-4 w-4" /> },
     { id: 'backlog', label: 'Backlog', icon: <Layers className="h-4 w-4" /> },
     { id: 'sprints', label: 'Sprints', icon: <RefreshCw className="h-4 w-4" /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="h-4 w-4" /> },
@@ -232,6 +246,9 @@ export const ProjectDetailPage: React.FC = () => {
 
       {/* Tabs Content Areas */}
       <div className="space-y-6">
+        {/* TIMELINE TAB */}
+        {activeTab === 'timeline' && <JiraTimeline projectId={projectId} />}
+
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -270,9 +287,11 @@ export const ProjectDetailPage: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>Công việc gần đây ({projectTasks.length})</span>
-                    <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
-                      Thêm công việc
-                    </Button>
+                    {canManageTasks && (
+                      <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
+                        Thêm công việc
+                      </Button>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -332,16 +351,18 @@ export const ProjectDetailPage: React.FC = () => {
         )}
 
         {/* TASKS TAB */}
-        {activeTab === 'tasks' && (
+        {activeTab === 'task-table' && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
                 <CardTitle>Tasks List ({projectTasks.length})</CardTitle>
                 <CardDescription>Bảng phân phối công việc dự án</CardDescription>
               </div>
-              <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
-                Tạo Task Mới
-              </Button>
+              {canManageTasks && (
+                <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
+                  Tạo Task Mới
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {projectTasks.length === 0 ? (
@@ -378,7 +399,7 @@ export const ProjectDetailPage: React.FC = () => {
                             <td className="p-3">
                               {assignee ? (
                                 <div className="flex items-center gap-1.5">
-                                  <Avatar name={assignee.full_name} size="sm" />
+                                  <Avatar name={assignee.full_name} src={assignee.avatar_url} size="sm" />
                                   <span className="font-medium text-text-primary">{assignee.full_name}</span>
                                 </div>
                               ) : (
@@ -388,6 +409,7 @@ export const ProjectDetailPage: React.FC = () => {
                             <td className="p-3">
                               <Select
                                 value={t.status || 'To Do'}
+                                disabled={!canManageTasks}
                                 onChange={(e) => handleStatusChange(t.id, e.target.value)}
                                 options={[
                                   { value: 'To Do', label: 'To Do' },
@@ -412,8 +434,8 @@ export const ProjectDetailPage: React.FC = () => {
           </Card>
         )}
 
-        {/* KANBAN BOARD TAB */}
-        {activeTab === 'board' && (
+        {/* TASKS KANBAN TAB */}
+        {activeTab === 'tasks' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {['To Do', 'In Progress', 'Done'].map((colStatus) => {
               const colTasks = projectTasks.filter(t => (t.status || 'To Do') === colStatus);
@@ -444,7 +466,7 @@ export const ProjectDetailPage: React.FC = () => {
                               <div className="flex items-center justify-between text-[10px] pt-2 border-t border-border/60">
                                 {assignee ? (
                                   <div className="flex items-center gap-1">
-                                    <Avatar name={assignee.full_name} size="sm" />
+                                    <Avatar name={assignee.full_name} src={assignee.avatar_url} size="sm" />
                                     <span className="font-semibold text-text-primary truncate max-w-[80px]">{assignee.full_name}</span>
                                   </div>
                                 ) : (
@@ -466,57 +488,14 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* BACKLOG TAB (Backend Gap) */}
+        {/* BACKLOG TAB */}
         {activeTab === 'backlog' && (
-          <Card className="border-rose-200/40 dark:border-rose-950/20 bg-rose-500/[0.02]">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Badge variant="danger">Backend Gap</Badge>
-                <CardTitle className="text-sm font-bold text-rose-600 dark:text-rose-400">
-                  Thiếu API Endpoint Product Backlog dự án #{projectId}
-                </CardTitle>
-              </div>
-              <CardDescription className="text-rose-500/80 text-xs">
-                Mô hình dữ liệu backlog chưa được khai báo ở backend. Thiết kế đề xuất cho backlog của dự án:
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-xs text-text-secondary leading-relaxed">
-              <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto whitespace-pre">
-{`SELECT * FROM dbo.backlog_items 
-WHERE project_id = ${projectId} AND status = 'Unscheduled'
-ORDER BY priority DESC, created_at ASC;`}
-              </pre>
-              <p>
-                <strong>Kế hoạch Frontend:</strong> Thêm một tab điều phối cho phép PM kéo các task chưa lên lịch (Backlog) thả vào các Sprint đang hoạt động trên bảng Kanban.
-              </p>
-            </CardContent>
-          </Card>
+          <BacklogManager projectId={projectId} />
         )}
 
-        {/* SPRINTS TAB (Backend Gap) */}
+        {/* SPRINTS TAB */}
         {activeTab === 'sprints' && (
-          <Card className="border-rose-200/40 dark:border-rose-950/20 bg-rose-500/[0.02]">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Badge variant="danger">Backend Gap</Badge>
-                <CardTitle className="text-sm font-bold text-rose-600 dark:text-rose-400">
-                  Thiếu API Endpoint Sprints dự án #{projectId}
-                </CardTitle>
-              </div>
-              <CardDescription className="text-rose-500/80 text-xs">
-                Không thể truy xuất thông tin chu kỳ phát triển (Sprints) cho dự án này.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-xs text-text-secondary leading-relaxed">
-              <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto whitespace-pre">
-{`SELECT * FROM dbo.sprints 
-WHERE project_id = ${projectId} AND status = 'Active';`}
-              </pre>
-              <p>
-                <strong>Kế hoạch:</strong> Khi backend bổ sung API, tab này sẽ kết xuất tiến trình thực tế thông qua biểu đồ Burn-down chart và danh sách các mục tiêu cốt lõi của chu kỳ Sprint.
-              </p>
-            </CardContent>
-          </Card>
+          <SprintsManager projectId={projectId} />
         )}
 
         {/* CALENDAR TAB */}
@@ -549,50 +528,14 @@ WHERE project_id = ${projectId} AND status = 'Active';`}
           </Card>
         )}
 
-        {/* FILES TAB (Backend Gap) */}
+        {/* FILES TAB */}
         {activeTab === 'files' && (
-          <Card className="border-rose-200/40 dark:border-rose-950/20 bg-rose-500/[0.02]">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Badge variant="danger">Backend Gap</Badge>
-                <CardTitle className="text-sm font-bold text-rose-600 dark:text-rose-400">
-                  Thiếu API Endpoint Quản lý File dùng chung dự án #{projectId}
-                </CardTitle>
-              </div>
-              <CardDescription className="text-rose-500/80 text-xs">
-                Hệ thống backend hiện chỉ cho phép đính kèm tệp tin ở cấp độ công việc (Task attachments), chưa hỗ trợ kho tài liệu chung cấp độ dự án.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-xs text-text-secondary leading-relaxed">
-              <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto whitespace-pre">
-{`SELECT * FROM dbo.project_files 
-WHERE project_id = ${projectId};`}
-              </pre>
-            </CardContent>
-          </Card>
+          <FilesManager projectId={projectId} />
         )}
 
-        {/* DISCUSSIONS TAB (Backend Gap) */}
+        {/* DISCUSSIONS TAB */}
         {activeTab === 'discussions' && (
-          <Card className="border-rose-200/40 dark:border-rose-950/20 bg-rose-500/[0.02]">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Badge variant="danger">Backend Gap</Badge>
-                <CardTitle className="text-sm font-bold text-rose-600 dark:text-rose-400">
-                  Thiếu API Endpoint Thảo luận nhóm dự án #{projectId}
-                </CardTitle>
-              </div>
-              <CardDescription className="text-rose-500/80 text-xs">
-                Mô hình lưu trữ và quản lý các topic thảo luận chưa được khai báo ở backend.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-xs text-text-secondary leading-relaxed">
-              <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto whitespace-pre">
-{`SELECT * FROM dbo.discussion_topics 
-WHERE project_id = ${projectId};`}
-              </pre>
-            </CardContent>
-          </Card>
+          <TopicsManager projectId={projectId} />
         )}
 
         {/* ACTIVITY TAB */}
@@ -673,6 +616,7 @@ WHERE project_id = ${projectId};`}
         projects={[project]}
         employees={employees}
         onSave={handleSaveTask}
+        canEdit={canManageTasks}
         isLoading={createTask.isPending || updateTask.isPending}
       />
     </div>

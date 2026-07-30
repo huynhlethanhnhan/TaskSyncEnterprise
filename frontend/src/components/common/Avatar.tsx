@@ -49,25 +49,29 @@ export const Avatar: React.FC<AvatarProps> = ({
     xl: 'h-4 w-4 ring-2',
   };
 
+  const hasCustomSize = Boolean(className && (/\b[hw]-\d+\b/.test(className) || className.includes('size-')));
+
   return (
-    <div className={cn('relative inline-flex shrink-0 select-none', className)} {...props}>
-      <div
-        className={cn(
-          'relative flex items-center justify-center overflow-hidden rounded-full bg-accent font-semibold text-accent-foreground border border-border/50 transition-all',
-          sizeClasses[size]
-        )}
-      >
-        {mediaUrl && !imageError ? (
-          <img
-            src={mediaUrl}
-            alt={alt || name || 'Avatar'}
-            onError={() => setImageError(true)}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <span>{getInitials(name)}</span>
-        )}
-      </div>
+    <div
+      className={cn(
+        'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-accent font-semibold text-accent-foreground border border-border/50 transition-all aspect-square',
+        !hasCustomSize && sizeClasses[size],
+        className
+      )}
+      {...props}
+    >
+      {mediaUrl && !imageError ? (
+        <img
+          src={mediaUrl}
+          alt={alt || name || 'Avatar'}
+          onError={() => setImageError(true)}
+          className="h-full w-full object-cover object-center rounded-full"
+        />
+      ) : (
+        <span className="flex items-center justify-center w-full h-full text-center leading-none">
+          {getInitials(name)}
+        </span>
+      )}
 
       {status && (
         <span

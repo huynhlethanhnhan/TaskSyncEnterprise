@@ -37,9 +37,14 @@ def get_project_key(project_id: int) -> str:
     return f"project:{project_id}"
 
 
-def get_project_list_key(skip: int = 0, limit: int = 20) -> str:
+def get_project_list_key(
+    skip: int = 0,
+    limit: int = 20,
+    user_id: int | None = None,
+) -> str:
     """Generates the cache key for the projects list with pagination parameters."""
-    return f"project:list:{skip}:{limit}"
+    user_part = f":u_{user_id}" if user_id is not None else ""
+    return f"project:list:{skip}:{limit}{user_part}"
 
 
 def get_role_key(role_id: int) -> str:
@@ -67,16 +72,41 @@ def get_task_list_key(
     limit: int = 20,
     project_id: int | None = None,
     status: str | None = None,
+    user_id: int | None = None,
 ) -> str:
     """Generates cache key for task list with pagination and filter options."""
     proj_part = f":p_{project_id}" if project_id else ""
     status_part = f":s_{status}" if status else ""
-    return f"task:list:{skip}:{limit}{proj_part}{status_part}"
+    user_part = f":u_{user_id}" if user_id is not None else ""
+    return f"task:list:{skip}:{limit}{proj_part}{status_part}{user_part}"
 
 
 def get_task_key(task_id: int) -> str:
     """Generates the cache key for a specific task."""
     return f"task:{task_id}"
+
+
+# ── Team cache keys ───────────────────────────────────────────────────────────
+
+
+def get_team_key(team_id: int) -> str:
+    """Generates the cache key for a specific team detail."""
+    return f"team:{team_id}"
+
+
+def get_team_list_key(
+    skip: int = 0,
+    limit: int = 20,
+    department_id: int | None = None,
+    search: str | None = None,
+) -> str:
+    """Generates cache key for team list with pagination and filter parameters."""
+    dept_part = f":d_{department_id}" if department_id else ""
+    search_part = f":s_{search}" if search else ""
+    return f"team:list:{skip}:{limit}{dept_part}{search_part}"
+
+
+# ── Pattern helpers ───────────────────────────────────────────────────────────
 
 
 def get_department_list_pattern() -> str:
@@ -102,3 +132,30 @@ def get_project_list_pattern() -> str:
 def get_task_list_pattern() -> str:
     """Generates pattern for task list cache keys."""
     return "task:list:*"
+
+
+def get_team_list_pattern() -> str:
+    """Generates pattern for team list cache keys."""
+    return "team:list:*"
+
+
+def get_sprint_key(sprint_id: int) -> str:
+    return f"sprint:{sprint_id}"
+
+
+def get_sprint_list_pattern() -> str:
+    return "sprint:list:*"
+
+
+def get_sprint_planning_pattern(sprint_id: int | None = None) -> str:
+    return (
+        f"sprint:{sprint_id}:planning*"
+        if sprint_id is not None
+        else "sprint:*:planning*"
+    )
+
+
+def get_backlog_list_pattern(project_id: int | None = None) -> str:
+    return (
+        f"backlog:list:p_{project_id}:*" if project_id is not None else "backlog:list:*"
+    )

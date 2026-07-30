@@ -4,6 +4,7 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Switch } from '../ui/Switch';
 import { Button } from '../ui/Button';
+import { useTeams } from '../../hooks/useTeams';
 import { type EmployeeItem, type DepartmentItem } from '../../api/services';
 
 interface EmployeeDrawerProps {
@@ -29,8 +30,17 @@ export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({
   const [password, setPassword] = React.useState('');
   const [jobTitle, setJobTitle] = React.useState('');
   const [departmentId, setDepartmentId] = React.useState<number | ''>('');
+  const [teamId, setTeamId] = React.useState<number | ''>('');
   const [roleId, setRoleId] = React.useState<number | ''>('');
   const [isActive, setIsActive] = React.useState(true);
+
+  // Fetch all teams; filter client-side by selected department to avoid extra requests
+  const { data: allTeams = [] } = useTeams();
+
+  const availableTeams = React.useMemo(() => {
+    if (!departmentId) return allTeams;
+    return allTeams.filter((t) => t.department_id === Number(departmentId));
+  }, [allTeams, departmentId]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -40,6 +50,7 @@ export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({
       setPassword('');
       setJobTitle(employee.job_title || '');
       setDepartmentId(employee.department_id || '');
+      setTeamId(employee.team_id || '');
       setRoleId(employee.role_id || '');
       setIsActive(employee.is_active ?? true);
     } else {
@@ -48,10 +59,26 @@ export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({
       setPassword('123456');
       setJobTitle('');
       setDepartmentId(departments[0]?.id || '');
+      setTeamId('');
       setRoleId(3);
       setIsActive(true);
     }
   }, [employee, isOpen, departments]);
+
+  // When department changes, clear team selection if the current team is not in the new department
+  const handleDepartmentChange = (value: string) => {
+    const newDeptId = value ? Number(value) : '';
+    setDepartmentId(newDeptId);
+
+    if (teamId !== '') {
+      const currentTeamStillValid = allTeams.some(
+        (t) => t.id === Number(teamId) && t.department_id === Number(newDeptId),
+      );
+      if (!currentTeamStillValid) {
+        setTeamId('');
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +89,7 @@ export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({
       email: email.trim(),
       job_title: jobTitle.trim() || null,
       department_id: departmentId ? Number(departmentId) : null,
+      team_id: teamId ? Number(teamId) : null,
       role_id: roleId ? Number(roleId) : null,
       is_active: isActive,
     };
@@ -132,7 +160,7 @@ export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({
           <Select
             label="Phòng ban"
             value={String(departmentId)}
-            onChange={(e) => setDepartmentId(e.target.value ? Number(e.target.value) : '')}
+            onChange={(e) => handleDepartmentChange(e.target.value)}
             options={[
               { value: '', label: '-- Chọn Phòng ban --' },
               ...departments.map((d) => ({ value: String(d.id), label: d.name })),
@@ -140,16 +168,26 @@ export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({
           />
 
           <Select
-            label="Vai trò Quản trị"
-            value={String(roleId)}
-            onChange={(e) => setRoleId(e.target.value ? Number(e.target.value) : '')}
+            label="Nhóm (Team)"
+            value={String(teamId)}
+            onChange={(e) => setTeamId(e.target.value ? Number(e.target.value) : '')}
             options={[
-              { value: '1', label: '1 - Administrator' },
-              { value: '2', label: '2 - Manager' },
-              { value: '3', label: '3 - Staff Member' },
+              { value: '', label: availableTeams.length === 0 ? '-- Chưa có nhóm --' : '-- Chọn Nhóm --' },
+              ...availableTeams.map((t) => ({ value: String(t.id), label: t.name })),
             ]}
           />
         </div>
+
+        <Select
+          label="Vai trò Quản trị"
+          value={String(roleId)}
+          onChange={(e) => setRoleId(e.target.value ? Number(e.target.value) : '')}
+          options={[
+            { value: '1', label: '1 - Administrator' },
+            { value: '2', label: '2 - Manager' },
+            { value: '3', label: '3 - Staff Member' },
+          ]}
+        />
 
         <div className="pt-2">
           <Switch

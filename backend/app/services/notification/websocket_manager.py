@@ -120,6 +120,34 @@ class WebSocketConnectionManager:
                     self.disconnect(connection, user_id)
         return success_count
 
+    def broadcast_threadsafe(self, event_data: dict) -> bool:
+        """Broadcast a domain event from a synchronous API worker."""
+        loop = self._event_loop
+        if loop is None or loop.is_closed() or not loop.is_running():
+            return False
+
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if current_loop is loop:
+            loop.create_task(self.broadcast(event_data))
+            return True
+
+        future = asyncio.run_coroutine_threadsafe(self.broadcast(event_data), loop)
+
+        def log_failure(completed_future):
+            try:
+                completed_future.result()
+            except Exception as error:
+                app_logger.warning(
+                    f"WebSocket domain-event broadcast failed: {error}"
+                )
+
+        future.add_done_callback(log_failure)
+        return True
+
 
 # Global singleton manager
 websocket_manager = WebSocketConnectionManager()

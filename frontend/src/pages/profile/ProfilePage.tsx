@@ -28,7 +28,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
 import api from '../../api/axios';
 
-export const ProfilePage: React.FC = () => {
+const ProfilePage: React.FC = () => {
   const { user, setUser } = useAuth();
   const toast = useToast();
 
@@ -385,54 +385,67 @@ export const ProfilePage: React.FC = () => {
                   <CardDescription>Hỗ trợ định dạng JPG, PNG, WEBP tối đa 5MB. Ảnh sẽ được tự động lưu trữ kiên cố.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex flex-col sm:flex-row items-center gap-6">
-                    <Avatar name={fullName} src={avatarPreview} size="xl" className="h-24 w-24 border-2 border-primary/20" />
-
-                    <div
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`flex-1 w-full p-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all ${
-                        isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 bg-accent/20'
-                      }`}
-                    >
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={(e) => e.target.files?.[0] && handleAvatarFileSelected(e.target.files[0])}
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
+                  <div className="flex flex-col sm:flex-row items-center sm:items-stretch gap-6">
+                    {/* Dedicated Left Column: Avatar Circular Preview */}
+                    <div className="flex flex-col items-center justify-center shrink-0 w-28 h-28 sm:w-32 sm:h-32">
+                      <Avatar
+                        name={fullName}
+                        src={avatarPreview}
+                        size="xl"
+                        className="h-28 w-28 sm:h-28 sm:w-28 rounded-full border-2 border-primary/20 shadow-sm transition-transform hover:scale-105"
                       />
-                      <Upload className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-xs font-semibold text-text-primary">
-                        Kéo & Thả ảnh vào đây, hoặc <span className="text-primary underline">Chọn từ thiết bị</span>
-                      </p>
-                      <p className="text-[11px] text-text-muted mt-1">Hỗ trợ JPG, PNG, WEBP dưới 5MB</p>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-3 pt-2 justify-end">
-                    {avatarPreview && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<Trash2 className="h-4 w-4 text-rose-500" />}
-                        onClick={handleAvatarDelete}
-                        isLoading={isUploadingAvatar}
+                    {/* Right Column: Upload Dropzone & Controls */}
+                    <div className="flex-1 flex flex-col justify-between w-full space-y-4">
+                      <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`flex-1 w-full p-5 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all flex flex-col items-center justify-center ${
+                          isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 bg-accent/20'
+                        }`}
                       >
-                        Xóa Ảnh hiện tại
-                      </Button>
-                    )}
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      leftIcon={<Upload className="h-4 w-4" />}
-                      onClick={() => fileInputRef.current?.click()}
-                      isLoading={isUploadingAvatar}
-                    >
-                      Tải Ảnh mới
-                    </Button>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={(e) => e.target.files?.[0] && handleAvatarFileSelected(e.target.files[0])}
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                        />
+                        <Upload className="h-6 w-6 text-primary mb-1.5" />
+                        <p className="text-xs font-semibold text-text-primary">
+                          Kéo & Thả ảnh vào đây, hoặc <span className="text-primary underline">Chọn từ thiết bị</span>
+                        </p>
+                        <p className="text-[11px] text-text-muted mt-0.5">Hỗ trợ JPG, PNG, WEBP dưới 5MB</p>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center justify-end gap-3">
+                        {avatarPreview && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full sm:w-auto"
+                            leftIcon={<Trash2 className="h-4 w-4 text-rose-500" />}
+                            onClick={handleAvatarDelete}
+                            isLoading={isUploadingAvatar}
+                          >
+                            Xóa Ảnh hiện tại
+                          </Button>
+                        )}
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                          leftIcon={<Upload className="h-4 w-4" />}
+                          onClick={() => fileInputRef.current?.click()}
+                          isLoading={isUploadingAvatar}
+                        >
+                          Tải Ảnh mới
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

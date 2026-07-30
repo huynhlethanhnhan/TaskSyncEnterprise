@@ -28,20 +28,20 @@ class StatefulMockRedis:
 
 
 # Set up a dedicated test application
-test_app = FastAPI()
-test_app.add_middleware(IdempotencyMiddleware)
+idempotency_app = FastAPI()
+idempotency_app.add_middleware(IdempotencyMiddleware)
 
 execution_counter = 0
 
 
-@test_app.post("/test-idempotent")
+@idempotency_app.post("/test-idempotent")
 def sample_post_endpoint():
     global execution_counter
     execution_counter += 1
     return {"counter": execution_counter}
 
 
-@test_app.get("/test-idempotent")
+@idempotency_app.get("/test-idempotent")
 def sample_get_endpoint():
     global execution_counter
     execution_counter += 1
@@ -64,7 +64,7 @@ def test_idempotency_workflow(stateful_redis):
     global execution_counter
     execution_counter = 0  # Reset counter
 
-    client = TestClient(test_app)
+    client = TestClient(idempotency_app)
     headers = {"Idempotency-Key": "test-uuid-1234"}
 
     # First request
@@ -87,7 +87,7 @@ def test_idempotency_ignored_on_get(stateful_redis):
     global execution_counter
     execution_counter = 0
 
-    client = TestClient(test_app)
+    client = TestClient(idempotency_app)
     headers = {"Idempotency-Key": "test-uuid-5678"}
 
     # First GET

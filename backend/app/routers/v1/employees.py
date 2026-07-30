@@ -106,6 +106,10 @@ def create_employee(data: EmployeeCreate, db: Session = Depends(get_db)):
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_employee(res.id)
+    if res.department_id is not None:
+        CacheInvalidator.invalidate_department(res.department_id)
+    if res.team_id is not None:
+        CacheInvalidator.invalidate_team(res.team_id)
     return res
 
 
@@ -145,8 +149,14 @@ def update_employee(
         CacheInvalidator.invalidate_employee(obj.id)
         return obj
 
+    old_department_id = obj.department_id
+    old_team_id = obj.team_id
     res = crud_employee.update(db, obj, data)
     CacheInvalidator.invalidate_employee(res.id)
+    for department_id in {old_department_id, res.department_id} - {None}:
+        CacheInvalidator.invalidate_department(department_id)
+    for team_id in {old_team_id, res.team_id} - {None}:
+        CacheInvalidator.invalidate_team(team_id)
     return res
 
 
@@ -162,11 +172,17 @@ def delete_employee(employee_id: int, db: Session = Depends(get_db)):
     if obj is None:
         raise HTTPException(404, "Employee not found")
 
+    department_id = obj.department_id
+    team_id = obj.team_id
     crud_employee.soft_delete(db, obj)
 
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_employee(employee_id)
+    if department_id is not None:
+        CacheInvalidator.invalidate_department(department_id)
+    if team_id is not None:
+        CacheInvalidator.invalidate_team(team_id)
 
     return {"message": "Deleted"}
 
@@ -204,6 +220,7 @@ def upload_my_avatar(
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_employee(current_user.id)
+    CacheInvalidator.invalidate_task(employee_id=current_user.id)
 
     return {
         "success": True,
@@ -228,6 +245,7 @@ def delete_my_avatar(
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_employee(current_user.id)
+    CacheInvalidator.invalidate_task(employee_id=current_user.id)
 
     return {
         "success": True,
