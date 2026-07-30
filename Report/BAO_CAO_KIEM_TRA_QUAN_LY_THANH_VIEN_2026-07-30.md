@@ -84,4 +84,14 @@
 
 Chức năng quản lý thành viên phòng ban/team đã được bổ sung đúng phạm vi, quyền được chặn tại backend và giao diện phản ánh đúng quyền thao tác. Các luồng thêm, gỡ, chuyển, tự rời nhóm/phòng ban và chuyển chéo tổ chức đã được kiểm tra bằng test tự động và runtime Docker.
 
-Phần thông tin commit, tag và trạng thái GitHub Actions sẽ được cập nhật sau khi push hoàn tất.
+## 7. Thông tin phát hành
+
+- Commit tính năng trên `develop`: `2e413a0`
+- Commit báo cáo trên `develop`: `7fe9e24`
+- Commit tính năng và migration tương thích trên `master`: `cf41670`
+- Tag xác nhận: `organization-membership-ok-2026.07.30`
+- GitHub Actions CI Foundation #41: **SUCCESS**
+  - Backend CI: **success**
+  - Frontend CI: **success**
+  - Docker Production Hardening Validation: **success**
+  - Run: <https://github.com/huynhlethanhnhan/TaskSyncEnterprise/actions/runs/30514633929>
