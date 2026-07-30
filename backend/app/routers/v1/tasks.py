@@ -59,7 +59,7 @@ class TaskEmployeeUpdate(BaseModel):
 )
 def get_tasks(
     skip: int = 0,
-    limit: int = 20,
+    limit: int = 1000,
     project_id: int | None = None,
     status: str | None = None,
     db: Session = Depends(get_db),
@@ -149,6 +149,56 @@ def create_task(
     return task
 
 
+def verify_task_update_permissions(
+    db: Session, task: Task, data: TaskUpdate, current_user: Employee
+):
+    from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
+    from app.models.team import Team
+    from sqlalchemy import select
+
+    if current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER):
+        require_project_management(db, task.project_id, current_user)
+        return
+
+    is_team_leader = db.scalar(
+        select(Team.id).where(
+            Team.leader_id == current_user.id,
+            Team.is_active == True,  # noqa: E712
+        )
+    )
+    if is_team_leader is not None:
+        require_project_management(db, task.project_id, current_user)
+        return
+
+    # Employee logic
+    if task.assigned_to != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Employee can only update tasks assigned to them.",
+        )
+
+    restricted_fields = {
+        "title",
+        "description",
+        "priority",
+        "assigned_to",
+        "sprint_id",
+        "topic_id",
+        "deadline",
+        "story_points",
+    }
+    set_fields = data.model_fields_set
+    for field in set_fields:
+        if field in restricted_fields:
+            val = getattr(data, field)
+            current_val = getattr(task, field, None)
+            if val != current_val:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Employees are not allowed to modify '{field}'.",
+                )
+
+
 @router.put(
     "/{task_id:int}",
     response_model=TaskResponse,
@@ -163,7 +213,8 @@ def update_task(
     obj = crud_task.get_by_id(db, task_id)
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    require_project_management(db, obj.project_id, current_user)
+
+    verify_task_update_permissions(db, obj, data, current_user)
 
     old_project_id = obj.project_id
     old_employee_id = obj.employee_id
@@ -204,7 +255,7 @@ def patch_task(
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    require_project_management(db, obj.project_id, current_user)
+    verify_task_update_permissions(db, obj, data, current_user)
 
     old_project_id = obj.project_id
     old_employee_id = obj.employee_id
@@ -292,7 +343,13 @@ def update_my_task(
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    require_project_management(db, task.project_id, current_user)
+    from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
+    is_manager_or_admin = current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER)
+    if not is_manager_or_admin and task.assigned_to != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Employee can only update tasks assigned to them.",
+        )
 
     # 3. Tiến hành cập nhật giới hạn (Chỉ đổi status và progress)
     old_status = task.status

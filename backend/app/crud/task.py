@@ -9,26 +9,62 @@ from app.services.project_access import project_scope_predicate
 from app.services.task_service import validate_task_relationships
 
 
+from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
+
+
 def get_all(
     db: Session,
     skip: int = 0,
-    limit: int = 20,
+    limit: int = 1000,
     project_id: int | None = None,
     status: str | None = None,
     current_user: Employee | None = None,
 ):
-
     stmt = select(Task).where(Task.is_deleted == False)
     if current_user is not None:
-        scope = project_scope_predicate(current_user)
-        if scope is not None:
-            stmt = stmt.join(Project, Project.id == Task.project_id).where(scope)
+        if current_user.role_id == ROLE_ADMIN:
+            # Admin can view all active tasks in the system
+            pass
+        elif current_user.role_id == ROLE_MANAGER:
+            scope = project_scope_predicate(current_user)
+            if scope is not None:
+                stmt = stmt.join(Project, Project.id == Task.project_id).where(scope)
+        else:
+            # Employee can view assigned tasks OR tasks in accessible projects
+            from app.models.task_assignment import TaskAssignment
+            from app.models.project_member import ProjectMember
+            from sqlalchemy import or_
+
+            scope_expr = or_(
+                Task.id.in_(
+                    select(TaskAssignment.task_id).where(
+                        TaskAssignment.employee_id == current_user.id
+                    )
+                ),
+                Task.created_by == current_user.id,
+                Task.project_id.in_(
+                    select(ProjectMember.project_id).where(
+                        ProjectMember.employee_id == current_user.id
+                    )
+                ),
+                Task.project_id.in_(
+                    select(Project.id).where(
+                        Project.created_by == current_user.id
+                    )
+                )
+            )
+            stmt = stmt.where(scope_expr)
+
     if project_id is not None:
         stmt = stmt.where(Task.project_id == project_id)
     if status is not None:
         stmt = stmt.where(Task.status == status)
 
-    stmt = stmt.order_by(Task.id.desc()).offset(skip).limit(limit)
+    stmt = stmt.order_by(Task.id.desc())
+    if skip > 0:
+        stmt = stmt.offset(skip)
+    if limit is not None and limit > 0:
+        stmt = stmt.limit(limit)
 
     return db.scalars(stmt).all()
 
