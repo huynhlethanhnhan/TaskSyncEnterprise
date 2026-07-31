@@ -69,8 +69,8 @@ def safe_reset_database(db: Session, confirm: bool) -> dict[str, int]:
     deleted_counts = {}
     print("[RESET] Cleaning and resetting development database...")
 
-    # Ensure tables exist first
-    Base.metadata.create_all(bind=engine)
+    # Schema creation is managed strictly by Alembic migrations
+    # (Base.metadata.create_all is avoided per production standards)
 
     for table_name in TABLES_TO_RESET:
         try:

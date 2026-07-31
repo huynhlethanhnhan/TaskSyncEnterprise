@@ -48,15 +48,17 @@ RUN mkdir -p /app/uploads/avatars /app/uploads/attachments /app/logs \
 # Copy application source code under tasksync ownership
 COPY --chown=tasksync:tasksync . .
 
+# Ensure entrypoint script is executable
+RUN chmod +x /app/entrypoint.sh
+
 # Run subsequent operations and process as unprivileged user
 USER tasksync
 
 EXPOSE 8000
 
-# Container health probe checking SRE live probe (using standard python library)
+# Container health probe checking SRE live probe
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')" || exit 1
 
-ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
-
-
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
