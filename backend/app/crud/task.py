@@ -139,80 +139,50 @@ def create(db: Session, data: TaskCreate):
 
 
 def update(db: Session, obj: Task, data: TaskUpdate):
-
     task_data = data.model_dump(exclude_unset=True)
+
+    project_was_set = "project_id" in data.model_fields_set
     sprint_was_set = "sprint_id" in data.model_fields_set
     assignee_was_set = "assigned_to" in data.model_fields_set
     topic_was_set = "topic_id" in data.model_fields_set
+
     assigned_to = task_data.pop("assigned_to", None)
-    validate_task_relationships(
-        db,
-        project_id=obj.project_id,
-        sprint_id=task_data.get("sprint_id") if sprint_was_set else None,
-        assigned_to=assigned_to if assignee_was_set else None,
-        topic_id=task_data.get("topic_id") if topic_was_set else None,
+
+    target_project_id = (
+        task_data["project_id"]
+        if project_was_set
+        else obj.project_id
     )
 
-    if task_data.get("status") == "Done":
-        task_data["progress_percent"] = 100
+    # Khi đổi Project nhưng không chọn lại Sprint,
+    # tự đưa Task về backlog để không giữ Sprint của Project cũ.
+    if (
+        project_was_set
+        and target_project_id != obj.project_id
+        and not sprint_was_set
+    ):
+        task_data["sprint_id"] = None
+        sprint_was_set = True
 
-    old_status = obj.status
-    for k, v in task_data.items():
-        setattr(obj, k, v)
-    db.commit()
+    target_sprint_id = (
+        task_data.get("sprint_id")
+        if sprint_was_set
+        else obj.sprint_id
+    )
 
-    if assignee_was_set:
-        from app.models.task_assignment import TaskAssignment
-        from sqlalchemy import delete
+    target_topic_id = (
+        task_data.get("topic_id")
+        if topic_was_set
+        else obj.topic_id
+    )
 
-        # Lưu lại người được gán cũ
-        old_assigned_to = obj.assigned_to
-
-        # Xóa các assignments cũ
-        db.execute(delete(TaskAssignment).where(TaskAssignment.task_id == obj.id))
-
-        if assigned_to is not None:
-            new_assignment = TaskAssignment(task_id=obj.id, employee_id=assigned_to)
-            db.add(new_assignment)
-            db.commit()
-
-            # KÍCH HOẠT TRIGGER NOTIFICATION (Nếu gán cho người mới hoặc người được gán thay đổi)
-            if old_assigned_to != assigned_to:
-                from app.crud import notification as notification_crud
-
-                try:
-                    notification_crud.create_notification(
-                        db,
-                        title="Bạn có task mới",
-                        message=obj.title,
-                        employee_id=assigned_to,
-                    )
-                except Exception as e:
-                    from app.core.logger import app_logger
-
-                    app_logger.error(f"Error creating notification: {e}")
-        else:
-            db.commit()
-
-    # KÍCH HOẠT NOTIFICATION KHI THAY ĐỔI TRẠNG THÁI TASK
-    new_status = obj.status
-    if old_status != new_status and obj.assigned_to is not None:
-        from app.crud import notification as notification_crud
-
-        try:
-            notification_crud.create_notification(
-                db,
-                title="Thay đổi trạng thái Task",
-                message=f"Task '{obj.title}' đã chuyển sang trạng thái '{new_status}'",
-                employee_id=obj.assigned_to,
-            )
-        except Exception as e:
-            from app.core.logger import app_logger
-
-            app_logger.error(f"Error creating status notification: {e}")
-
-    db.refresh(obj)
-    return obj
+    validate_task_relationships(
+        db,
+        project_id=target_project_id,
+        sprint_id=target_sprint_id,
+        assigned_to=assigned_to if assignee_was_set else None,
+        topic_id=target_topic_id,
+    )
 
 
 def delete(db: Session, obj: Task):
