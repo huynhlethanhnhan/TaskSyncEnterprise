@@ -15,6 +15,9 @@ This document presents the final engineering, quality assurance, and acceptance 
 | **Backend Pytest Suite** | 100% pass across all tests | **408 / 408 PASSED** (0:03:10) | **PASSED** |
 | **Frontend Vite Production Build** | Zero TypeScript / syntax errors | **Built in 2.69s (0 errors)** | **PASSED** |
 | **Playwright E2E Browser Acceptance** | 100% pass across automated browser flows | **10 / 10 PASSED** (0 errors) | **PASSED** |
+| **Docker Build & Hadolint Scan** | Dual backend & frontend multi-stage containers | **Backend & Frontend Images Built** | **PASSED** |
+| **Docker Compose Health & Smoke Test** | All containers reach healthy status | **Automated Smoke Test PASSED** | **PASSED** |
+| **GitHub Actions CI Pipeline** | All quality gates pass on develop | **Hygiene, Backend, Frontend, Docker PASSED** | **PASSED** |
 | **UTF-8 & Mojibake Audit** | Clean Vietnamese text without corruption | Verified 100% clean UTF-8 strings | **PASSED** |
 | **Secrets & Credential Security** | Zero committed secrets or passwords | Local `.env` ignored, sanitized outputs | **PASSED** |
 
