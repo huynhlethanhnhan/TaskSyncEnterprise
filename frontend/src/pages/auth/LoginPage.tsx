@@ -14,8 +14,8 @@ const LoginPage: React.FC = () => {
   const { login, isAuthenticated } = useAuth();
   const toast = useToast();
 
-  const [email, setEmail] = React.useState('admin@tasksync.example.com');
-  const [password, setPassword] = React.useState('TaskSync@2026');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
   const [rememberMe, setRememberMe] = React.useState(true);
   const [isLoading, setIsLoading] = React.useState(false);

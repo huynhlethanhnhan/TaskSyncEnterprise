@@ -110,21 +110,6 @@ def reset_demo_data():
             except Exception:
                 pass
 
-        # Keep or recreate Admin
-        admin_email = "admin@tasksync.local"
-        admin_exists = db.execute(
-            text("SELECT id FROM dbo.employees WHERE email = :email AND is_deleted = 0"),
-            {"email": admin_email},
-        ).scalar()
-
-        if admin_exists:
-            db.execute(
-                text("DELETE FROM dbo.employees WHERE id != :admin_id"),
-                {"admin_id": admin_exists},
-            )
-        else:
-            db.execute(text("DELETE FROM dbo.employees"))
-
         db.execute(text("DELETE FROM dbo.teams"))
         db.execute(text("DELETE FROM dbo.departments"))
 
@@ -162,7 +147,7 @@ def reset_demo_data():
             # Delete all employees
             db.execute(text("DELETE FROM dbo.employees"))
             # Insert single Admin user
-            hashed_pwd = get_password_hash("Admin123!")
+            hashed_pwd = get_password_hash("TaskSync@2026")
             db.execute(
                 text(
                     """
