@@ -90,8 +90,6 @@ services:
         condition: service_healthy
       sqlserver:
         condition: service_healthy
-      sqlserver-init:
-        condition: service_completed_successfully
     networks:
       - frontend-network
       - backend-network
@@ -208,22 +206,6 @@ services:
           memory: 512M
     restart: unless-stopped
 
-  sqlserver-init:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: tasksync-sqlserver-init
-    depends_on:
-      sqlserver:
-        condition: service_healthy
-    environment:
-      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}
-      - MSSQL_DATABASE=TaskSyncEnterprise
-    entrypoint: ["/bin/bash", "-c"]
-    command:
-      - >
-        /opt/mssql-tools18/bin/sqlcmd
-        -S sqlserver -U sa -P "$${MSSQL_SA_PASSWORD}" -C
-        -Q "IF DB_ID(N'$${MSSQL_DATABASE}') IS NULL CREATE DATABASE [$${MSSQL_DATABASE}]"
-    restart: "no"
 
   grafana:
     image: grafana/grafana:11.1.0

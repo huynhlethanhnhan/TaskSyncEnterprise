@@ -15,13 +15,30 @@ services:
       - MSSQL_DATABASE=${MSSQL_DATABASE:-TaskSyncEnterprise}
       - MSSQL_USER=${MSSQL_USER:-sa}
       - MSSQL_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}
+      - RUN_DEMO_SEED=${RUN_DEMO_SEED:-false}
+      - ALLOW_DESTRUCTIVE_RESET=${ALLOW_DESTRUCTIVE_RESET:-false}
     depends_on:
       redis:
         condition: service_healthy
       sqlserver:
         condition: service_healthy
-      sqlserver-init:
-        condition: service_completed_successfully
+    volumes:
+      - backend_uploads:/app/uploads
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-/api/v1}
+    container_name: tasksync-frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
     restart: always
 
   redis:
@@ -60,23 +77,7 @@ services:
       start_period: 30s
     restart: always
 
-  sqlserver-init:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: tasksync-sqlserver-init
-    depends_on:
-      sqlserver:
-        condition: service_healthy
-    environment:
-      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}
-      - MSSQL_DATABASE=${MSSQL_DATABASE:-TaskSyncEnterprise}
-    entrypoint: ["/bin/bash", "-c"]
-    command:
-      - >
-        /opt/mssql-tools18/bin/sqlcmd
-        -S sqlserver -U sa -P "$${MSSQL_SA_PASSWORD}" -C
-        -Q "IF DB_ID(N'$${MSSQL_DATABASE}') IS NULL CREATE DATABASE [$${MSSQL_DATABASE}]"
-    restart: "no"
-
 volumes:
   redis_data:
   mssql_data:
+  backend_uploads:
