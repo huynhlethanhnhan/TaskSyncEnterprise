@@ -16,6 +16,14 @@ class TeamBase(BaseModel):
             return None
         return v
 
+    @field_validator("team_code", "name")
+    @classmethod
+    def strip_and_validate_required_text(cls, v: str) -> str:
+        normalized = v.strip()
+        if not normalized:
+            raise ValueError("Value must not be empty or whitespace")
+        return normalized
+
 
 class TeamCreate(TeamBase):
     pass
@@ -34,6 +42,16 @@ class TeamUpdate(BaseModel):
         if v == "" or v == 0:
             return None
         return v
+
+    @field_validator("team_code", "name")
+    @classmethod
+    def strip_and_validate_required_text(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        normalized = v.strip()
+        if not normalized:
+            raise ValueError("Value must not be empty or whitespace")
+        return normalized
 
 
 class TeamResponse(TeamBase):

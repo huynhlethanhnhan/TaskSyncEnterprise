@@ -67,14 +67,14 @@ def _ensure_setup(db):
         project_id=proj_a.id,
         title=f"Epic for A-{uid}",
         content="Content A",
-        created_by=admin.id,
+        created_by_id=admin.id,
         is_deleted=False,
     )
     topic_b = DiscussionTopic(
         project_id=proj_b.id,
         title=f"Epic for B-{uid}",
         content="Content B",
-        created_by=admin.id,
+        created_by_id=admin.id,
         is_deleted=False,
     )
     db.add_all([topic_a, topic_b])

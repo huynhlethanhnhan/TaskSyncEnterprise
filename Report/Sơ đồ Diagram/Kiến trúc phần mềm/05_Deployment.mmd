@@ -1,0 +1,8 @@
+flowchart LR
+Client --> Nginx
+Nginx --> Frontend
+Nginx --> Backend
+Backend --> SQLServer
+Backend --> Redis
+Backend --> Volumes
+SQLInit[sqlserver-init] --> SQLServer

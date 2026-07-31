@@ -50,7 +50,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   onClose,
   task,
   projects = [],
-  employees = [],
+  employees: _employees = [],
   onSave,
   isLoading = false,
   canEdit = true,
@@ -156,14 +156,39 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   const [storyPoints, setStoryPoints] = React.useState(0);
   const [isUploading, setIsUploading] = React.useState(false);
 
-  const { data: projectMembers = [] } = useProjectMembers(projectId ? Number(projectId) : null);
+  const { data: projectMembers = [], refetch: refetchProjectMembers } = useProjectMembers(projectId ? Number(projectId) : null);
   const { data: projectSprints = [] } = useSprints(projectId ? Number(projectId) : undefined);
   const { data: projectTopics = [] } = useTopics(projectId ? Number(projectId) : undefined);
 
+  const handleProjectChange = (newProjectId: number | '') => {
+    setProjectId(newProjectId);
+    setAssignedTo('');
+    setSprintId('');
+    setTopicId('');
+  };
+
   const assigneeOptions = React.useMemo(() => {
-    const list = projectMembers.length > 0 ? projectMembers : employees;
-    return list.map((emp) => ({ value: String(emp.id), label: emp.full_name || 'Member' }));
-  }, [projectMembers, employees]);
+    if (!projectId || projectMembers.length === 0) {
+      return [];
+    }
+    return projectMembers.map((emp) => {
+      const codeStr = emp.employee_code ? ` (${emp.employee_code})` : '';
+      const pos = (emp as any).position || emp.job_title;
+      const posStr = pos ? ` - ${pos}` : '';
+      return {
+        value: String(emp.id),
+        label: `${emp.full_name}${codeStr}${posStr}`,
+      };
+    });
+  }, [projectId, projectMembers]);
+
+  const assigneePlaceholder = !projectId
+    ? '-- Chọn Dự án trước --'
+    : projectMembers.length === 0
+    ? 'Dự án chưa có thành viên'
+    : '-- Chọn Người thực hiện --';
+
+  const isAssigneeDisabled = !canEdit || !projectId || projectMembers.length === 0;
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -203,6 +228,16 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
     if (canEdit && !title.trim()) return;
 
     if (canEdit) {
+      if (assignedTo) {
+        const { data: latestMembers } = await refetchProjectMembers();
+        const memberList = latestMembers || projectMembers;
+        const isValid = memberList.some((m) => Number(m.id) === Number(assignedTo));
+        if (!isValid) {
+          toast.error('Lỗi phân công', 'Nhân viên được chọn chưa phải thành viên của dự án.');
+          return;
+        }
+      }
+
       await onSave({
         title: title.trim(),
         name: title.trim(),
@@ -214,7 +249,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
         sprint_id: sprintId ? Number(sprintId) : null,
         topic_id: topicId ? Number(topicId) : null,
         deadline: deadline || null,
-        story_points: Number(storyPoints),
+        story_points: storyPoints === 0 ? null : storyPoints,
       });
     } else if (isAssignedToCurrentUser && task) {
       await onSave({
@@ -555,7 +590,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                   label="Thuộc Dự án"
                   value={String(projectId)}
                   disabled={!canEdit}
-                  onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
+                  onChange={(e) => handleProjectChange(e.target.value ? Number(e.target.value) : '')}
                   options={[
                     { value: '', label: '-- Chọn Dự án --' },
                     ...projects.map((p) => ({ value: String(p.id), label: p.name })),
@@ -565,10 +600,10 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Người Thực hiện"
                   value={String(assignedTo)}
-                  disabled={!canEdit}
+                  disabled={isAssigneeDisabled}
                   onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : '')}
                   options={[
-                    { value: '', label: '-- Chọn Người thực hiện --' },
+                    { value: '', label: assigneePlaceholder },
                     ...assigneeOptions,
                   ]}
                 />
@@ -690,7 +725,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
             <Select
               label="Thuộc Dự án"
               value={String(projectId)}
-              onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
+              onChange={(e) => handleProjectChange(e.target.value ? Number(e.target.value) : '')}
               options={[
                 { value: '', label: '-- Chọn Dự án --' },
                 ...projects.map((p) => ({ value: String(p.id), label: p.name })),
@@ -700,9 +735,10 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
             <Select
               label="Người Thực hiện"
               value={String(assignedTo)}
+              disabled={isAssigneeDisabled}
               onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : '')}
               options={[
-                { value: '', label: '-- Chọn Người thực hiện --' },
+                { value: '', label: assigneePlaceholder },
                 ...assigneeOptions,
               ]}
             />

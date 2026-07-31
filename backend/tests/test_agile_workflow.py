@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Any
 
 import pytest
 from fastapi import HTTPException
@@ -229,6 +230,9 @@ def test_completing_sprint_returns_unfinished_item_to_product_backlog(db):
     assert task.sprint_id == sprint.id
 
 
+from app.core.exceptions import BusinessRuleException
+
+
 def test_task_cannot_reference_sprint_from_another_project(db):
     first_project = _project("PRJ-1", "Project 1")
     second_project = _project("PRJ-2", "Project 2")
@@ -238,7 +242,7 @@ def test_task_cannot_reference_sprint_from_another_project(db):
     db.add(sprint)
     db.commit()
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises((HTTPException, BusinessRuleException)) as exc_info:
         validate_task_relationships(
             db,
             project_id=first_project.id,
@@ -267,7 +271,7 @@ def test_task_assignee_must_be_an_active_project_member(db):
     db.add(employee)
     db.commit()
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises((HTTPException, BusinessRuleException)) as exc_info:
         validate_task_relationships(
             db,
             project_id=project.id,
@@ -351,9 +355,9 @@ def test_project_list_is_scoped_for_manager_and_employee(db):
 
 def test_project_membership_check_generates_sql_server_compatible_query():
     class RecordingSession:
-        statement = None
+        statement: Any = None
 
-        def scalar(self, statement):
+        def scalar(self, statement: Any) -> Any:
             self.statement = statement
             return 1
 
@@ -373,8 +377,9 @@ def test_project_membership_check_generates_sql_server_compatible_query():
     )
     session = RecordingSession()
 
-    assert user_can_access_project(session, project, employee) is True
+    assert user_can_access_project(session, project, employee) is True  # type: ignore[arg-type]
 
+    assert session.statement is not None
     sql = str(
         session.statement.compile(
             dialect=mssql.dialect(),

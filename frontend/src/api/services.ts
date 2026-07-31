@@ -177,6 +177,10 @@ export const projectsApi = {
     const res = await api.get(`/projects/${projectId}/members`);
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
+  addMember: async (projectId: number, employeeId: number): Promise<any> => {
+    const res = await api.post(`/projects/${projectId}/members`, { employee_id: employeeId });
+    return res.data?.data || res.data;
+  },
 };
 
 export const tasksApi = {

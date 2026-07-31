@@ -13,6 +13,7 @@ from app.schemas.project import (
     ProjectUpdate,
     ProjectResponse,
     ProjectMemberSummaryResponse,
+    ProjectMemberAddRequest,
 )
 from app.models.employee import Employee
 from app.core.deps import get_current_user
@@ -144,7 +145,6 @@ def get_project_members(
     from app.models.project import Project
     from app.models.project_member import ProjectMember
     from app.models.employee import Employee
-    from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
     from sqlalchemy import select
 
     project = db.get(Project, project_id)
@@ -156,8 +156,70 @@ def get_project_members(
     members_stmt = (
         select(Employee)
         .join(ProjectMember, Employee.id == ProjectMember.employee_id)
-        .where(ProjectMember.project_id == project_id, Employee.is_deleted == False)
+        .where(
+            ProjectMember.project_id == project_id,
+            Employee.is_deleted == False,  # noqa: E712
+            Employee.is_active == True,  # noqa: E712
+        )
     )
     members = db.scalars(members_stmt).all()
 
     return members
+
+
+@router.post(
+    "/{project_id:int}/members",
+    status_code=201,
+    summary="Add a member to project",
+)
+def add_project_member(
+    project_id: int,
+    data: ProjectMemberAddRequest,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
+    from app.models.project import Project
+    from app.models.project_member import ProjectMember
+    from app.models.employee import Employee
+    from sqlalchemy import select
+    from app.core.exceptions import BusinessRuleException
+
+    project = db.get(Project, project_id)
+    if not project or project.is_deleted:
+        raise HTTPException(404, "Project not found")
+
+    require_project_management(db, project_id, current_user)
+
+    emp = db.get(Employee, data.employee_id)
+    if not emp or emp.is_deleted or not emp.is_active:
+        raise HTTPException(404, "Employee not found or is inactive.")
+
+    existing = db.scalar(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.employee_id == data.employee_id,
+        )
+    )
+    if existing is not None:
+        raise BusinessRuleException(
+            message="Thành viên đã thuộc dự án này.",
+            error_code="MEMBER_ALREADY_IN_PROJECT",
+            status_code=409,
+        )
+
+    member = ProjectMember(project_id=project_id, employee_id=data.employee_id)
+    db.add(member)
+    db.commit()
+    db.refresh(member)
+
+    from app.cache import CacheInvalidator
+
+    CacheInvalidator.invalidate_project(project_id)
+
+    return {
+        "success": True,
+        "message": "Đã thêm thành viên vào dự án thành công.",
+        "project_id": project_id,
+        "employee_id": data.employee_id,
+    }
+

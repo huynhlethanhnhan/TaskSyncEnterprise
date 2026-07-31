@@ -1,0 +1,6 @@
+flowchart LR
+Admin --> Web[React Web Application]
+Manager --> Web
+Employee --> Web
+Web --> Platform[TaskSyncEnterprise REST API + WebSocket]
+Platform -. notification .-> Provider[Email / Push Provider]

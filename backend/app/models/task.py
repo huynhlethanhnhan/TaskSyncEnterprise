@@ -37,7 +37,7 @@ class Task(Base):
 
     status: Mapped[str] = mapped_column(Unicode(30), server_default=text("N'To Do'"))
 
-    story_points: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    story_points: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     progress_percent: Mapped[float] = mapped_column(
         Numeric(5, 2), server_default=text("0")

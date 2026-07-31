@@ -69,8 +69,8 @@ def test_employee_access_denied(client, db):
     assert response.status_code == 403
 
 
-# 🧪 TEST CASE 4: Regular employees are read-only even when assigned
-def test_update_assigned_task_denied_for_regular_employee(client, db):
+# 🧪 TEST CASE 4: Assigned employees can update status and progress
+def test_assigned_employee_can_update_status_and_progress(client, db):
     email = "worker@example.com"
     user = create_mock_user(db, email, ROLE_EMPLOYEE)
     headers = get_auth_headers(client, email)
@@ -106,17 +106,67 @@ def test_update_assigned_task_denied_for_regular_employee(client, db):
     db.add(assignment)
     db.commit()
 
-    # Assigned employees can view and collaborate, but only managers/leaders save task fields.
+    # Assigned employees can update status and progress on their own tasks.
     response = client.put(
         f"/api/v1/tasks/my-task/{task.id}",
         json={"status": "In Progress", "progress_percent": 50.0},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "In Progress"
+    assert response.json()["progress_percent"] == 50.0
+
+    db.refresh(task)
+    assert task.status == "In Progress"
+    assert task.progress_percent == 50.0
+
+
+def test_assigned_employee_cannot_update_admin_fields(client, db):
+    email = "worker@example.com"
+    user = create_mock_user(db, email, ROLE_EMPLOYEE)
+    headers = get_auth_headers(client, email)
+
+    from app.models.project import Project
+
+    project = Project(
+        name="Test Project",
+        project_code="PRJ001",
+        status="Planning",
+        priority="Medium",
+        progress_percent=0.0,
+        is_deleted=False,
+    )
+    db.add(project)
+    db.commit()
+
+    task = Task(
+        project_id=project.id,
+        title="Assigned Task",
+        status="To Do",
+        priority="Medium",
+        story_points=1,
+        progress_percent=0.0,
+        is_deleted=False,
+    )
+    db.add(task)
+    db.commit()
+    db.add(TaskAssignment(task_id=task.id, employee_id=user.id))
+    db.commit()
+
+    response = client.put(
+        f"/api/v1/tasks/{task.id}",
+        json={
+            "title": "Unauthorized title change",
+            "story_points": 8,
+            "deadline": "2026-08-15",
+        },
         headers=headers,
     )
     assert response.status_code == 403
 
 
 # 🧪 TEST CASE 5: Task Ownership Failure - Modify unauthorized task (Negative Test)
-def test_update_unassigned_task_denied(client, db):
+def test_unassigned_employee_cannot_update_task_status(client, db):
     email_1 = "worker1@example.com"
     email_2 = "worker2@example.com"
     user_1 = create_mock_user(db, email_1, ROLE_EMPLOYEE)

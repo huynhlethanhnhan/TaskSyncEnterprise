@@ -1,0 +1,12 @@
+flowchart LR
+N0["SQL Server"]
+N1["Backup Job"]
+N2["Kho lưu trữ"]
+N3["Kiểm tra checksum"]
+N4["Restore thử nghiệm"]
+N5["Xác nhận RPO/RTO"]
+N0 --> N1
+N1 --> N2
+N2 --> N3
+N3 --> N4
+N4 --> N5

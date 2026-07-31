@@ -1,0 +1,9 @@
+erDiagram
+PROJECT ||--o{ TOPIC : defines
+PROJECT ||--o{ SPRINT : plans
+PROJECT ||--o{ BACKLOG_ITEM : owns
+PROJECT ||--o{ TASK : delivers
+TOPIC ||--o{ BACKLOG_ITEM : groups
+SPRINT ||--o{ TASK : executes
+EMPLOYEE ||--o{ TASK_ASSIGNMENT : receives
+TASK ||--o{ TASK_ASSIGNMENT : assigns

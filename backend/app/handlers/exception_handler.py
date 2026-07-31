@@ -3,6 +3,7 @@ import logging
 import time
 from datetime import datetime, timezone
 from fastapi import Request, FastAPI
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
@@ -195,7 +196,7 @@ async def unified_exception_handler(request: Request, exc: Exception) -> JSONRes
     return JSONResponse(
         status_code=mapped_exc.status_code,
         headers={"X-Request-ID": request_id},
-        content=response_model.model_dump(),
+        content=jsonable_encoder(response_model.model_dump()),
     )
 
 

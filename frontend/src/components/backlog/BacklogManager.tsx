@@ -40,7 +40,7 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [priority, setPriority] = React.useState('Medium');
-  const [storyPoints, setStoryPoints] = React.useState(0);
+  const [storyPoints, setStoryPoints] = React.useState<number | ''>('');
   const [sprintId, setSprintId] = React.useState<number | ''>('');
   const [topicId, setTopicId] = React.useState<number | ''>('');
   const [epicTitle, setEpicTitle] = React.useState('');
@@ -72,14 +72,14 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
         title: title.trim(),
         description: description.trim() || null,
         priority,
-        story_points: Number(storyPoints),
+        story_points: storyPoints === '' || storyPoints === 0 ? null : storyPoints,
         sprint_id: sprintId ? Number(sprintId) : null,
         topic_id: topicId ? Number(topicId) : null,
       });
       setTitle('');
       setDescription('');
       setPriority('Medium');
-      setStoryPoints(0);
+      setStoryPoints('');
       setSprintId('');
       setTopicId('');
       toast.success('Thành công', 'Đã thêm một hạng mục mới vào Product Backlog.');
@@ -216,7 +216,9 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                     label="Story Points"
                     type="number"
                     value={storyPoints}
-                    onChange={(e) => setStoryPoints(Number(e.target.value))}
+                    onChange={(e) =>
+                      setStoryPoints(e.target.value === '' ? '' : Number(e.target.value))
+                    }
                     min={0}
                   />
                 </div>

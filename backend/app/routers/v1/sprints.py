@@ -49,8 +49,8 @@ def calculate_and_save_snapshot(
         select(Task).where(Task.sprint_id == sprint_id, Task.is_deleted == False)
     ).all()
 
-    total_sp = sum(t.story_points for t in tasks)
-    completed_sp = sum(t.story_points for t in tasks if t.status == "Done")
+    total_sp = sum(t.story_points or 0 for t in tasks)
+    completed_sp = sum(t.story_points or 0 for t in tasks if t.status == "Done")
     remaining_sp = total_sp - completed_sp
 
     total_tasks = len(tasks)
@@ -381,8 +381,8 @@ def get_sprint_analytics(
 
     total_tasks = len(tasks)
     completed_tasks = sum(1 for t in tasks if t.status == "Done")
-    total_sp = sum(t.story_points for t in tasks)
-    completed_sp = sum(t.story_points for t in tasks if t.status == "Done")
+    total_sp = sum(t.story_points or 0 for t in tasks)
+    completed_sp = sum(t.story_points or 0 for t in tasks if t.status == "Done")
 
     return SprintAnalyticsResponse(
         sprint_id=sprint.id,

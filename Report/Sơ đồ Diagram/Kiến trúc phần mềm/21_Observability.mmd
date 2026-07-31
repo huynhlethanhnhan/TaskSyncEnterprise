@@ -1,0 +1,12 @@
+flowchart LR
+N0["FastAPI / Nginx"]
+N1["Structured Logs"]
+N2["Prometheus Metrics"]
+N3["Grafana Dashboard"]
+N4["Alert"]
+N5["Nhóm vận hành"]
+N0 --> N1
+N1 --> N2
+N2 --> N3
+N3 --> N4
+N4 --> N5

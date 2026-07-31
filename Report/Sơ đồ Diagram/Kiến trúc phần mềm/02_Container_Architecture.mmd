@@ -1,0 +1,8 @@
+flowchart TB
+Browser --> Nginx
+Nginx --> Frontend[React + Vite SPA]
+Nginx --> Backend[FastAPI Modular Monolith]
+Backend --> SQL[SQL Server - Source of Truth]
+Backend --> Redis[Redis - Cache Aside]
+Backend --> Storage[Upload Volume]
+Backend --> Metrics[Prometheus / Grafana]

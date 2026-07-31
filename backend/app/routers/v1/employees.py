@@ -97,6 +97,7 @@ def get_my_profile(current_user: Employee = Depends(get_current_user)):
 @router.post(
     "",
     response_model=EmployeeResponse,
+    status_code=201,
     dependencies=[
         Depends(RequireAdmin)
     ],  # <-- Admin mới được tạo tài khoản nhân viên mới

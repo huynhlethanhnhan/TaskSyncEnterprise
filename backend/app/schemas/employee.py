@@ -23,9 +23,29 @@ class EmployeeBase(BaseModel):
     job_title: str | None = None
 
 
+import re
+from pydantic import field_validator
+
+
 class EmployeeCreate(EmployeeBase):
     employee_code: str | None = None
     password: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_policy(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Mật khẩu phải có ít nhất 8 ký tự.")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Mật khẩu phải chứa ít nhất một chữ hoa.")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Mật khẩu phải chứa ít nhất một chữ thường.")
+        if not re.search(r"\d", v):
+            raise ValueError("Mật khẩu phải chứa ít nhất một chữ số.")
+        if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]", v):
+            raise ValueError("Mật khẩu phải chứa ít nhất một ký tự đặc biệt.")
+        return v
+
 
 
 class EmployeeUpdate(BaseModel):

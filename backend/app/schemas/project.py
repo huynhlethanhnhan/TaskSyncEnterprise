@@ -49,7 +49,15 @@ class ProjectMemberSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    employee_code: str | None = None
     full_name: str
     avatar_url: str | None = None
     job_title: str | None = None
+    position: str | None = None
     email: str | None = None
+    is_active: bool = True
+
+
+class ProjectMemberAddRequest(BaseModel):
+    employee_id: int
+

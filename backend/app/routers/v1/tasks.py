@@ -125,6 +125,7 @@ def get_task(
 @router.post(
     "",
     response_model=TaskResponse,
+    status_code=201,
     dependencies=[Depends(RequireEmployee)],
 )
 def create_task(
@@ -133,8 +134,8 @@ def create_task(
     current_user: Employee = Depends(get_current_user),
 ):
     from app.core.logger import app_logger
-    import json
-    app_logger.info(f"--- DIAGNOSTIC TASK CREATE LOG ---")
+
+    app_logger.info("--- DIAGNOSTIC TASK CREATE LOG ---")
     app_logger.info(f"Payload: {data.model_dump_json()}")
     app_logger.info(f"current_user.id: {current_user.id}")
     app_logger.info(f"project_id: {data.project_id}")
@@ -143,7 +144,7 @@ def create_task(
     app_logger.info(f"topic_id: {data.topic_id}")
     app_logger.info(f"story_points: {data.story_points}")
     app_logger.info(f"deadline: {data.deadline}")
-    
+
     require_project_management(db, data.project_id, current_user)
     secured_data = data.model_copy(update={"created_by": current_user.id})
     task = crud_task.create(db, secured_data)
