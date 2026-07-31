@@ -33,7 +33,7 @@ def reset_demo_data():
         sys.exit(1)
 
     from app.config import settings
-    db_uri = str(settings.SQLALCHEMY_DATABASE_URI).lower()
+    db_uri = settings.SQLALCHEMY_DATABASE_URI.lower()
     if "tasksyncenterprise" not in db_uri:
         print(f"[ERROR] Destructive reset target must be 'TaskSyncEnterprise', found URI: {db_uri}")
         sys.exit(1)

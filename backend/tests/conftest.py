@@ -8,7 +8,7 @@ from app.database import Base, get_db
 # it before importing ``app.models`` and ``app.main`` so mapper aliases created
 # during application startup never capture a schema-qualified selectable in the SQLite harness.
 Base.metadata.schema = None
-import app.models  # noqa: F401
+import app.models as _app_models  # noqa: F401
 for table in Base.metadata.tables.values():
     table.schema = None
 
