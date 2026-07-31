@@ -42,6 +42,13 @@ class Project(Base):
         Numeric(5, 2), server_default=text("0")
     )
 
+    department_id: Mapped[int | None] = mapped_column(
+        ForeignKey("departments.id"), nullable=True
+    )
+    team_id: Mapped[int | None] = mapped_column(
+        ForeignKey("teams.id"), nullable=True
+    )
+
     created_by: Mapped[int | None] = mapped_column(ForeignKey("employees.id"))
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, server_default=text("0"))
@@ -52,6 +59,10 @@ class Project(Base):
 
     updated_at: Mapped[datetime | None]
 
+    department = relationship("Department", foreign_keys=[department_id])
+    team = relationship("Team", foreign_keys=[team_id])
+
     members = relationship(
         "ProjectMember", back_populates="project", cascade="all, delete-orphan"
     )
+

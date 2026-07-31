@@ -154,15 +154,27 @@ def update(db: Session, obj: Task, data: TaskUpdate):
         else obj.project_id
     )
 
-    # Khi đổi Project nhưng không chọn lại Sprint,
-    # tự đưa Task về backlog để không giữ Sprint của Project cũ.
-    if (
-        project_was_set
-        and target_project_id != obj.project_id
-        and not sprint_was_set
-    ):
-        task_data["sprint_id"] = None
-        sprint_was_set = True
+    # When changing Project:
+    # 1. Clear old Sprint unless a new sprint was set
+    # 2. Clear old Assignee unless a new valid ProjectMember assignee was set
+    if project_was_set and target_project_id != obj.project_id:
+        if not sprint_was_set:
+            task_data["sprint_id"] = None
+            sprint_was_set = True
+
+        if not assignee_was_set:
+            assigned_to = None
+            assignee_was_set = True
+        elif assigned_to is not None:
+            from app.models.project_member import ProjectMember
+            is_member = db.scalar(
+                select(ProjectMember.id).where(
+                    ProjectMember.project_id == target_project_id,
+                    ProjectMember.employee_id == assigned_to,
+                )
+            )
+            if is_member is None:
+                assigned_to = None
 
     target_sprint_id = (
         task_data.get("sprint_id")
@@ -176,13 +188,80 @@ def update(db: Session, obj: Task, data: TaskUpdate):
         else obj.topic_id
     )
 
+    target_assignee = (
+        assigned_to
+        if assignee_was_set
+        else None
+    )
+
     validate_task_relationships(
         db,
         project_id=target_project_id,
         sprint_id=target_sprint_id,
-        assigned_to=assigned_to if assignee_was_set else None,
+        assigned_to=target_assignee,
         topic_id=target_topic_id,
     )
+
+    old_assigned_to = obj.assigned_to
+    old_status = obj.status
+
+    if task_data.get("status") == "Done":
+        task_data["progress_percent"] = 100
+
+    for k, v in task_data.items():
+        setattr(obj, k, v)
+
+    db.commit()
+
+    if assignee_was_set:
+        from app.models.task_assignment import TaskAssignment
+        from sqlalchemy import delete
+
+        db.execute(delete(TaskAssignment).where(TaskAssignment.task_id == obj.id))
+
+        if assigned_to is not None:
+            new_assignment = TaskAssignment(task_id=obj.id, employee_id=assigned_to)
+            db.add(new_assignment)
+            db.commit()
+
+            if old_assigned_to != assigned_to:
+                from app.crud import notification as notification_crud
+
+                try:
+                    notification_crud.create_notification(
+                        db,
+                        title="Bạn có task mới",
+                        message=obj.title,
+                        employee_id=assigned_to,
+                    )
+                except Exception as e:
+                    from app.core.logger import app_logger
+
+                    app_logger.error(f"Error creating notification: {e}")
+        else:
+            db.commit()
+        
+        db.expire(obj, ["assignments"])
+
+    new_status = obj.status
+    target_emp_for_notif = assigned_to if assignee_was_set else old_assigned_to
+    if old_status != new_status and target_emp_for_notif is not None:
+        from app.crud import notification as notification_crud
+
+        try:
+            notification_crud.create_notification(
+                db,
+                title="Thay đổi trạng thái Task",
+                message=f"Task '{obj.title}' đã chuyển sang trạng thái '{new_status}'",
+                employee_id=target_emp_for_notif,
+            )
+        except Exception as e:
+            from app.core.logger import app_logger
+
+            app_logger.error(f"Error creating status notification: {e}")
+
+    db.refresh(obj)
+    return obj
 
 
 def delete(db: Session, obj: Task):

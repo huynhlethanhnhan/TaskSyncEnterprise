@@ -15,6 +15,8 @@ class ProjectBase(BaseModel):
     priority: str = "Medium"
 
     budget: float | None = None
+    department_id: int | None = None
+    team_id: int | None = None
 
 
 class ProjectCreate(ProjectBase):
@@ -34,6 +36,8 @@ class ProjectUpdate(BaseModel):
 
     budget: float | None = None
     progress_percent: float | None = None
+    department_id: int | None = None
+    team_id: int | None = None
 
 
 class ProjectResponse(ProjectBase):
@@ -43,6 +47,8 @@ class ProjectResponse(ProjectBase):
     id: int
     progress_percent: float
     created_at: datetime
+    created_by: int | None = None
+
 
 
 class ProjectMemberSummaryResponse(BaseModel):

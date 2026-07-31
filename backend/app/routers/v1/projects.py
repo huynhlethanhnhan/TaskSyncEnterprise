@@ -79,6 +79,11 @@ def create_project(
     db: Session = Depends(get_db),
     current_user: Employee = Depends(get_current_user),
 ):
+    from app.services.project_access import validate_project_relationships
+
+    validate_project_relationships(
+        db, department_id=data.department_id, team_id=data.team_id
+    )
     secured_data = data.model_copy(update={"created_by": current_user.id})
     res = crud_project.create(db, secured_data)
     from app.cache import CacheInvalidator
@@ -103,6 +108,16 @@ def update_project(
 
     if obj is None:
         raise HTTPException(404, "Project not found")
+
+    from app.services.project_access import validate_project_relationships
+
+    target_department_id = (
+        data.department_id if data.department_id is not None else obj.department_id
+    )
+    target_team_id = data.team_id if data.team_id is not None else obj.team_id
+    validate_project_relationships(
+        db, department_id=target_department_id, team_id=target_team_id
+    )
 
     res = crud_project.update(db, obj, data)
     from app.cache import CacheInvalidator
@@ -193,6 +208,28 @@ def add_project_member(
     emp = db.get(Employee, data.employee_id)
     if not emp or emp.is_deleted or not emp.is_active:
         raise HTTPException(404, "Employee not found or is inactive.")
+
+    from app.core.constants import ROLE_ADMIN
+
+    if emp.role_id != ROLE_ADMIN:
+        if (
+            project.department_id is not None
+            and emp.department_id != project.department_id
+        ):
+            raise BusinessRuleException(
+                message="Nhân viên không thuộc Phòng ban phụ trách dự án.",
+                error_code="EMPLOYEE_DEPARTMENT_MISMATCH",
+                status_code=409,
+            )
+        if (
+            project.team_id is not None
+            and emp.team_id != project.team_id
+        ):
+            raise BusinessRuleException(
+                message="Nhân viên không thuộc Team phụ trách dự án.",
+                error_code="EMPLOYEE_TEAM_MISMATCH",
+                status_code=409,
+            )
 
     existing = db.scalar(
         select(ProjectMember).where(

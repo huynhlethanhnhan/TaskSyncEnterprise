@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 from fastapi import HTTPException
+from app.core.exceptions import BusinessRuleException
 from pydantic import ValidationError
 from sqlalchemy.dialects import mssql
 
@@ -81,7 +82,7 @@ def test_cross_project_backlog_assignment_is_rejected(db):
     db.add_all([sprint, item])
     db.commit()
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises((HTTPException, BusinessRuleException)) as exc_info:
         sprint_service.add_backlog_item(db, sprint, item)
 
     assert exc_info.value.status_code == 409
@@ -99,7 +100,7 @@ def test_duplicate_sprint_assignment_is_rejected(db):
 
     sprint_service.add_backlog_item(db, first_sprint, item)
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises((HTTPException, BusinessRuleException)) as exc_info:
         sprint_service.add_backlog_item(db, second_sprint, item)
 
     assert exc_info.value.status_code == 409

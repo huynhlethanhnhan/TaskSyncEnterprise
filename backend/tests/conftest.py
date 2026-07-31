@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
+import app.models  # noqa: F401
 
 # The application metadata defaults to SQL Server's ``dbo`` schema. Normalize
 # it before importing ``app.main`` so mapper aliases created during application
@@ -25,12 +26,14 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 def db():
     from sqlalchemy import text
     from sqlalchemy.sql.schema import DefaultClause
+    import app.models  # noqa: F401
 
     # Intercept and adapt metadata dynamically for SQLite. Clearing only each
     # table schema leaves ORM aliases able to inherit MetaData(schema="dbo"),
     # which makes joined dashboard queries target a nonexistent dbo database.
     Base.metadata.schema = None
-    for table in Base.metadata.tables.values():
+    for key in list(Base.metadata.tables.keys()):
+        table = Base.metadata.tables[key]
         table.schema = None
         for column in table.columns:
             if column.server_default is not None and isinstance(
