@@ -222,9 +222,11 @@ def update(db: Session, obj: Task, data: TaskUpdate):
         if assigned_to is not None:
             new_assignment = TaskAssignment(task_id=obj.id, employee_id=assigned_to)
             db.add(new_assignment)
-            db.commit()
 
-            if old_assigned_to != assigned_to:
+        db.commit()
+        db.expire(obj, ["assignments"])
+
+        if assigned_to is not None and old_assigned_to != assigned_to:
                 from app.crud import notification as notification_crud
 
                 try:

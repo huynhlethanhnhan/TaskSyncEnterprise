@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate
@@ -14,19 +14,25 @@ def get_all(
     limit=20,
 ) -> list[Project]:
 
-    stmt = select(Project).where(Project.is_deleted == False)  # noqa: E712
+    stmt = (
+        select(Project)
+        .options(joinedload(Project.department), joinedload(Project.team))
+        .where(Project.is_deleted == False)  # noqa: E712
+    )
     scope = project_scope_predicate(current_user)
     if scope is not None:
         stmt = stmt.where(scope)
     stmt = stmt.order_by(Project.id.desc()).offset(skip).limit(limit)
 
-    return list(db.scalars(stmt).all())
+    return list(db.scalars(stmt).unique().all())
 
 
 def get_by_id(db: Session, project_id: int):
 
     return db.scalar(
-        select(Project).where(
+        select(Project)
+        .options(joinedload(Project.department), joinedload(Project.team))
+        .where(
             Project.id == project_id,
             Project.is_deleted == False,  # noqa: E712
         )

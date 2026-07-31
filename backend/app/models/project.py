@@ -66,3 +66,12 @@ class Project(Base):
         "ProjectMember", back_populates="project", cascade="all, delete-orphan"
     )
 
+    @property
+    def department_name(self) -> str | None:
+        return self.department.name if self.department else None
+
+    @property
+    def team_name(self) -> str | None:
+        return self.team.name if self.team else None
+
+

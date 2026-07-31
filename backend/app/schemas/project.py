@@ -48,6 +48,8 @@ class ProjectResponse(ProjectBase):
     progress_percent: float
     created_at: datetime
     created_by: int | None = None
+    department_name: str | None = None
+    team_name: str | None = None
 
 
 

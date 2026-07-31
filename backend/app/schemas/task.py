@@ -50,6 +50,7 @@ class TaskCreate(BaseModel):
 
 
 class TaskUpdate(BaseModel):
+    project_id: int | None = None
     title: str | None = None
     description: str | None = None
     priority: str | None = None
@@ -61,7 +62,7 @@ class TaskUpdate(BaseModel):
     sprint_id: int | None = None
     topic_id: int | None = None
 
-    @field_validator("sprint_id", "topic_id", "assigned_to", mode="before", check_fields=False)
+    @field_validator("project_id", "sprint_id", "topic_id", "assigned_to", mode="before", check_fields=False)
     @classmethod
     def empty_to_none(cls, v):
         if v == "" or v == 0:
