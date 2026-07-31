@@ -57,6 +57,7 @@ api.interceptors.response.use(
         isRefreshing = false;
         tokenService.clear();
         localStorage.removeItem("user");
+        window.dispatchEvent(new CustomEvent('tasksync:session-expired'));
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";
         }
@@ -78,6 +79,7 @@ api.interceptors.response.use(
         processQueue(refreshErr, null);
         tokenService.clear();
         localStorage.removeItem("user");
+        window.dispatchEvent(new CustomEvent('tasksync:session-expired'));
 
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";

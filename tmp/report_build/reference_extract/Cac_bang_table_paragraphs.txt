@@ -1,0 +1,61 @@
+[P1][Heading 2] Thiết kế hệ thống
+[P2][Normal] Thiết kế CSDL
+[P5][Caption] Hinh xx : Sơ đồ Diagram TaskSyncEnterprise
+[P6][Normal] 1 Phân hệ Quản lý Nhân viên
+[P8][Caption] Hinh xx : Bảng roles
+[P9][Normal] Chi tiết bảng roles
+[P12][Caption] Hinh xx : Bảng departments
+[P13][Normal] Chi tiết bảng departments
+[P16][Caption] Hinh xx : Bảng teams
+[P17][Normal] Chi tiết bảng teams
+[P20][Caption] Hinh xx : Bảng employees
+[P21][Normal] Chi tiết bảng employees
+[P23][Normal] Phân hệ Quản lý Dự án và Công việc
+[P25][Caption] Hinh xx : Bảng projects
+[P26][Normal] Chi tiết bảng projects
+[P29][Caption] Hinh xx : Bảng project_members
+[P30][Normal] Chi tiết bảng project_members
+[P33][Caption] Hinh xx : Bảng tasks
+[P34][Normal] Chi tiết bảng tasks
+[P36][Normal] Chi tiết bảng task_assignments
+[P39][Caption] Hinh xx : Bảng task_comments
+[P40][Normal] Chi tiết bảng task_comments
+[P43][Caption] Hinh xx : Bảng task_checklists
+[P44][Normal] Chi tiết bảng task_checklists
+[P47][Caption] Hinh xx : Bảng task_assignments
+[P48][Normal] Chi tiết bảng task_attachments
+[P50][Normal] Phân hệ Thông báo
+[P53][Caption] Hinh xx : Bảng notifications
+[P54][Normal] Chi tiết bảng notifications
+[P57][Caption] Hinh xx : Bảng departments
+[P58][Normal] Chi tiết bảng notification_preferences
+[P61][Caption] Hinh xx : Bảng notification_logs
+[P62][Normal] Chi tiết bảng notification_logs
+[P64][Normal] Phân hệ Xác thực và Bảo mật
+[P66][Caption] Hinh xx : Bảng user_sessions
+[P67][Normal] Chi tiết bảng user_sessions
+[P70][Caption] Hinh xx : Bảng refresh_tokens
+[P71][Normal] Chi tiết bảng refresh_tokens
+[P74][Caption] Hinh xx : Bảng token_blacklist
+[P75][Normal] Chi tiết bảng token_blacklist
+[P77][Normal] Phân hệ Hành chính và Audit Log
+[P79][Caption] Hinh xx : Bảng vacations
+[P80][Normal] Chi tiết bảng vacations
+[P83][Caption] Hinh xx : Bảng audit_logs
+[P84][Normal] Chi tiết bảng audit_logs
+[P86][Normal] Thiết kế giao diện
+[P88][Caption] Hinh xx : Giao diện trang chủ của admin
+[P91][Caption] Hinh xx : Giao diện trang chủ của admin
+[P94][Caption] Hinh xx : Giao diện project của admin
+[P97][Caption] Hinh xx : Giao diện task của admin
+[P99][Caption] Hinh xx : Giao diện quản lý employee của admin
+[P101][Caption] Hinh xx : Giao diện quản lý departments của admin
+[P102][Caption] Hinh xx : Giao diện lịch
+[P103][Caption] Hinh xx : Giao diện trang hiển thị thông báo
+[P105][Caption] Hinh xx : Giao diện cài đặt hệ thống
+[P108][Caption] Hinh xx : Giao diện audit log của admin
+[P110][Caption] Hinh xx : Giao diện profile
+[P111][Caption] Hinh xx : Giao diện trang chủ chính của employee
+[P112][Caption] Hinh xx : Giao diện quản lý dự án của employee
+[P113][Caption] Hinh xx : Giao diện task của employee
+[P116][Caption] Hinh xx : Giao diện đăng nhập

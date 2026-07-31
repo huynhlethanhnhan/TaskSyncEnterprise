@@ -76,6 +76,10 @@ def get_by_id(db: Session, task_id: int):
 
 def create(db: Session, data: TaskCreate):
     task_data = data.model_dump()
+    if not task_data.get("title") and task_data.get("name"):
+        task_data["title"] = task_data["name"]
+    task_data.pop("name", None)
+
     assigned_to = task_data.pop("assigned_to", None)
     validate_task_relationships(
         db,
@@ -87,7 +91,23 @@ def create(db: Session, data: TaskCreate):
 
     obj = Task(**task_data)
     db.add(obj)
-    db.commit()
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        from app.core.logger import error_logger
+        db_orig = getattr(exc, "orig", exc)
+        error_logger.error(
+            f"Task create DB commit failed [{type(exc).__name__}]: {db_orig!r} | Statement: {getattr(exc, 'statement', None)} | Params: {getattr(exc, 'params', None)}",
+            exc_info=True,
+            extra={
+                "db_error": str(db_orig),
+                "db_error_repr": repr(db_orig),
+                "statement": str(getattr(exc, "statement", None)),
+                "params": str(getattr(exc, "params", None)),
+            },
+        )
+        raise
     db.refresh(obj)
 
     if assigned_to is not None:
@@ -95,9 +115,14 @@ def create(db: Session, data: TaskCreate):
 
         assignment = TaskAssignment(task_id=obj.id, employee_id=assigned_to)
         db.add(assignment)
-        db.commit()
+        try:
+            db.commit()
+        except Exception as e:
+            from app.core.logger import app_logger
 
-        # KÍCH HOẠT TRIGGER NOTIFICATION
+            app_logger.error(f"Error committing assignment: {e}")
+
+        # KÍCH HOẠT TRIGGER NOTIFICATION (Fail-silent)
         from app.crud import notification as notification_crud
 
         try:
@@ -109,8 +134,7 @@ def create(db: Session, data: TaskCreate):
 
             app_logger.error(f"Error creating notification: {e}")
 
-        db.refresh(obj)
-
+    db.refresh(obj)
     return obj
 
 

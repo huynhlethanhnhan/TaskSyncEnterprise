@@ -91,9 +91,26 @@ async def unified_exception_handler(request: Request, exc: Exception) -> JSONRes
             details=details,
         )
     elif isinstance(exc, SQLAlchemyError):
-        # Prevent leaking database schema details or connection strings to client
+        db_orig = getattr(exc, "orig", None)
+        statement = getattr(exc, "statement", None)
+        params = getattr(exc, "params", None)
+        orig_msg = str(db_orig) if db_orig else str(exc)
+        orig_repr = repr(db_orig) if db_orig else repr(exc)
+
+        error_logger.error(
+            f"SQLAlchemy Integrity/DB Failure [{type(exc).__name__}]: {orig_repr} | Statement: {statement} | Params: {params}",
+            exc_info=True,
+        )
+
         mapped_exc = DatabaseException(
-            message="Đã xảy ra lỗi tương tác cơ sở dữ liệu hệ thống.", details=None
+            message="Đã xảy ra lỗi tương tác cơ sở dữ liệu hệ thống.",
+            details={
+                "exception_type": type(exc).__name__,
+                "db_error": orig_msg,
+                "db_error_repr": orig_repr,
+                "statement": str(statement) if statement else None,
+                "params": str(params) if params else None,
+            },
         )
     elif isinstance(exc, PermissionError):
         mapped_exc = AuthorizationException(

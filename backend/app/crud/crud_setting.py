@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -26,7 +26,7 @@ def update_user_preference(
     for key, val in values.items():
         if val is not None:
             setattr(pref, key, val)
-    pref.updated_at = datetime.utcnow()
+    pref.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(pref)
     return pref
@@ -72,6 +72,6 @@ def update_system_settings(
             else:
                 setting.value = str_val
                 setting.updated_by = updated_by_id
-                setting.updated_at = datetime.utcnow()
+                setting.updated_at = datetime.now(timezone.utc)
     db.commit()
     return get_system_settings_dict(db)

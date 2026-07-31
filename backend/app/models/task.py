@@ -1,3 +1,4 @@
+# 📂 FILE: app/models/task.py
 from datetime import datetime
 
 from sqlalchemy import (
@@ -54,7 +55,10 @@ class Task(Base):
     )
 
     assignments = relationship(
-        "TaskAssignment", back_populates="task", cascade="all, delete-orphan"
+        "TaskAssignment",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     comments = relationship(
@@ -92,6 +96,10 @@ class Task(Base):
                 "job_title": emp.job_title,
             }
         return None
+
+    @property
+    def name(self) -> str:
+        return self.title
 
     @property
     def employee_id(self) -> int | None:

@@ -1,0 +1,260 @@
+[
+  {
+    "table": 1,
+    "rows": [
+      [
+        "Hạng mục đối chiếu",
+        "Tài liệu tham khảo cũ (LTHN_Agile_Final.pdf)",
+        "Tài liệu kỹ thuật chính thức (develop branch)",
+        "Kết luận & Hướng xử lý"
+      ],
+      [
+        "Tên đề tài & Phạm vi",
+        "Hệ thống quản lý rạp chiếu phim (Hilo Cinema)",
+        "Nền tảng quản lý công việc TaskSyncEnterprise",
+        "Chốt 100% TaskSyncEnterprise. File Hilo Cinema chỉ là mẫu trình bày báo cáo cũ."
+      ],
+      [
+        "Nhân sự dự án",
+        "Phan Anh Lộc, Nguyễn Thành Tài, Bảo Hân, Tuyết Nhung",
+        "Huỳnh Lê Thành Nhân (PO/Lead), Đức Mạnh (SM), Anh Tuấn, Huy Hoàng, Phạm Tuấn",
+        "Xác nhận danh sách 5 thành viên chính thức thuộc Viện NIIE."
+      ],
+      [
+        "Kiến trúc hệ thống",
+        "Microservices (.NET Core + ReactJS)",
+        "Modular Monolith (Python 3.12 FastAPI + React SPA + SQL Server + Redis)",
+        "Chuẩn hóa kiến trúc Modular Monolith trên repository chính thức."
+      ],
+      [
+        "Phân bổ Sprints",
+        "Chia nhỏ 4 Sprints độc lập",
+        "Gộp thành 2 Sprints lớn (Sprint 1: Release 1.0, Sprint 2: Release 2.0)",
+        "Chạy theo kế hoạch gộp 2 Sprint chính (~1.5 tháng/Sprint) bắt đầu từ 02/07/2026."
+      ]
+    ]
+  },
+  {
+    "table": 2,
+    "rows": [
+      [
+        "Thành viên",
+        "Vai trò Scrum / Kỹ thuật",
+        "Phạm vi công việc & Trách nhiệm chính",
+        "Khối lượng công việc"
+      ],
+      [
+        "A - Huỳnh Lê Thành Nhân",
+        "Product Owner / Full Stack Lead",
+        "Dựng Kiến trúc hệ thống, JWT Auth, RBAC, WebSockets Alerts, Kanban Engine, Burnup Predictor, Docker Setup, Code Review.",
+        "Nhiều nhất (~40% Dev)"
+      ],
+      [
+        "B - Nguyễn Đức Mạnh",
+        "Scrum Master / Backend Developer",
+        "Thiết lập SQL Server Schema, Rest API CRUD, Workflow Chuyển phòng ban, Leave Accrual Engine, OT Validation, Audit Log Engine.",
+        "Trung bình - Cao (~30% Dev)"
+      ],
+      [
+        "C - Nguyễn Lê Huy Hoàng",
+        "Frontend Developer",
+        "Xây dựng UI Component bằng React/Vite/TSX, Form Đăng ký Nghỉ phép/OT, Filters, Settings UI, Resource Allocation Map UI.",
+        "Trung bình (~30% Dev)"
+      ],
+      [
+        "D - Phạm Anh Tuấn",
+        "QA / Test Engineer",
+        "Xây dựng Test Suite (331 Pytest backend cases, 22 Frontend unit tests), kiểm thử E2E, quét dead-code, kiểm tra Redis failover.",
+        "Kiểm thử & QA"
+      ],
+      [
+        "E - Nguyễn Anh Tuấn",
+        "Research & Documentation",
+        "Chuyên trách 100% tài liệu Markdown, nghiên cứu nghiệp vụ, viết SYSTEM_ARCHITECTURE.md, DOMAIN_MODEL.md, AUDIT, ROADMAP.",
+        "100% Tài liệu & Research"
+      ]
+    ]
+  },
+  {
+    "table": 3,
+    "rows": [
+      [
+        "US ID",
+        "User Story Title",
+        "Priority",
+        "SP",
+        "Assignee",
+        "Target Sprint"
+      ],
+      [
+        "US01",
+        "Secure User Login",
+        "Highest",
+        "3",
+        "A (Lead)",
+        "Sprint 1"
+      ],
+      [
+        "US04",
+        "Role-Based Access Enforcement",
+        "Medium",
+        "8",
+        "A (Lead)",
+        "Sprint 1"
+      ],
+      [
+        "US07",
+        "Task Kanban Board",
+        "Highest",
+        "5",
+        "A (Lead)",
+        "Sprint 1"
+      ],
+      [
+        "US10",
+        "Bulk Employee Data Import",
+        "Medium",
+        "8",
+        "B (Backend)",
+        "Sprint 1"
+      ],
+      [
+        "US14",
+        "Department Transfer Approval Flow",
+        "Lowest",
+        "13",
+        "B (Backend)",
+        "Sprint 1"
+      ],
+      [
+        "US19",
+        "Task Creation Editor",
+        "Highest",
+        "5",
+        "A (Lead)",
+        "Sprint 2"
+      ],
+      [
+        "US24",
+        "Annual Leave Balance Accrual",
+        "Medium",
+        "8",
+        "B (Backend)",
+        "Sprint 2"
+      ],
+      [
+        "US29",
+        "Real-Time In-App Alerts via WebSocket",
+        "Highest",
+        "8",
+        "A (Lead)",
+        "Sprint 2"
+      ],
+      [
+        "US35",
+        "Operational Performance Dashboard",
+        "Highest",
+        "8",
+        "A (Lead)",
+        "Sprint 2"
+      ],
+      [
+        "US40",
+        "Security Audit Log Explorer",
+        "Highest",
+        "8",
+        "B (Backend)",
+        "Sprint 2"
+      ]
+    ]
+  },
+  {
+    "table": 4,
+    "rows": [
+      [
+        "Bug ID",
+        "Phase",
+        "Mô tả Sự cố (Bug)",
+        "Nguyên nhân gốc rễ & Cách xử lý",
+        "Bài học kinh nghiệm"
+      ],
+      [
+        "BUG-01",
+        "Sprint 0",
+        "Bất đồng định hướng đề tài Hilo Cinema vs TaskSyncEnterprise.",
+        "RC: Lầm tưởng file mẫu old. Fix: Daily Meeting chốt 100% TaskSyncEnterprise.",
+        "Chốt Charter & Backlog chính thức từ đầu."
+      ],
+      [
+        "BUG-02",
+        "Sprint 1",
+        "Tồn tại dead-code file .jsx cũ và npm package thừa.",
+        "RC: Chưa xóa file legacy. Fix: Scan static & xóa 16 file .jsx, 4 npm packages.",
+        "Xóa ngay file cũ khi refactor; scan static code."
+      ],
+      [
+        "BUG-03",
+        "Sprint 1",
+        "Animation chờ giả ở Settings UI.",
+        "RC: Dùng mock state timeout. Fix: Nối Provider thật, update UI cache tức thời.",
+        "Giao diện quản trị bắt buộc nối Provider thật."
+      ],
+      [
+        "BUG-04",
+        "Sprint 1",
+        "Thiếu thông điệp lỗi nghiệp vụ khi xung đột Chuyển phòng ban.",
+        "RC: Backend thiếu validate. Fix: Bắt lỗi trả về HTTP 409 Conflict cụ thể.",
+        "Validate state machine ở backend, trả mã HTTP 409."
+      ],
+      [
+        "BUG-05",
+        "Sprint 1",
+        "Lỗi Import Excel nhân viên khi gặp date lạ & email trùng.",
+        "RC: Parser date cứng. Fix: Sửa parser đa dạng date & check unique email.",
+        "Batch import phải validate 100% trước khi commit."
+      ],
+      [
+        "BUG-06",
+        "Sprint 2",
+        "Backend Pytest test suite timeout trên CI GitHub Actions.",
+        "RC: Cấu hình env CI lỗi. Fix: Reconfig pytest env & async teardown.",
+        "Môi trường CI phải đồng bộ chính xác topology local."
+      ],
+      [
+        "BUG-07",
+        "Sprint 2",
+        "Service Redis DOWN làm Readiness check trả HTTP 503.",
+        "RC: Readiness check cứng. Fix: Áp dụng Cache-aside pattern cho SQL Server.",
+        "Cache chỉ đóng vai trò tăng tốc, không được là SPOF."
+      ],
+      [
+        "BUG-08",
+        "Sprint 2",
+        "Tích tụ file đính kèm rác (orphaned files) trong storage.",
+        "RC: Soft delete chưa gc file. Fix: Viết Background Job dọn dẹp file mồ côi (US21).",
+        "Thực thể xóa mềm phải có garbage collection đi kèm."
+      ],
+      [
+        "BUG-09",
+        "Sprint 2",
+        "Hủy đơn nghỉ phép khẩn cấp không phục hồi ngày phép.",
+        "RC: Quên gọi balance update. Fix: Thêm transaction hoàn quỹ phép nguyên tử.",
+        "Thao tác đổi hạn ngạch phải chạy trong Transaction."
+      ],
+      [
+        "BUG-10",
+        "Sprint 2",
+        "Docker Named Volume giữ state cũ; password Compose hardcoded.",
+        "RC: Hardcode password. Fix: Dùng file .env & container sqlserver-init.",
+        "Docker Compose tuyệt đối không chứa hardcoded secret."
+      ],
+      [
+        "BUG-11",
+        "Sprint 2",
+        "Cảnh báo rủi ro bảo mật thư viện bắc cầu (React Router).",
+        "RC: Dependency bắc cầu. Fix: Ghi nhận Residual Risk trong AUDIT doc.",
+        "Audit bảo mật định kỳ, phân loại rủi ro dư thừa."
+      ]
+    ]
+  }
+]

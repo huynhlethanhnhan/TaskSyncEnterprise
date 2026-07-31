@@ -1,13 +1,14 @@
 # 📂 FILE: app/schemas/task.py
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 VALID_STORY_POINTS = {1, 2, 3, 5, 8, 13}
 
 
 class TaskCreate(BaseModel):
     project_id: int
-    title: str
+    title: str = ""
+    name: str | None = None
     description: str | None = None
     priority: str = "Medium"
     status: str = "To Do"
@@ -18,7 +19,15 @@ class TaskCreate(BaseModel):
     sprint_id: int | None = None
     topic_id: int | None = None
 
-    @field_validator("sprint_id", "topic_id", "assigned_to", "project_id", mode="before", check_fields=False)
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_title(cls, data):
+        if isinstance(data, dict):
+            if not data.get("title") and data.get("name"):
+                data["title"] = data["name"]
+        return data
+
+    @field_validator("sprint_id", "topic_id", "assigned_to", mode="before", check_fields=False)
     @classmethod
     def empty_to_none(cls, v):
         if v == "" or v == 0:
@@ -52,7 +61,7 @@ class TaskUpdate(BaseModel):
     sprint_id: int | None = None
     topic_id: int | None = None
 
-    @field_validator("sprint_id", "topic_id", "assigned_to", "project_id", mode="before", check_fields=False)
+    @field_validator("sprint_id", "topic_id", "assigned_to", mode="before", check_fields=False)
     @classmethod
     def empty_to_none(cls, v):
         if v == "" or v == 0:

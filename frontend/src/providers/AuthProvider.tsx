@@ -62,11 +62,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(userProfile);
   };
 
-  const logout = () => {
+  const logout = React.useCallback(() => {
     queryClient.clear();
     tokenService.clear();
     setUser(null);
-  };
+  }, [queryClient, setUser]);
+
+  React.useEffect(() => {
+    const handleSessionExpired = () => {
+      logout();
+    };
+    window.addEventListener('tasksync:session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('tasksync:session-expired', handleSessionExpired);
+    };
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, setUser, login, logout }}>
