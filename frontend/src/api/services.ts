@@ -41,6 +41,9 @@ export interface ProjectItem {
   description?: string | null;
   status: string;
   department_id?: number | null;
+  team_id?: number | null;
+  department_name?: string | null;
+  team_name?: string | null;
   manager_id?: number | null;
   created_at?: string;
   updated_at?: string;

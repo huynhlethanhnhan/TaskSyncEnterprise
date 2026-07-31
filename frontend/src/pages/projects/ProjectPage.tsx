@@ -105,8 +105,14 @@ const ProjectPage: React.FC = () => {
         toast.success('Tạo dự án mới thành công', `Đã khởi tạo dự án ${data.name}.`);
       }
       setIsDrawerOpen(false);
-    } catch {
-      toast.error('Không thể lưu dự án', 'Đã xảy ra lỗi khi tương tác với API backend.');
+    } catch (err: any) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        (Array.isArray(err?.response?.data?.detail)
+          ? err?.response?.data?.detail[0]?.msg
+          : err?.response?.data?.detail) ||
+        'Không thể lưu dự án. Vui lòng kiểm tra lại thông tin.';
+      toast.error('Lỗi lưu thông tin dự án', errorMsg);
     }
   };
 
@@ -251,6 +257,20 @@ const ProjectPage: React.FC = () => {
 
                 <CardContent className="pt-0 space-y-4">
                   <div className="flex items-center justify-between text-xs border-t border-border/60 pt-3">
+                    <span className="text-text-muted">Phòng ban / Team:</span>
+                    <span className="font-semibold text-text-primary text-right">
+                      {project.department_name ? (
+                        <>
+                          {project.department_name}
+                          {project.team_name ? ` • ${project.team_name}` : ''}
+                        </>
+                      ) : (
+                        <span className="text-text-muted italic">Chưa gán Phòng ban</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs border-t border-border/60 pt-2">
                     <span className="text-text-muted">Ngày khởi tạo:</span>
                     <span className="font-semibold text-text-primary">
                       {project.created_at ? new Date(project.created_at).toLocaleDateString('vi-VN') : 'Mới cập nhật'}
