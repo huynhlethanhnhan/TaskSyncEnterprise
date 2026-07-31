@@ -10,7 +10,7 @@ erDiagram
     ROLE ||--o{ EMPLOYEE : "grants_permissions"
 
     DEPARTMENT ||--o{ PROJECT : "owns_organization_context"
-    TEAM ||--o? PROJECT : "primary_assigned_team"
+    TEAM ||--o| PROJECT : "primary_assigned_team"
     EMPLOYEE ||--o{ PROJECT : "manages"
 
     PROJECT ||--o{ PROJECT_MEMBER : "has_members"
