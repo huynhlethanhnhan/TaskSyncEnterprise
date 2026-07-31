@@ -2,14 +2,15 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from app.database import Base, get_db
-import app.models  # noqa: F401
 
 # The application metadata defaults to SQL Server's ``dbo`` schema. Normalize
-# it before importing ``app.main`` so mapper aliases created during application
-# startup never capture a schema-qualified selectable in the SQLite harness.
+# it before importing ``app.models`` and ``app.main`` so mapper aliases created
+# during application startup never capture a schema-qualified selectable in the SQLite harness.
 Base.metadata.schema = None
+import app.models  # noqa: F401
+for table in Base.metadata.tables.values():
+    table.schema = None
 
 from app.main import app
 
