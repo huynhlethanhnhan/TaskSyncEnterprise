@@ -85,31 +85,31 @@ def run_audit():
         print("\n--- INTEGRITY & ORPHAN CHECKS ---")
         # Orphan ProjectMember -> invalid project
         orphan_pm_project = db.scalars(
-            select(ProjectMember).outerjoin(Project, ProjectMember.project_id == Project.id).where(Project.id == None)
+            select(ProjectMember).outerjoin(Project, ProjectMember.project_id == Project.id).where(Project.id.is_(None))
         ).all()
         print(f"Orphan ProjectMembers (missing Project): {len(orphan_pm_project)}")
 
         # Orphan ProjectMember -> invalid employee
         orphan_pm_employee = db.scalars(
-            select(ProjectMember).outerjoin(Employee, ProjectMember.employee_id == Employee.id).where(Employee.id == None)
+            select(ProjectMember).outerjoin(Employee, ProjectMember.employee_id == Employee.id).where(Employee.id.is_(None))
         ).all()
         print(f"Orphan ProjectMembers (missing Employee): {len(orphan_pm_employee)}")
 
         # Orphan TaskAssignment -> invalid task
         orphan_ta_task = db.scalars(
-            select(TaskAssignment).outerjoin(Task, TaskAssignment.task_id == Task.id).where(Task.id == None)
+            select(TaskAssignment).outerjoin(Task, TaskAssignment.task_id == Task.id).where(Task.id.is_(None))
         ).all()
         print(f"Orphan TaskAssignments (missing Task): {len(orphan_ta_task)}")
 
         # Orphan TaskAssignment -> invalid employee
         orphan_ta_emp = db.scalars(
-            select(TaskAssignment).outerjoin(Employee, TaskAssignment.employee_id == Employee.id).where(Employee.id == None)
+            select(TaskAssignment).outerjoin(Employee, TaskAssignment.employee_id == Employee.id).where(Employee.id.is_(None))
         ).all()
         print(f"Orphan TaskAssignments (missing Employee): {len(orphan_ta_emp)}")
 
         # Orphan Task -> invalid project
         orphan_task_project = db.scalars(
-            select(Task).outerjoin(Project, Task.project_id == Project.id).where(Project.id == None)
+            select(Task).outerjoin(Project, Task.project_id == Project.id).where(Project.id.is_(None))
         ).all()
         print(f"Orphan Tasks (missing Project): {len(orphan_task_project)}")
 

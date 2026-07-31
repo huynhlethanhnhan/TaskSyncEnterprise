@@ -231,9 +231,6 @@ def test_completing_sprint_returns_unfinished_item_to_product_backlog(db):
     assert task.sprint_id == sprint.id
 
 
-from app.core.exceptions import BusinessRuleException
-
-
 def test_task_cannot_reference_sprint_from_another_project(db):
     first_project = _project("PRJ-1", "Project 1")
     second_project = _project("PRJ-2", "Project 2")

@@ -84,7 +84,7 @@ def safe_reset_database(db: Session, confirm: bool) -> dict[str, int]:
                 db.commit()
             deleted_counts[table_name] = count
             print(f"  - {table_name}: deleted {count} records.")
-        except Exception as e:
+        except Exception:
             db.rollback()
             # Ignore missing table errors in test harness
             deleted_counts[table_name] = 0
@@ -96,8 +96,8 @@ def run_seed_pipeline(db: Session) -> dict[str, int]:
     print("\n[SEED] Initializing large-scale deterministic dataset...")
 
     # 1. Seed Roles
-    num_roles = seed_roles(db)
-    print(f"  [OK] Seeded Roles: 3 (Admin, Manager, Employee)")
+    seed_roles(db)
+    print("  [OK] Seeded Roles: 3 (Admin, Manager, Employee)")
 
     # 2. Seed Departments
     departments = seed_departments(db)
