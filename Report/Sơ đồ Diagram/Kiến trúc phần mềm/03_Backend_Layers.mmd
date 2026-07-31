@@ -1,9 +1,0 @@
-flowchart TB
-Request --> Router[Router / API v1]
-Router --> Schema[Pydantic + RBAC]
-Schema --> Service[Business Service]
-Service --> CRUD
-CRUD --> ORM[SQLAlchemy ORM]
-ORM --> DB[SQL Server]
-Service --> Cache[CacheInvalidator + Redis]
-Service --> WS[WebSocket Manager]

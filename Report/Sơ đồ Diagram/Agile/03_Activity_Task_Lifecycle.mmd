@@ -1,8 +1,0 @@
-flowchart LR
-Start --> Create[Tạo Task]
-Create --> Validate[Kiểm tra quyền & dữ liệu]
-Validate --> Assign[Gán người phụ trách]
-Assign --> Doing[In Progress]
-Doing --> Review[Review Acceptance Criteria]
-Review -->|Đạt| Done[Done + Audit Event]
-Review -->|Không đạt| Doing
