@@ -3,6 +3,7 @@
 Read-only Database Audit Script for TaskSyncEnterprise Work Management Module.
 Prints a summary report without modifying any data.
 """
+
 import sys
 import os
 
@@ -26,30 +27,48 @@ from app.models.user_session import UserSession
 from app.models.refresh_token import RefreshToken
 from app.models.token_blacklist import TokenBlacklist
 
+
 def run_audit():
     print("=" * 60)
     print("      DEVELOPMENT DATABASE READ-ONLY AUDIT REPORT")
     print("=" * 60)
-    
+
     db = SessionLocal()
     try:
         # 1. Entity Counts
         roles_cnt = db.scalar(select(func.count(Role.id))) or 0
         depts_cnt = db.scalar(select(func.count(Department.id))) or 0
         emps_cnt = db.scalar(select(func.count(Employee.id))) or 0
-        active_emps_cnt = db.scalar(select(func.count(Employee.id)).where(Employee.is_active == True, Employee.is_deleted == False)) or 0
+        active_emps_cnt = (
+            db.scalar(
+                select(func.count(Employee.id)).where(
+                    Employee.is_active == True, Employee.is_deleted == False
+                )
+            )
+            or 0
+        )
         projects_cnt = db.scalar(select(func.count(Project.id))) or 0
-        active_projects_cnt = db.scalar(select(func.count(Project.id)).where(Project.is_deleted == False)) or 0
+        active_projects_cnt = (
+            db.scalar(select(func.count(Project.id)).where(Project.is_deleted == False))
+            or 0
+        )
         pm_cnt = db.scalar(select(func.count(ProjectMember.id))) or 0
         sprints_cnt = db.scalar(select(func.count(Sprint.id))) or 0
         topics_cnt = db.scalar(select(func.count(DiscussionTopic.id))) or 0
         tasks_cnt = db.scalar(select(func.count(Task.id))) or 0
-        active_tasks_cnt = db.scalar(select(func.count(Task.id)).where(Task.is_deleted == False)) or 0
+        active_tasks_cnt = (
+            db.scalar(select(func.count(Task.id)).where(Task.is_deleted == False)) or 0
+        )
         assignments_cnt = db.scalar(select(func.count(TaskAssignment.id))) or 0
         backlog_cnt = db.scalar(select(func.count(BacklogItem.id))) or 0
         notifs_cnt = db.scalar(select(func.count(Notification.id))) or 0
         sessions_cnt = db.scalar(select(func.count(UserSession.id))) or 0
-        active_sessions_cnt = db.scalar(select(func.count(UserSession.id)).where(UserSession.is_active == True)) or 0
+        active_sessions_cnt = (
+            db.scalar(
+                select(func.count(UserSession.id)).where(UserSession.is_active == True)
+            )
+            or 0
+        )
         refresh_tokens_cnt = db.scalar(select(func.count(RefreshToken.id))) or 0
         blacklisted_tokens_cnt = db.scalar(select(func.count(TokenBlacklist.id))) or 0
 
@@ -73,8 +92,12 @@ def run_audit():
         print("\n--- PROJECT 72 AUDIT ---")
         p72 = db.get(Project, 72)
         if p72:
-            print(f"Project 72 found: Name='{p72.name}', Code='{getattr(p72, 'project_code', 'N/A')}', Status='{p72.status}', is_deleted={p72.is_deleted}")
-            p72_members = db.scalars(select(ProjectMember).where(ProjectMember.project_id == 72)).all()
+            print(
+                f"Project 72 found: Name='{p72.name}', Code='{getattr(p72, 'project_code', 'N/A')}', Status='{p72.status}', is_deleted={p72.is_deleted}"
+            )
+            p72_members = db.scalars(
+                select(ProjectMember).where(ProjectMember.project_id == 72)
+            ).all()
             print(f"Project 72 Member count: {len(p72_members)}")
             p72_tasks = db.scalars(select(Task).where(Task.project_id == 72)).all()
             print(f"Project 72 Task count: {len(p72_tasks)}")
@@ -85,31 +108,41 @@ def run_audit():
         print("\n--- INTEGRITY & ORPHAN CHECKS ---")
         # Orphan ProjectMember -> invalid project
         orphan_pm_project = db.scalars(
-            select(ProjectMember).outerjoin(Project, ProjectMember.project_id == Project.id).where(Project.id.is_(None))
+            select(ProjectMember)
+            .outerjoin(Project, ProjectMember.project_id == Project.id)
+            .where(Project.id.is_(None))
         ).all()
         print(f"Orphan ProjectMembers (missing Project): {len(orphan_pm_project)}")
 
         # Orphan ProjectMember -> invalid employee
         orphan_pm_employee = db.scalars(
-            select(ProjectMember).outerjoin(Employee, ProjectMember.employee_id == Employee.id).where(Employee.id.is_(None))
+            select(ProjectMember)
+            .outerjoin(Employee, ProjectMember.employee_id == Employee.id)
+            .where(Employee.id.is_(None))
         ).all()
         print(f"Orphan ProjectMembers (missing Employee): {len(orphan_pm_employee)}")
 
         # Orphan TaskAssignment -> invalid task
         orphan_ta_task = db.scalars(
-            select(TaskAssignment).outerjoin(Task, TaskAssignment.task_id == Task.id).where(Task.id.is_(None))
+            select(TaskAssignment)
+            .outerjoin(Task, TaskAssignment.task_id == Task.id)
+            .where(Task.id.is_(None))
         ).all()
         print(f"Orphan TaskAssignments (missing Task): {len(orphan_ta_task)}")
 
         # Orphan TaskAssignment -> invalid employee
         orphan_ta_emp = db.scalars(
-            select(TaskAssignment).outerjoin(Employee, TaskAssignment.employee_id == Employee.id).where(Employee.id.is_(None))
+            select(TaskAssignment)
+            .outerjoin(Employee, TaskAssignment.employee_id == Employee.id)
+            .where(Employee.id.is_(None))
         ).all()
         print(f"Orphan TaskAssignments (missing Employee): {len(orphan_ta_emp)}")
 
         # Orphan Task -> invalid project
         orphan_task_project = db.scalars(
-            select(Task).outerjoin(Project, Task.project_id == Project.id).where(Project.id.is_(None))
+            select(Task)
+            .outerjoin(Project, Task.project_id == Project.id)
+            .where(Project.id.is_(None))
         ).all()
         print(f"Orphan Tasks (missing Project): {len(orphan_task_project)}")
 
@@ -117,14 +150,19 @@ def run_audit():
         print("\n--- RECENT TASKS SAMPLE (LAST 5) ---")
         recent_tasks = db.scalars(select(Task).order_by(Task.id.desc()).limit(5)).all()
         for t in recent_tasks:
-            assignee_str = f"AssignedTo={t.assigned_to}" if t.assigned_to else "Unassigned"
-            print(f"ID={t.id} | Title='{t.title}' | ProjectID={t.project_id} | Status='{t.status}' | {assignee_str} | CreatedAt={t.created_at}")
+            assignee_str = (
+                f"AssignedTo={t.assigned_to}" if t.assigned_to else "Unassigned"
+            )
+            print(
+                f"ID={t.id} | Title='{t.title}' | ProjectID={t.project_id} | Status='{t.status}' | {assignee_str} | CreatedAt={t.created_at}"
+            )
 
         print("\n=" * 60)
         print("                 AUDIT COMPLETE")
         print("=" * 60)
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     run_audit()

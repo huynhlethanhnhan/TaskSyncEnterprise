@@ -59,11 +59,16 @@ def safe_reset_database(db: Session, confirm: bool) -> dict[str, int]:
     allow_reset = os.environ.get("ALLOW_DATABASE_RESET", "false").lower() == "true"
 
     if env == "production" and not allow_reset:
-        print("[ERROR] Cannot reset database on Production environment!", file=sys.stderr)
+        print(
+            "[ERROR] Cannot reset database on Production environment!", file=sys.stderr
+        )
         sys.exit(1)
 
     if not confirm:
-        print("[ERROR] Confirmation flag --confirm-reset required for reset!", file=sys.stderr)
+        print(
+            "[ERROR] Confirmation flag --confirm-reset required for reset!",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     deleted_counts = {}
@@ -105,7 +110,9 @@ def run_seed_pipeline(db: Session) -> dict[str, int]:
 
     # 3. Seed Employees
     employees = seed_employees(db, departments)
-    print(f"  [OK] Seeded Employees: {len(employees)} (Accounts: admin001, manager001, employee001...)")
+    print(
+        f"  [OK] Seeded Employees: {len(employees)} (Accounts: admin001, manager001, employee001...)"
+    )
 
     # 4. Seed Projects
     projects = seed_projects(db, employees)
@@ -156,12 +163,28 @@ def run_seed_pipeline(db: Session) -> dict[str, int]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="TaskSyncEnterprise Database Reset & Seed CLI Runner")
-    parser.add_argument("--reset", action="store_true", help="Reset development database tables")
-    parser.add_argument("--seed", action="store_true", help="Run deterministic seed pipeline")
-    parser.add_argument("--reset-and-seed", action="store_true", help="Reset existing data and seed clean dataset")
-    parser.add_argument("--confirm-reset", action="store_true", help="Explicit confirmation flag required for reset")
-    parser.add_argument("--summary", action="store_true", help="Print summary counts after operation")
+    parser = argparse.ArgumentParser(
+        description="TaskSyncEnterprise Database Reset & Seed CLI Runner"
+    )
+    parser.add_argument(
+        "--reset", action="store_true", help="Reset development database tables"
+    )
+    parser.add_argument(
+        "--seed", action="store_true", help="Run deterministic seed pipeline"
+    )
+    parser.add_argument(
+        "--reset-and-seed",
+        action="store_true",
+        help="Reset existing data and seed clean dataset",
+    )
+    parser.add_argument(
+        "--confirm-reset",
+        action="store_true",
+        help="Explicit confirmation flag required for reset",
+    )
+    parser.add_argument(
+        "--summary", action="store_true", help="Print summary counts after operation"
+    )
 
     args = parser.parse_args()
 
