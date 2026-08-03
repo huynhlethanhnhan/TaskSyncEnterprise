@@ -78,8 +78,12 @@ def test_employee_avatar_change_clears_embedded_task_detail_avatars(monkeypatch)
     monkeypatch.setattr(CacheInvalidator, "_check_redis_ready", lambda: True)
     monkeypatch.setattr(CacheInvalidator, "_get_service", lambda: FakeCache())
     monkeypatch.setattr(CacheInvalidator, "_publish", lambda *args, **kwargs: None)
-    monkeypatch.setattr(CacheInvalidator, "invalidate_project", lambda *args, **kwargs: None)
-    monkeypatch.setattr(CacheInvalidator, "invalidate_employee", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        CacheInvalidator, "invalidate_project", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        CacheInvalidator, "invalidate_employee", lambda *args, **kwargs: None
+    )
     monkeypatch.setattr(CacheInvalidator, "invalidate_dashboard", lambda: None)
 
     CacheInvalidator.invalidate_task(employee_id=59)
@@ -113,7 +117,9 @@ def _create_employee(db, code, email):
     return employee
 
 
-def test_team_leader_can_manage_task_and_assigned_employee_can_update_status(client, db):
+def test_team_leader_can_manage_task_and_assigned_employee_can_update_status(
+    client, db
+):
     department = Department(
         department_code="OPS",
         name="Operations",

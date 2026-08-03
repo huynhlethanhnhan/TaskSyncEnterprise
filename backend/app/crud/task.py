@@ -48,10 +48,8 @@ def get_all(
                     )
                 ),
                 Task.project_id.in_(
-                    select(Project.id).where(
-                        Project.created_by == current_user.id
-                    )
-                )
+                    select(Project.id).where(Project.created_by == current_user.id)
+                ),
             )
             stmt = stmt.where(scope_expr)
 
@@ -96,6 +94,7 @@ def create(db: Session, data: TaskCreate):
     except Exception as exc:
         db.rollback()
         from app.core.logger import error_logger
+
         db_orig = getattr(exc, "orig", exc)
         error_logger.error(
             f"Task create DB commit failed [{type(exc).__name__}]: {db_orig!r} | Statement: {getattr(exc, 'statement', None)} | Params: {getattr(exc, 'params', None)}",
@@ -148,11 +147,7 @@ def update(db: Session, obj: Task, data: TaskUpdate):
 
     assigned_to = task_data.pop("assigned_to", None)
 
-    target_project_id = (
-        task_data["project_id"]
-        if project_was_set
-        else obj.project_id
-    )
+    target_project_id = task_data["project_id"] if project_was_set else obj.project_id
 
     # When changing Project:
     # 1. Clear old Sprint unless a new sprint was set
@@ -167,6 +162,7 @@ def update(db: Session, obj: Task, data: TaskUpdate):
             assignee_was_set = True
         elif assigned_to is not None:
             from app.models.project_member import ProjectMember
+
             is_member = db.scalar(
                 select(ProjectMember.id).where(
                     ProjectMember.project_id == target_project_id,
@@ -176,23 +172,11 @@ def update(db: Session, obj: Task, data: TaskUpdate):
             if is_member is None:
                 assigned_to = None
 
-    target_sprint_id = (
-        task_data.get("sprint_id")
-        if sprint_was_set
-        else obj.sprint_id
-    )
+    target_sprint_id = task_data.get("sprint_id") if sprint_was_set else obj.sprint_id
 
-    target_topic_id = (
-        task_data.get("topic_id")
-        if topic_was_set
-        else obj.topic_id
-    )
+    target_topic_id = task_data.get("topic_id") if topic_was_set else obj.topic_id
 
-    target_assignee = (
-        assigned_to
-        if assignee_was_set
-        else None
-    )
+    target_assignee = assigned_to if assignee_was_set else None
 
     validate_task_relationships(
         db,
@@ -227,22 +211,22 @@ def update(db: Session, obj: Task, data: TaskUpdate):
         db.expire(obj, ["assignments"])
 
         if assigned_to is not None and old_assigned_to != assigned_to:
-                from app.crud import notification as notification_crud
+            from app.crud import notification as notification_crud
 
-                try:
-                    notification_crud.create_notification(
-                        db,
-                        title="Bạn có task mới",
-                        message=obj.title,
-                        employee_id=assigned_to,
-                    )
-                except Exception as e:
-                    from app.core.logger import app_logger
+            try:
+                notification_crud.create_notification(
+                    db,
+                    title="Bạn có task mới",
+                    message=obj.title,
+                    employee_id=assigned_to,
+                )
+            except Exception as e:
+                from app.core.logger import app_logger
 
-                    app_logger.error(f"Error creating notification: {e}")
+                app_logger.error(f"Error creating notification: {e}")
         else:
             db.commit()
-        
+
         db.expire(obj, ["assignments"])
 
     new_status = obj.status

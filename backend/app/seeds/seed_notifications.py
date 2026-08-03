@@ -6,9 +6,21 @@ from app.models.employee import Employee
 
 NOTIF_TYPES = [
     ("TASKS", "Bạn được gán công việc mới", "Quản lý đã phân công cho bạn task #{id}."),
-    ("TASKS", "Cảnh báo hạn chót công việc", "Task #{id} sắp đến hạn hoàn thành trong 24h tới."),
-    ("TASKS", "Task đã quá hạn", "Công việc #{id} của bạn đã vượt quá hạn chót quy định."),
-    ("PROJECTS", "Sprint mới đã được kích hoạt", "Sprint chu kỳ phát triển mới đã bắt đầu."),
+    (
+        "TASKS",
+        "Cảnh báo hạn chót công việc",
+        "Task #{id} sắp đến hạn hoàn thành trong 24h tới.",
+    ),
+    (
+        "TASKS",
+        "Task đã quá hạn",
+        "Công việc #{id} của bạn đã vượt quá hạn chót quy định.",
+    ),
+    (
+        "PROJECTS",
+        "Sprint mới đã được kích hoạt",
+        "Sprint chu kỳ phát triển mới đã bắt đầu.",
+    ),
     ("PROJECTS", "Cập nhật dự án", "Thông tin dự án của bạn đã được điều chỉnh."),
 ]
 

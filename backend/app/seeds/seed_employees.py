@@ -15,25 +15,111 @@ def seed_employees(db: Session, departments: list[Department]) -> list[Employee]
     employees_specs = []
 
     # 2 Admins
-    employees_specs.append({
-        "employee_code": "admin001",
-        "full_name": "Quản Trị Viên Tổng (Admin 001)",
-        "email": "admin001@enterprise.com",
-        "role_id": ROLE_ADMIN,
-        "department_id": dep_ids[0],
-    })
-    employees_specs.append({
-        "employee_code": "admin002",
-        "full_name": "Quản Trị Phụ Trách (Admin 002)",
-        "email": "admin002@enterprise.com",
-        "role_id": ROLE_ADMIN,
-        "department_id": dep_ids[0],
-    })
+    employees_specs.append(
+        {
+            "employee_code": "admin001",
+            "full_name": "Quản Trị Viên Tổng (Admin 001)",
+            "email": "admin001@enterprise.com",
+            "role_id": ROLE_ADMIN,
+            "department_id": dep_ids[0],
+        }
+    )
+    employees_specs.append(
+        {
+            "employee_code": "admin002",
+            "full_name": "Quản Trị Phụ Trách (Admin 002)",
+            "email": "admin002@enterprise.com",
+            "role_id": ROLE_ADMIN,
+            "department_id": dep_ids[0],
+        }
+    )
 
     # Common Vietnamese names
-    vn_first_names = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô", "Dương", "Lý"]
-    vn_middle_names = ["Thị", "Văn", "Hữu", "Thanh", "Minh", "Thu", "Ngọc", "Hồng", "Đức", "Công", "Xuân", "Hải", "Tuấn", "Hoài", "Quang"]
-    vn_last_names = ["An", "Anh", "Bảo", "Châu", "Chi", "Dũng", "Dương", "Đạt", "Giang", "Hà", "Hải", "Hiếu", "Hòa", "Huy", "Khang", "Khánh", "Khoa", "Kiên", "Lâm", "Linh", "Long", "Mai", "Nam", "Nga", "Ngọc", "Nhi", "Nhung", "Phong", "Phúc", "Phương", "Quân", "Quang", "Quyên", "Sơn", "Thảo", "Thắng", "Thành", "Thủy", "Tiên", "Trang", "Trí", "Tú", "Tuấn", "Uyên", "Vân", "Việt", "Vy", "Yến"]
+    vn_first_names = [
+        "Nguyễn",
+        "Trần",
+        "Lê",
+        "Phạm",
+        "Hoàng",
+        "Huỳnh",
+        "Phan",
+        "Vũ",
+        "Võ",
+        "Đặng",
+        "Bùi",
+        "Đỗ",
+        "Hồ",
+        "Ngô",
+        "Dương",
+        "Lý",
+    ]
+    vn_middle_names = [
+        "Thị",
+        "Văn",
+        "Hữu",
+        "Thanh",
+        "Minh",
+        "Thu",
+        "Ngọc",
+        "Hồng",
+        "Đức",
+        "Công",
+        "Xuân",
+        "Hải",
+        "Tuấn",
+        "Hoài",
+        "Quang",
+    ]
+    vn_last_names = [
+        "An",
+        "Anh",
+        "Bảo",
+        "Châu",
+        "Chi",
+        "Dũng",
+        "Dương",
+        "Đạt",
+        "Giang",
+        "Hà",
+        "Hải",
+        "Hiếu",
+        "Hòa",
+        "Huy",
+        "Khang",
+        "Khánh",
+        "Khoa",
+        "Kiên",
+        "Lâm",
+        "Linh",
+        "Long",
+        "Mai",
+        "Nam",
+        "Nga",
+        "Ngọc",
+        "Nhi",
+        "Nhung",
+        "Phong",
+        "Phúc",
+        "Phương",
+        "Quân",
+        "Quang",
+        "Quyên",
+        "Sơn",
+        "Thảo",
+        "Thắng",
+        "Thành",
+        "Thủy",
+        "Tiên",
+        "Trang",
+        "Trí",
+        "Tú",
+        "Tuấn",
+        "Uyên",
+        "Vân",
+        "Việt",
+        "Vy",
+        "Yến",
+    ]
 
     def generate_name():
         return f"{random.choice(vn_first_names)} {random.choice(vn_middle_names)} {random.choice(vn_last_names)}"
@@ -41,24 +127,28 @@ def seed_employees(db: Session, departments: list[Department]) -> list[Employee]
     # 5 Managers
     for i in range(1, 6):
         code = f"manager{i:03d}"
-        employees_specs.append({
-            "employee_code": code,
-            "full_name": f"{generate_name()} ({code})",
-            "email": f"{code}@enterprise.com",
-            "role_id": ROLE_MANAGER,
-            "department_id": dep_ids[i % len(dep_ids)],
-        })
+        employees_specs.append(
+            {
+                "employee_code": code,
+                "full_name": f"{generate_name()} ({code})",
+                "email": f"{code}@enterprise.com",
+                "role_id": ROLE_MANAGER,
+                "department_id": dep_ids[i % len(dep_ids)],
+            }
+        )
 
     # 25 Employees
     for i in range(1, 26):
         code = f"employee{i:03d}"
-        employees_specs.append({
-            "employee_code": code,
-            "full_name": f"{generate_name()} ({code})",
-            "email": f"{code}@enterprise.com",
-            "role_id": ROLE_EMPLOYEE,
-            "department_id": dep_ids[(i - 1) % len(dep_ids)],
-        })
+        employees_specs.append(
+            {
+                "employee_code": code,
+                "full_name": f"{generate_name()} ({code})",
+                "email": f"{code}@enterprise.com",
+                "role_id": ROLE_EMPLOYEE,
+                "department_id": dep_ids[(i - 1) % len(dep_ids)],
+            }
+        )
 
     created_employees = []
     for spec in employees_specs:

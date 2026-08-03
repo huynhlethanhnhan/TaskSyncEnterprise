@@ -47,7 +47,6 @@ class EmployeeCreate(EmployeeBase):
         return v
 
 
-
 class EmployeeUpdate(BaseModel):
 
     full_name: str | None = None

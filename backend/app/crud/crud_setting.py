@@ -53,7 +53,10 @@ def get_system_settings_dict(db: Session) -> dict:
         "default_sprint_capacity": int(result.get("default_sprint_capacity", 30)),
         "default_task_page_size": int(result.get("default_task_page_size", 20)),
         "deadline_reminder_days": int(result.get("deadline_reminder_days", 3)),
-        "allow_employee_status_update": result.get("allow_employee_status_update", "true").lower() == "true",
+        "allow_employee_status_update": result.get(
+            "allow_employee_status_update", "true"
+        ).lower()
+        == "true",
         "maintenance_mode": result.get("maintenance_mode", "false").lower() == "true",
     }
 
@@ -67,7 +70,9 @@ def update_system_settings(
             str_val = str(val).lower() if isinstance(val, bool) else str(val)
             setting = db.get(SystemSetting, key)
             if not setting:
-                setting = SystemSetting(key=key, value=str_val, updated_by=updated_by_id)
+                setting = SystemSetting(
+                    key=key, value=str_val, updated_by=updated_by_id
+                )
                 db.add(setting)
             else:
                 setting.value = str_val

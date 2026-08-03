@@ -26,17 +26,31 @@ class UserPreference(Base):
     )
     theme: Mapped[str] = mapped_column(String(20), server_default=text("'system'"))
     language: Mapped[str] = mapped_column(String(10), server_default=text("'vi'"))
-    timezone: Mapped[str] = mapped_column(String(50), server_default=text("'Asia/Ho_Chi_Minh'"))
-    date_format: Mapped[str] = mapped_column(String(20), server_default=text("'DD/MM/YYYY'"))
+    timezone: Mapped[str] = mapped_column(
+        String(50), server_default=text("'Asia/Ho_Chi_Minh'")
+    )
+    date_format: Mapped[str] = mapped_column(
+        String(20), server_default=text("'DD/MM/YYYY'")
+    )
     page_size: Mapped[int] = mapped_column(Integer, server_default=text("20"))
     compact_mode: Mapped[bool] = mapped_column(Boolean, server_default=text("0"))
-    
-    in_app_notifications: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
+
+    in_app_notifications: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("1")
+    )
     email_notifications: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
-    task_assigned_notify: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
-    task_deadline_notify: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
-    sprint_status_notify: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
-    project_update_notify: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
+    task_assigned_notify: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("1")
+    )
+    task_deadline_notify: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("1")
+    )
+    sprint_status_notify: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("1")
+    )
+    project_update_notify: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("1")
+    )
 
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=text("SYSUTCDATETIME()"), onupdate=datetime.utcnow

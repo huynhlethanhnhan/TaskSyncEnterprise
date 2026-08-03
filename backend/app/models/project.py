@@ -45,9 +45,7 @@ class Project(Base):
     department_id: Mapped[int | None] = mapped_column(
         ForeignKey("departments.id"), nullable=True
     )
-    team_id: Mapped[int | None] = mapped_column(
-        ForeignKey("teams.id"), nullable=True
-    )
+    team_id: Mapped[int | None] = mapped_column(ForeignKey("teams.id"), nullable=True)
 
     created_by: Mapped[int | None] = mapped_column(ForeignKey("employees.id"))
 
@@ -73,5 +71,3 @@ class Project(Base):
     @property
     def team_name(self) -> str | None:
         return self.team.name if self.team else None
-
-

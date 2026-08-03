@@ -5,7 +5,9 @@ from app.models.project import Project
 from app.models.employee import Employee
 
 
-def seed_topics(db: Session, projects: list[Project], employees: list[Employee]) -> list[DiscussionTopic]:
+def seed_topics(
+    db: Session, projects: list[Project], employees: list[Employee]
+) -> list[DiscussionTopic]:
     random.seed(2026)
     created_topics = []
 
@@ -31,20 +33,21 @@ def seed_topics(db: Session, projects: list[Project], employees: list[Employee])
         {
             "title": "Epic: User & Team Organization",
             "content": "Phân quyền, quản lý nhân viên, phòng ban và nhóm.",
-        }
+        },
     ]
 
     for project in projects:
         # Create 2 topics per project
         selected_specs = random.sample(topic_specs, 2)
-        
+
         for spec in selected_specs:
             # Check if topic already exists for this project
-            topic = db.query(DiscussionTopic).filter_by(
-                project_id=project.id,
-                title=spec["title"]
-            ).first()
-            
+            topic = (
+                db.query(DiscussionTopic)
+                .filter_by(project_id=project.id, title=spec["title"])
+                .first()
+            )
+
             if not topic:
                 topic = DiscussionTopic(
                     project_id=project.id,

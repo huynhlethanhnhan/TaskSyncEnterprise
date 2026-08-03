@@ -141,9 +141,7 @@ class WebSocketConnectionManager:
             try:
                 completed_future.result()
             except Exception as error:
-                app_logger.warning(
-                    f"WebSocket domain-event broadcast failed: {error}"
-                )
+                app_logger.warning(f"WebSocket domain-event broadcast failed: {error}")
 
         future.add_done_callback(log_failure)
         return True

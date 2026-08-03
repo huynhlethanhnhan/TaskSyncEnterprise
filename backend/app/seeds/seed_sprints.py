@@ -41,7 +41,11 @@ def seed_sprints(db: Session, projects: list[Project]) -> list[Sprint]:
             },
         ]
         for sdata in test_sprints:
-            sprint = db.query(Sprint).filter_by(project_id=prj_test.id, name=sdata["name"]).first()
+            sprint = (
+                db.query(Sprint)
+                .filter_by(project_id=prj_test.id, name=sdata["name"])
+                .first()
+            )
             if not sprint:
                 sprint = Sprint(
                     project_id=prj_test.id,
@@ -114,7 +118,11 @@ def seed_sprints(db: Session, projects: list[Project]) -> list[Sprint]:
             ]
 
         for sdata in sprint_specs:
-            sprint = db.query(Sprint).filter_by(project_id=prj.id, name=sdata["name"]).first()
+            sprint = (
+                db.query(Sprint)
+                .filter_by(project_id=prj.id, name=sdata["name"])
+                .first()
+            )
             if not sprint:
                 sprint = Sprint(
                     project_id=prj.id,

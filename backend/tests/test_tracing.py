@@ -324,8 +324,9 @@ def instrumented_client():
         __import__("app.main", fromlist=["app"]).app, raise_server_exceptions=False
     )
 
+
 class TestFastAPIInstrumentation:
-    
+
     # 2. Truyền instrumented_client vào hàm thay vì client
     def test_instrumentation_does_not_break_health_endpoint(self, instrumented_client):
         """FastAPI auto-instrumentation must not break existing routes."""
@@ -351,9 +352,11 @@ class TestFastAPIInstrumentation:
         response = instrumented_client.get("/api/v1/this-route-does-not-exist-9999")
         assert response.status_code == 404
 
+
 # ──────────────────────────────────────────────────────────────────────────────
 # 6. Excluded Endpoint Tests
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 # Đưa fixture ra ngoài class và xóa tham số "self"
 @pytest.fixture(scope="class")
@@ -374,7 +377,7 @@ def in_memory_provider():
 
 
 class TestExcludedEndpoints:
-    
+
     def test_health_path_is_in_excluded_list(self):
         from app.config import settings
 

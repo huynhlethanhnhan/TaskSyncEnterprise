@@ -93,7 +93,9 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         try:
             is_new = client.set(redis_key, pending_value, nx=True, ex=ttl)
         except Exception as redis_err:
-            logger.warning(f"Bypassing idempotency check because Redis SET failed: {redis_err}")
+            logger.warning(
+                f"Bypassing idempotency check because Redis SET failed: {redis_err}"
+            )
             self.redis_client_mgr.mark_offline(str(redis_err))
             return await call_next(request)
 
@@ -121,7 +123,9 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 try:
                     client.set(redis_key, serialized, ex=ttl)
                 except Exception as redis_err:
-                    logger.warning(f"Failed to cache idempotency response in Redis: {redis_err}")
+                    logger.warning(
+                        f"Failed to cache idempotency response in Redis: {redis_err}"
+                    )
 
                 # Return rebuilt response
                 return Response(

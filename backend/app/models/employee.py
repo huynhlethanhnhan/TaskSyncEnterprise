@@ -100,4 +100,3 @@ class Employee(Base):
     @property
     def position(self) -> str | None:
         return self.job_title
-

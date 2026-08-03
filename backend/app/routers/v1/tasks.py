@@ -339,6 +339,7 @@ def update_my_task(
         raise HTTPException(status_code=404, detail="Task not found")
 
     from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
+
     is_manager_or_admin = current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER)
     if not is_manager_or_admin and task.assigned_to != current_user.id:
         raise HTTPException(

@@ -61,7 +61,9 @@ def test_02_admin_system_settings_rbac(client, db):
     assert res_emp_get.status_code == 403
 
     # Admin GET system settings -> 200 OK
-    res_admin_get = client.get("/api/v1/settings/system", headers=get_auth_header(admin))
+    res_admin_get = client.get(
+        "/api/v1/settings/system", headers=get_auth_header(admin)
+    )
     assert res_admin_get.status_code == 200
     assert "system_name" in res_admin_get.json()
 

@@ -4,6 +4,7 @@ from app.models.employee import Employee
 from app.models.department import Department
 from app.models.role import Role
 
+
 def test_manual_task_creation_regression(client, db):
     # 1. Prepare minimal data for testing (simulate DB state if not seeded)
     admin_role = db.query(Role).filter(Role.role_name == "Admin").first()
@@ -18,7 +19,11 @@ def test_manual_task_creation_regression(client, db):
         db.add(dept)
         db.commit()
 
-    admin = db.query(Employee).filter(Employee.email == "admin_test_task@example.com").first()
+    admin = (
+        db.query(Employee)
+        .filter(Employee.email == "admin_test_task@example.com")
+        .first()
+    )
     if not admin:
         admin = Employee(
             employee_code="EMP-TEST",
@@ -27,12 +32,12 @@ def test_manual_task_creation_regression(client, db):
             password_hash="test",
             role_id=admin_role.id,
             department_id=dept.id,
-            is_active=True
+            is_active=True,
         )
         db.add(admin)
         db.commit()
         db.refresh(admin)
-    
+
     project = db.query(Project).filter(Project.name == "Dự Án Test Project").first()
     if not project:
         project = Project(
@@ -40,40 +45,53 @@ def test_manual_task_creation_regression(client, db):
             name="Dự Án Test Project",
             description="Test",
             status="Active",
-            created_by=admin.id
+            created_by=admin.id,
         )
         db.add(project)
         db.commit()
         db.refresh(project)
 
     from app.models.sprint import Sprint
+
     sprint = db.query(Sprint).filter(Sprint.name == "Test Sprint").first()
     if not sprint:
         sprint = Sprint(
-            name="Test Sprint",
-            goal="Test",
-            status="Planned",
-            project_id=project.id
+            name="Test Sprint", goal="Test", status="Planned", project_id=project.id
         )
         db.add(sprint)
         db.commit()
         db.refresh(sprint)
 
     from app.models.project_member import ProjectMember
-    membership = db.query(ProjectMember).filter(ProjectMember.project_id == project.id, ProjectMember.employee_id == admin.id).first()
+
+    membership = (
+        db.query(ProjectMember)
+        .filter(
+            ProjectMember.project_id == project.id,
+            ProjectMember.employee_id == admin.id,
+        )
+        .first()
+    )
     if not membership:
         membership = ProjectMember(project_id=project.id, employee_id=admin.id)
         db.add(membership)
         db.commit()
 
     # Login to get token
-    response = client.post("/api/v1/auth/login", data={"username": "admin_test_task@example.com", "password": "password123"})
+    response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "admin_test_task@example.com", "password": "password123"},
+    )
     if response.status_code == 401:
         from app.core.security import get_password_hash
+
         admin.password_hash = get_password_hash("password123")
         db.commit()
-        response = client.post("/api/v1/auth/login", data={"username": "admin_test_task@example.com", "password": "password123"})
-    
+        response = client.post(
+            "/api/v1/auth/login",
+            data={"username": "admin_test_task@example.com", "password": "password123"},
+        )
+
     token = response.json().get("access_token")
     headers = {"Authorization": f"Bearer {token}", "Idempotency-Key": "test-key-1"}
 
@@ -88,7 +106,7 @@ def test_manual_task_creation_regression(client, db):
         "sprint_id": None,
         "topic_id": None,
         "deadline": None,
-        "story_points": 0
+        "story_points": 0,
     }
     resp1 = client.post("/api/v1/tasks", json=payload_1, headers=headers)
     assert resp1.status_code == 201

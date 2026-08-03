@@ -153,9 +153,7 @@ def test_invalidation_with_integer_delete_result_does_not_log_exception(
 
     CacheInvalidator.invalidate_task(task_id=101)
 
-    assert not [
-        record for record in caplog.records if record.levelno >= logging.ERROR
-    ]
+    assert not [record for record in caplog.records if record.levelno >= logging.ERROR]
 
 
 def test_redis_unavailable():

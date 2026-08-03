@@ -58,6 +58,7 @@ def create(db: Session, data: EmployeeCreate):
     )
 
     import uuid
+
     emp_code = data.employee_code
     if not emp_code:
         # Generate a unique employee code
