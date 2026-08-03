@@ -96,6 +96,7 @@ def test_seed_reset_breaks_organization_cycles_before_deleting(db):
     assert db.scalar(select(func.count(Team.id))) == 0
 
     from app.seeds.seed_roles import seed_roles
+
     seed_roles(db)
 
 

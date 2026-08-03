@@ -9,6 +9,7 @@ from app.database import Base, get_db
 # during application startup never capture a schema-qualified selectable in the SQLite harness.
 Base.metadata.schema = None
 import app.models as _app_models  # noqa: F401
+
 for table in Base.metadata.tables.values():
     table.schema = None
 

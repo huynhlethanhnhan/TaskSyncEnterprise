@@ -282,7 +282,11 @@ class Settings(BaseSettings):
     )
 
     CORS_ORIGINS: Union[list[str], str] = Field(
-        default_factory=lambda: ["http://localhost:5173", "http://localhost:8080", "http://localhost:8000"],
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://localhost:8080",
+            "http://localhost:8000",
+        ],
         description="Alias for BACKEND_CORS_ORIGINS.",
     )
 

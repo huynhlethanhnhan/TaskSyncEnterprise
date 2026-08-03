@@ -163,5 +163,7 @@ def test_settings_list_parsing_json_and_comma():
         s = Settings()
         assert s.ALLOWED_HOSTS == ["localhost", "127.0.0.1", "backend", "frontend"]
         assert s.CORS_ORIGINS == ["http://localhost:5173", "http://localhost:8080"]
-        assert s.BACKEND_CORS_ORIGINS == ["http://localhost:5173", "http://localhost:8000"]
-
+        assert s.BACKEND_CORS_ORIGINS == [
+            "http://localhost:5173",
+            "http://localhost:8000",
+        ]
