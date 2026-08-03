@@ -3,200 +3,260 @@
 [![Release Candidate](https://img.shields.io/badge/Release%20Candidate-v1.0.0--RC1-blue.svg)](docs/reports/final_release_candidate_report.md)
 [![Backend Pytest](https://img.shields.io/badge/Backend%20Pytest-408%20Passed-success.svg)](docs/reports/final_release_candidate_report.md)
 [![Frontend Vite](https://img.shields.io/badge/Vite%20Build-Passed-success.svg)](docs/reports/final_release_candidate_report.md)
-[![Docker Hardened](https://img.shields.io/badge/Docker%20Compose-Hardened-success.svg)](docs/reports/docker_and_ci_stabilization_report.md)
-[![CI Pipeline](https://img.shields.io/badge/GitHub%20Actions-Green-brightgreen.svg)](.github/workflows/ci.yml)
+[![Alembic Clean Database](https://img.shields.io/badge/Alembic%20Migrations-Verified%20Clean-success.svg)](docs/reports/ALEMBIC_MIGRATION_LOCAL_FIX_REPORT.md)
+[![Docker Status](https://img.shields.io/badge/Docker%20Status-Not%20Verified%20E2E-amber.svg)](#14-docker-status)
 
-## 📌 Executive Product Overview
+---
+
+## 1. Project Overview
 
 **TaskSyncEnterprise** is a multi-tenant, role-based enterprise task management platform built for modern agile software development teams. The platform cleanly integrates **Administration Governance** (`Department -> Team -> Employee`) with **Agile Work Management** (`Project -> ProjectMember -> Sprint -> Task -> TaskAssignment -> Board -> Backlog -> Notifications -> Dashboard -> Calendar`).
 
 ---
 
-## 📂 Module Structure
+## 2. Technology Stack
 
-```
-TaskSyncEnterprise/
-├── backend/
-│   ├── alembic/              # Alembic database schema migration scripts
-│   ├── app/                  # FastAPI routers, models, schemas, services, CRUD
-│   │   ├── seeds/            # Deterministic database seeding pipeline
-│      ├── core/             # Security, RBAC, JWT, configuration
-│      └── main.py            # FastAPI entry point
-│   ├── tests/                # Pytest integration & unit test suite (408 passed)
-│   ├── entrypoint.sh         # Hardened container startup script (wait, migrate, seed, app)
-│   ├── Dockerfile            # Production multi-stage Python 3.12 image
-│   └── requirements.txt      # Production Python dependencies
-├── frontend/
-│   ├── e2e/                  # Playwright E2E browser acceptance suite
-│   ├── src/                  # React 19 SPA components, pages, hooks, providers
-│   ├── nginx.conf            # Nginx container configuration with reverse proxy rules
-│   ├── Dockerfile            # Production multi-stage Node 22 / Nginx image
-│   └── package.json          # Node dependencies & Vite build scripts
-├── docs/
-│   ├── architecture/         # Enterprise business rules & data model docs
-│   ├── diagrams/             # Mermaid component, container, ERD & request flow diagrams
-│   └── reports/              # Final Release Candidate & CI/Docker reports
-├── scripts/
-│   └── docker_smoke_test.ps1 # Container stack integration test runner
-├── .github/workflows/
-│   └── ci.yml                # GitHub Actions CI workflow (Hygiene, Backend, Frontend, Docker)
-├── docker-compose.yml        # Development Docker Compose stack
-├── docker-compose.production.yml # Hardened Production Docker Compose stack
-└── README.md
-```
+- **Backend Framework**: Python 3.12+, FastAPI, Uvicorn
+- **ORM & Database**: SQLAlchemy 2.0, Alembic, MS SQL Server (via `pymssql`)
+- **Frontend Framework**: React 19, TypeScript, Vite, TailwindCSS v4, TanStack React Query
+- **Testing & Quality**: Pytest (408 tests passed), Compileall, Ruff
+- **Database Engine**: Microsoft SQL Server 2022 / SQLEXPRESS
 
 ---
 
-## 🛠️ Technology Stack
+## 3. Prerequisites
 
-- **Backend**: Python 3.12+, FastAPI, SQLAlchemy 2.0 (ORM), Pydantic v2, Alembic (Migrations), PyMSSQL / SQLite.
-- **Frontend**: React 19, TypeScript, Vite, TailwindCSS v4, TanStack React Query, Lucide Icons.
-- **Containers & Reverse Proxy**: Docker, Docker Compose, Nginx 1.27.1, Hadolint.
-- **Testing & Quality**: Pytest (Coverage 88%+), Playwright E2E browser runner, Hadolint, Bandit SAST, pip-audit.
-- **Database & Cache**: MS SQL Server 2022, Redis 7 (Cache invalidation with graceful in-memory fallback).
-
----
-
-## 👥 Role Matrix & Access Control
-
-| Role | Administration Scope | Work Manager Scope | System Permissions |
-|---|---|---|---|
-| **Admin** | Global (Full CRUD on Departments, Teams, Employees) | All Projects, Memberships, Sprints & Tasks | System Settings, Global Audit & Dashboard |
-| **Manager** | View-only Department / Team context | Scoped Projects, Member assignment, Sprint lifecycle | Project Dashboard & Member Workload |
-| **Employee** | View personal profile & team members | Assigned Projects & Tasks | Personal Kanban Board, Task Status & Progress |
+Before installing TaskSyncEnterprise locally on Windows, ensure the following software is installed:
+1. **Python 3.12+** (Added to PATH)
+2. **Microsoft SQL Server** (MSSQLSERVER or SQLEXPRESS)
+3. **Node.js v20+** and `npm`
+4. **Git**
 
 ---
 
-## 🏗️ Architecture & Domain Hierarchy
+## 4. Local Setup on Windows
 
-```
-Administration Level:
-  Department ──(1:N)──> Team ──(1:N)──> Employee
+Clone the `develop` branch from GitHub into your local workspace directory (e.g. `D:\TaskSyncEnterprise` or `E:\TaskSyncEnterprise`):
 
-Work Manager Level:
-  Project
-  ├──(1:1)──> Department (Primary Owning Department)
-  ├──(0..1:1)─> Team (Primary Owning Team, must belong to Department)
-  ├──(1:N)──> ProjectMember (Constrained by Department/Team rules)
-  ├──(1:N)──> Sprint (Derives organization context dynamically via Project)
-  └──(1:N)──> Task (Derives organization context dynamically via Project)
-              └── Assigned To: ProjectMember (Must be an active ProjectMember)
-```
-
----
-
-## 🚀 Docker Setup & Deployment
-
-### Development Stack (Local Docker Compose)
 ```powershell
-# Copy environment template
-Copy-Item .env.example .env
+# Clone develop branch
+git clone --branch develop --single-branch https://github.com/huynhlethanhnhan/TaskSyncEnterprise.git TaskSyncEnterprise
 
-# Edit .env with custom secrets if desired
-# Build & start container stack
-docker compose up -d --build
-
-# Inspect running container health
-docker compose ps
-
-# Run container smoke test automation
-.\scripts\docker_smoke_test.ps1
-
-# Shutdown container stack
-docker compose down
-```
-
-### Production Stack (Hardened Compose)
-```powershell
-Copy-Item .env.production.example .env.production
-docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
+# Navigate to repository root
+cd TaskSyncEnterprise
 ```
 
 ---
 
-## ⚡ Non-Docker Local Setup
+## 5. Python Virtual Environment
 
-### 1. Backend Setup
+Navigate to the `backend` directory, create and activate a Python virtual environment:
+
 ```powershell
 cd backend
+
+# Create virtual environment
 python -m venv .venv
+
+# Activate virtual environment on Windows PowerShell
 .\.venv\Scripts\Activate.ps1
+
+# Upgrade pip and install dependencies
+python -m pip install --upgrade pip
 pip install -r requirements.txt -r requirements-dev.txt
-
-# Run Alembic migrations
-python -m alembic upgrade head
-
-# Seed development dataset
-python -m app.seeds.seed_runner
-
-# Start Uvicorn backend server
-python -m uvicorn app.main:app --port 8000 --reload
 ```
 
-### 2. Frontend Setup
+---
+
+## 6. Environment Configuration
+
+Copy `.env.example` to create your local `.env` file:
+
+```powershell
+# Copy template (Do NOT commit .env with real passwords/secrets)
+Copy-Item ..\.env.example .env
+```
+
+Edit `.env` for your local SQL Server instance:
+
+```env
+MSSQL_HOST=127.0.0.1
+MSSQL_PORT=1433
+MSSQL_DATABASE=TaskSyncEnterprise
+MSSQL_USER=
+MSSQL_PASSWORD=
+```
+
+> [!NOTE]
+> - `MSSQL_HOST=127.0.0.1` is generally more stable than `localhost` on Windows IPv4/IPv6 resolver setups.
+> - Leave `MSSQL_USER` and `MSSQL_PASSWORD` empty if your local SQL Server uses Windows Trusted Authentication, or specify your `sa` / application credentials.
+
+---
+
+## 7. SQL Server Configuration
+
+Ensure your local Microsoft SQL Server service is running and configured for TCP connections:
+- Open **SQL Server Configuration Manager**.
+- Enable **TCP/IP** protocol under *SQL Server Network Configuration*.
+- Verify TCP Port is set to **1433**.
+- Ensure the **SQL Server (MSSQLSERVER)** or **SQL Server (SQLEXPRESS)** service is running.
+
+---
+
+## 8. Create Database
+
+Alembic manages table schemas and migration chains, but does not automatically create the SQL Server database container itself. The database must exist before executing migrations.
+
+Create the `TaskSyncEnterprise` database using SQL Server Management Studio (SSMS), `sqlcmd`, or the provided idempotent SQL script:
+
+### Using SQL Script:
+```powershell
+# SQL Script located at backend/scripts/create_database.sql
+```
+
+### SQL Command:
+```sql
+USE master;
+GO
+
+IF DB_ID(N'TaskSyncEnterprise') IS NULL
+BEGIN
+    CREATE DATABASE [TaskSyncEnterprise];
+END;
+GO
+```
+
+---
+
+## 9. Run Alembic Migrations
+
+For a brand new empty database, run `alembic upgrade head`. Alembic will automatically execute the entire migration chain from `<base>` to `head`:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+
+# Upgrade database to head (no need to run 'upgrade base' first)
+python -m alembic upgrade head
+
+# Verify migration status
+python -m alembic current
+python -m alembic heads
+```
+
+Verify that `alembic current` matches `alembic heads` (e.g. `05252bd1d012 (head)`).
+
+---
+
+## 10. Start Backend
+
+Start the FastAPI application backend server:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Access the interactive API documentation:
+- OpenAPI / Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- Health Probe: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+- Liveness Probe: [http://127.0.0.1:8000/health/live](http://127.0.0.1:8000/health/live)
+- Readiness Probe: [http://127.0.0.1:8000/health/ready](http://127.0.0.1:8000/health/ready)
+
+---
+
+## 11. Start Frontend
+
+In a separate PowerShell terminal, navigate to `frontend` and start Vite dev server:
+
 ```powershell
 cd frontend
-npm ci
+npm install
 npm run dev
 ```
 
+Access the web application at [http://localhost:5173](http://localhost:5173).
+
 ---
 
-## 🧪 Quality Gates & Automated Acceptance
+## 12. Run Tests
+
+Execute the backend quality gates and automated test suite:
 
 ```powershell
-# 1. Backend Pytest Test Suite (408 passed)
 cd backend
-.\.venv\Scripts\python.exe -m alembic current
-.\.venv\Scripts\python.exe -m pytest tests -q
+.\.venv\Scripts\Activate.ps1
 
-# 2. Frontend Production Build Check
-cd ..\frontend
-npm run build
+# Syntax & Compilation Check
+python -m compileall app alembic
 
-# 3. Playwright E2E Browser Acceptance Suite (10/10 Passed)
-cd ..
-node frontend/e2e/run-acceptance.mjs
+# Linting
+ruff check .
 
-# 4. Container Smoke Test Verification
-.\scripts\docker_smoke_test.ps1
+# Automated Pytest Suite (408 tests)
+python -m pytest -q
+
+# Run Local Migration Verification Script
+.\scripts\test_migrations_local.ps1
 ```
 
 ---
 
-## 📊 System Architecture Diagrams
+## 13. Migration Troubleshooting
 
-- 📐 [System Component Diagram](docs/diagrams/system_component_diagram.md)
-- 🐳 [Container Deployment Diagram](docs/diagrams/container_deployment_diagram.md)
-- 🗄️ [Database ERD Diagram](docs/diagrams/database_erd.md)
-- 🔄 [Request Flow Sequence Diagram](docs/diagrams/request_flow_diagram.md)
+If migration fails with SQL constraint errors on older database instances:
+1. **Auto-generated Constraint Names (`FK__...`)**:
+   All migration scripts (specifically `f69319655bb9`) now use dynamic metadata reflection (`find_foreign_key_name`) to discover foreign key names before dropping them. This ensures safe execution on any clean MSSQL instance regardless of SQL Server's random hash suffix generation.
+2. **Resetting Test Database (Local Dev Only)**:
+   ```sql
+   USE master;
+   GO
+   IF DB_ID(N'TaskSyncEnterprise') IS NOT NULL
+   BEGIN
+       ALTER DATABASE [TaskSyncEnterprise] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+       DROP DATABASE [TaskSyncEnterprise];
+   END;
+   GO
+   CREATE DATABASE [TaskSyncEnterprise];
+   GO
+   ```
 
 ---
 
-## ⚠️ Known Limitations & Roadmap
+## 14. Docker Status
 
-### Known Limitations
-1. **Azure Cloud Infrastructure**: Direct Azure Kubernetes / App Service Terraform modules remain out of scope for pre-August local delivery.
-2. **Production SMTP Gateway**: Requires external credentials in `.env` for production email transmission.
-3. **Frontend Bundle Warning**: Large chunk warning on single vendor bundle; Vite code splitting optimization is scheduled for v1.1.
+> [!WARNING]
+> **Docker Status: Not yet verified end-to-end.**
+> The verified installation path for TaskSyncEnterprise is currently **Windows Local + Python Virtual Environment + MSSQL Local**.
+> Docker Compose configurations are included for experimental container setups, but end-to-end container validation is scheduled for a future release cycle.
 
-### Roadmap
-- [x] Administration Stabilization (`Department -> Team -> Employee`)
-- [x] Project Organization Context (`department_id` & `team_id`)
-- [x] RBAC & Project Member Business Rules
-- [x] Alembic-First Database Migration Strategy
-- [x] Hardened Docker Container Pipeline & Health Probes
-- [x] GitHub Actions Green Foundation CI
-- [ ] Azure KeyVault & Managed Identity integration
-- [ ] Automated SQL Server backup retention scheduler
-- [ ] Advanced analytical reporting dashboard
+---
+
+## 15. Security Notes
+
+- **Secrets Management**: Never commit populated `.env` files or hardcoded credentials to Git.
+- **Connection Security**: Ensure production SQL Server connections use encrypted channels (`Encrypt=True;TrustServerCertificate=False`).
+- **User Permissions**: Never use `sa` account for production application connections. Create dedicated, least-privileged database users.
+
+---
+
+## 16. Git Branch Workflow
+
+- **Development Branch**: `develop`
+- **Rule**: All feature development, bug fixes, and migration updates must be pushed to `develop`.
+- **Pre-commit Checklist**:
+  1. Clean database `alembic upgrade head` PASS
+  2. `alembic current` == `alembic heads` PASS
+  3. `ruff check .` PASS
+  4. `python -m pytest -q` PASS
+  5. `git status` clean
 
 ---
 
 ## 📖 Key Documentation Links
 
-- 📋 [Docker & CI/CD Stabilization Report](docs/reports/docker_and_ci_stabilization_report.md)
+- 📄 [Alembic Migration Fix Report](docs/reports/ALEMBIC_MIGRATION_LOCAL_FIX_REPORT.md)
 - 🎯 [Final Release Candidate Report](docs/reports/final_release_candidate_report.md)
-- 📘 [Final Manual Acceptance Guide](docs/guides/final_manual_acceptance_guide.md)
-- 🐛 [Final Bug Fix Matrix](docs/reports/final_bug_fix_matrix.md)
 - 🏢 [Enterprise Business Relationships Architecture](docs/architecture/business_relationships.md)

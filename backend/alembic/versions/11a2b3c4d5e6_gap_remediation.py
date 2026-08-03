@@ -210,15 +210,20 @@ def downgrade() -> None:
     op.drop_constraint('fk_attachments_feedback_id', 'task_attachments', schema='dbo', type_='foreignkey')
     op.drop_constraint('fk_attachments_reply_id', 'task_attachments', schema='dbo', type_='foreignkey')
     op.drop_constraint('fk_attachments_topic_id', 'task_attachments', schema='dbo', type_='foreignkey')
-    
+
+    op.drop_index('ix_dbo_task_attachments_feedback_id', table_name='task_attachments', schema='dbo')
+    op.drop_index('ix_dbo_task_attachments_reply_id', table_name='task_attachments', schema='dbo')
+    op.drop_index('ix_dbo_task_attachments_topic_id', table_name='task_attachments', schema='dbo')
+
     op.drop_column('task_attachments', 'feedback_id', schema='dbo')
     op.drop_column('task_attachments', 'reply_id', schema='dbo')
     op.drop_column('task_attachments', 'topic_id', schema='dbo')
     op.alter_column('task_attachments', 'task_id', existing_type=sa.Integer(), nullable=False, schema='dbo')
-    
+
     op.drop_constraint('fk_tasks_sprint_id', 'tasks', schema='dbo', type_='foreignkey')
+    op.drop_index('ix_dbo_tasks_sprint_id', table_name='tasks', schema='dbo')
     op.drop_column('tasks', 'sprint_id', schema='dbo')
-    
+
     op.drop_table('user_feedback', schema='dbo')
     op.drop_table('discussion_replies', schema='dbo')
     op.drop_table('discussion_topics', schema='dbo')
