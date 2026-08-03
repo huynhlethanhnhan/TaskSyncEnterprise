@@ -1,5 +1,5 @@
 # 📂 FILE: app/routers/v1/backlog.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select, or_
 
@@ -70,6 +70,13 @@ def create_backlog_item(
             current_sprint_id=None,
         )
         values["status"] = "In Sprint"
+    if values.get("title") is None or not str(values["title"]).strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Title is required.",
+        )
+    if values.get("priority") is None:
+        values["priority"] = "Medium"
     item = BacklogItem(
         **values,
         sprint_id=sprint_id,
@@ -114,6 +121,11 @@ def update_backlog_item(
     require_project_management(db, item.project_id, current_user)
 
     values = data.model_dump(exclude_unset=True)
+    if values.get("title") is not None and not str(values["title"]).strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Title must not be empty.",
+        )
     sprint_id_was_set = "sprint_id" in values
     target_sprint_id = values.pop("sprint_id", item.sprint_id)
     if sprint_id_was_set and target_sprint_id != item.sprint_id:

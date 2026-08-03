@@ -19,10 +19,11 @@ const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
 const apiBaseUrl = process.env.E2E_API_URL || 'http://127.0.0.1:8000/api/v1';
 const executablePath = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 
-const adminEmail = process.env.E2E_ADMIN_EMAIL || 'admin@tasksync.com';
+const adminEmail = process.env.E2E_ADMIN_EMAIL || 'admin@tasksync.example.com';
 const adminPassword = process.env.E2E_ADMIN_PASSWORD || 'TaskSync@2026';
-const employeeEmail = process.env.E2E_EMPLOYEE_EMAIL || 'developer1@tasksync.com';
+const employeeEmail = process.env.E2E_EMPLOYEE_EMAIL || 'huynh.le.thanh.nhan@tasksync.example.com';
 const employeePassword = process.env.E2E_EMPLOYEE_PASSWORD || 'TaskSync@2026';
+
 
 const isHeaded = process.argv.includes('--headed');
 

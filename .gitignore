@@ -96,3 +96,7 @@ backend/logs/*.log.*
 *.rdb
 /backups/**/*.tar.gz
 /infrastructure/backup/runtime/**/*.tar.gz
+
+# Temporary Vibe Files
+.vibe/
+
