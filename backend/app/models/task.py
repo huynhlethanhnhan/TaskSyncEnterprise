@@ -1,3 +1,4 @@
+# 📂 FILE: app/models/task.py
 from datetime import datetime
 
 from sqlalchemy import (
@@ -37,7 +38,7 @@ class Task(Base):
 
     status: Mapped[str] = mapped_column(Unicode(30), server_default=text("N'To Do'"))
 
-    story_points: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    story_points: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     progress_percent: Mapped[float] = mapped_column(
         Numeric(5, 2), server_default=text("0")
@@ -54,7 +55,10 @@ class Task(Base):
     )
 
     assignments = relationship(
-        "TaskAssignment", back_populates="task", cascade="all, delete-orphan"
+        "TaskAssignment",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     comments = relationship(
@@ -65,8 +69,8 @@ class Task(Base):
         "TaskChecklist", back_populates="task", cascade="all, delete-orphan"
     )
 
-    sprint = relationship("Sprint", back_populates="tasks")
-    topic = relationship("DiscussionTopic")
+    sprint = relationship("Sprint", back_populates="tasks", lazy="joined")
+    topic = relationship("DiscussionTopic", lazy="joined")
 
     attachments = relationship(
         "TaskAttachment",
@@ -92,6 +96,10 @@ class Task(Base):
                 "job_title": emp.job_title,
             }
         return None
+
+    @property
+    def name(self) -> str:
+        return self.title
 
     @property
     def employee_id(self) -> int | None:

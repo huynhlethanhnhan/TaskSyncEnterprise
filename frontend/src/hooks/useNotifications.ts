@@ -2,11 +2,14 @@ import * as React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationsApi, type NotificationItem } from '../api/services';
 import { tokenService } from '../services/tokenService';
+import { useAuth } from '../providers/AuthProvider';
 
 export const useNotifications = () => {
+  const { isAuthenticated } = useAuth();
   return useQuery<NotificationItem[], Error>({
     queryKey: ['notifications'],
     queryFn: notificationsApi.getAll,
+    enabled: isAuthenticated,
     refetchInterval: 1000 * 10,
     refetchIntervalInBackground: true,
   });

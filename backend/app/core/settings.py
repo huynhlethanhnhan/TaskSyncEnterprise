@@ -1,10 +1,32 @@
 # 📂 FILE: app/core/settings.py
+import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, Optional
-from pydantic import Field, SecretStr, PositiveInt
+from typing import Any, Literal, Optional, Union
+from pydantic import Field, SecretStr, PositiveInt, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.core.paths import resolve_path
+
+
+def _parse_list_str(v: Any) -> list[str]:
+    """Helper to parse JSON array string, comma-separated string, or list into list[str]."""
+    if v is None:
+        return []
+    if isinstance(v, list):
+        return [str(x).strip() for x in v if str(x).strip()]
+    if isinstance(v, str):
+        v = v.strip()
+        if not v:
+            return []
+        if v.startswith("[") and v.endswith("]"):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return [str(x).strip() for x in parsed if str(x).strip()]
+            except Exception:
+                pass
+        return [x.strip() for x in v.split(",") if x.strip()]
+    return list(v)
 
 
 class Settings(BaseSettings):
@@ -259,11 +281,16 @@ class Settings(BaseSettings):
         ),
     )
 
-    # =========================================================================
-    # 📡 5. CORS SETTINGS
-    # =========================================================================
+    CORS_ORIGINS: Union[list[str], str] = Field(
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://localhost:8080",
+            "http://localhost:8000",
+        ],
+        description="Alias for BACKEND_CORS_ORIGINS.",
+    )
 
-    BACKEND_CORS_ORIGINS: list[str] = Field(
+    BACKEND_CORS_ORIGINS: Union[list[str], str] = Field(
         default_factory=lambda: ["http://localhost:5173"],
         description=(
             "Purpose: Allowed CORS origins permitted to invoke backend API endpoints.\n"
@@ -532,7 +559,7 @@ class Settings(BaseSettings):
         ),
     )
 
-    ALLOWED_HOSTS: list[str] = Field(
+    ALLOWED_HOSTS: Union[list[str], str] = Field(
         default_factory=lambda: ["*"],
         description=(
             "Purpose: List of allowed hostnames/IP addresses for TrustedHostMiddleware to prevent Host Header injection attacks.\n"
@@ -541,6 +568,18 @@ class Settings(BaseSettings):
             "Security Consideration: Restricting host headers prevents server side cache poisoning and redirects hijacking."
         ),
     )
+
+    @field_validator(
+        "BACKEND_CORS_ORIGINS",
+        "CORS_ORIGINS",
+        "ALLOWED_HOSTS",
+        "STORAGE_ALLOWED_AVATAR_EXTENSIONS",
+        "STORAGE_ALLOWED_ATTACHMENT_EXTENSIONS",
+        mode="before",
+    )
+    @classmethod
+    def _assemble_list_fields(cls, v: Any) -> list[str]:
+        return _parse_list_str(v)
 
     # =========================================================================
     # ✉️ 6. SMTP & EMAIL SERVICE SETTINGS

@@ -75,7 +75,7 @@ def test_complete_e2e_flow(client, db):
         },
         headers=admin_headers,
     )
-    assert task_res.status_code == 200
+    assert task_res.status_code == 201, task_res.json()
     task_id = task_res.json()["id"]
     print(f"[PASS] Task created successfully. Task ID: {task_id}")
 

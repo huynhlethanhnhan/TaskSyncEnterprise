@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - develop
+      - master
 
   pull_request:
     branches:
@@ -20,6 +21,32 @@ permissions:
   contents: read
 
 jobs:
+  repository-hygiene:
+    name: Repository Hygiene & Security Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check git diff formatting
+        run: git diff --check
+
+      - name: Reject forbidden committed artifacts
+        run: |
+          FORBIDDEN_PATTERNS=(".env$" ".venv/" "node_modules/" "frontend/dist/" "__pycache__/")
+          FOUND=0
+          for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
+            if git ls-files | grep -E "${pattern}" > /dev/null; then
+              echo "::error::Tracked forbidden file found matching pattern: $pattern"
+              FOUND=1
+            fi
+          done
+          if [ $FOUND -eq 1 ]; then
+            exit 1
+          fi
+          echo "Repository hygiene check passed cleanly."
+
   backend:
     name: Backend CI (Python 3.12)
     runs-on: ubuntu-latest
@@ -106,6 +133,13 @@ jobs:
         run: |
           echo "No changed Python files found."
 
+      - name: Verify Alembic migration heads
+        working-directory: backend
+        env:
+          PYTHONPATH: .
+        run: |
+          python -m alembic heads
+
       - name: Run Pytest with coverage
         working-directory: backend
         env:
@@ -162,7 +196,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-
   frontend:
     name: Frontend CI (Node 22)
     runs-on: ubuntu-latest
@@ -183,7 +216,19 @@ jobs:
         working-directory: frontend
         run: |
           npm ci
- 
+
+      - name: Run frontend lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run frontend typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Run frontend contract tests
+        working-directory: frontend
+        run: npm test
+
       - name: Verify frontend production build
         working-directory: frontend
         run: |
@@ -197,10 +242,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Run Hadolint Dockerfile Linter
+      - name: Run Hadolint Backend Dockerfile Linter
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: backend/Dockerfile
+          failure-threshold: error
+
+      - name: Run Hadolint Frontend Dockerfile Linter
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: frontend/Dockerfile
           failure-threshold: error
 
       - name: Set up Docker Buildx
@@ -216,9 +267,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build production frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: tasksync-frontend:prod
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Validate docker-compose.yml syntax
-        # CI has no untracked .env file. Validate the committed local template
-        # explicitly so required secrets stay mandatory in real deployments.
         run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
 
       - name: Validate docker-compose.production.yml syntax

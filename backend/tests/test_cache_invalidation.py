@@ -1,4 +1,5 @@
 # 📂 FILE: backend/tests/test_cache_invalidation.py
+import logging
 import pytest
 from unittest.mock import MagicMock, patch
 from app.cache import CacheInvalidator, cache_service, cache_keys
@@ -143,6 +144,18 @@ def test_task_update_invalidation(mock_redis):
 
     # Invalidate dashboard
     mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
+
+
+def test_invalidation_with_integer_delete_result_does_not_log_exception(
+    mock_redis, caplog
+):
+    caplog.set_level(logging.ERROR, logger="cache")
+
+    CacheInvalidator.invalidate_task(task_id=101)
+
+    assert not [
+        record for record in caplog.records if record.levelno >= logging.ERROR
+    ]
 
 
 def test_redis_unavailable():

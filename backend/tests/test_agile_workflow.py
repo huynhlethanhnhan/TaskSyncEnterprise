@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
+from typing import Any
 
 import pytest
 from fastapi import HTTPException
+from app.core.exceptions import BusinessRuleException
 from pydantic import ValidationError
 from sqlalchemy.dialects import mssql
 
@@ -80,7 +82,7 @@ def test_cross_project_backlog_assignment_is_rejected(db):
     db.add_all([sprint, item])
     db.commit()
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises((HTTPException, BusinessRuleException)) as exc_info:
         sprint_service.add_backlog_item(db, sprint, item)
 
     assert exc_info.value.status_code == 409
@@ -98,7 +100,7 @@ def test_duplicate_sprint_assignment_is_rejected(db):
 
     sprint_service.add_backlog_item(db, first_sprint, item)
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises((HTTPException, BusinessRuleException)) as exc_info:
         sprint_service.add_backlog_item(db, second_sprint, item)
 
     assert exc_info.value.status_code == 409
@@ -238,7 +240,7 @@ def test_task_cannot_reference_sprint_from_another_project(db):
     db.add(sprint)
     db.commit()
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises((HTTPException, BusinessRuleException)) as exc_info:
         validate_task_relationships(
             db,
             project_id=first_project.id,
@@ -267,7 +269,7 @@ def test_task_assignee_must_be_an_active_project_member(db):
     db.add(employee)
     db.commit()
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises((HTTPException, BusinessRuleException)) as exc_info:
         validate_task_relationships(
             db,
             project_id=project.id,
@@ -351,9 +353,9 @@ def test_project_list_is_scoped_for_manager_and_employee(db):
 
 def test_project_membership_check_generates_sql_server_compatible_query():
     class RecordingSession:
-        statement = None
+        statement: Any = None
 
-        def scalar(self, statement):
+        def scalar(self, statement: Any) -> Any:
             self.statement = statement
             return 1
 
@@ -373,8 +375,9 @@ def test_project_membership_check_generates_sql_server_compatible_query():
     )
     session = RecordingSession()
 
-    assert user_can_access_project(session, project, employee) is True
+    assert user_can_access_project(session, project, employee) is True  # type: ignore[arg-type]
 
+    assert session.statement is not None
     sql = str(
         session.statement.compile(
             dialect=mssql.dialect(),

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { Plus, Search, LayoutGrid, List } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
@@ -23,6 +23,7 @@ import { useDepartments } from '../../hooks/useDepartments';
 import { useTeams } from '../../hooks/useTeams';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
+import { extractApiError } from '../../utils/errorHelpers';
 import { type TaskItem } from '../../api/services';
 
 const STATUS_COLUMNS = ['To Do', 'In Progress', 'Done'];
@@ -104,9 +105,9 @@ const TaskPage: React.FC = () => {
     try {
       await updateTaskStatus.mutateAsync({ id: taskId, status: newStatus });
       toast.success('Cập nhật trạng thái công việc', `Đã chuyển task sang "${newStatus}".`);
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Không thể thay đổi trạng thái task.';
-      toast.error('Lỗi cập nhật trạng thái', message);
+    } catch (err: any) {
+      const apiError = extractApiError(err, 'Không thể thay đổi trạng thái task.');
+      toast.error(`Lỗi [${apiError.status}]`, apiError.message);
     }
   };
 
@@ -117,8 +118,9 @@ const TaskPage: React.FC = () => {
     try {
       await deleteTask.mutateAsync(task.id);
       toast.success('Đã xóa task thành công');
-    } catch {
-      toast.error('Lỗi khi xóa task');
+    } catch (err) {
+      const apiError = extractApiError(err, 'Lỗi khi xóa task');
+      toast.error(`Lỗi [${apiError.status}]`, apiError.message);
     }
   };
 
@@ -132,8 +134,9 @@ const TaskPage: React.FC = () => {
         toast.success('Tạo công việc mới thành công');
       }
       setIsDrawerOpen(false);
-    } catch {
-      toast.error('Lỗi lưu công việc');
+    } catch (err) {
+      const apiError = extractApiError(err, 'Lỗi lưu công việc');
+      toast.error(`Lỗi [${apiError.status}]`, apiError.message);
     }
   };
 
@@ -274,7 +277,7 @@ const TaskPage: React.FC = () => {
       id: 'department',
       header: 'Phòng ban',
       cell: ({ row }: { row: { original: TaskItem } }) => {
-        const emp = (row.original as any).assignee || employees.find((e) => e.id === row.original.assigned_to);
+        const emp = employees.find((e) => Number(e.id) === Number(row.original.assigned_to)) || (row.original as any).assignee;
         const dept = emp?.department_id ? departmentMap.get(emp.department_id) : null;
         return dept ? (
           <span className="font-semibold text-text-primary">{dept.name}</span>
@@ -287,7 +290,7 @@ const TaskPage: React.FC = () => {
       accessorKey: 'assigned_to',
       header: 'Người thực hiện',
       cell: ({ row }: { row: { original: TaskItem } }) => {
-        const emp = (row.original as any).assignee || employees.find((e) => e.id === row.original.assigned_to);
+        const emp = employees.find((e) => Number(e.id) === Number(row.original.assigned_to)) || (row.original as any).assignee;
         return emp ? (
           <div className="flex items-center gap-2">
             <Avatar name={emp.full_name} src={emp.avatar_url} size="sm" />
@@ -431,7 +434,7 @@ const TaskPage: React.FC = () => {
                   ) : (
                     colTasks.map((task) => {
                       const proj = projects.find((p) => p.id === task.project_id);
-                      const assignee = (task as any).assignee || employees.find((e) => e.id === task.assigned_to);
+                      const assignee = employees.find((e) => Number(e.id) === Number(task.assigned_to)) || (task as any).assignee;
 
                       return (
                         <Card
@@ -448,7 +451,7 @@ const TaskPage: React.FC = () => {
                               <div className="w-36 shrink-0">
                                 <Select
                                   value={task.status || 'To Do'}
-                                  disabled={!canManageTasks}
+                                  disabled={!canManageTasks && Number(task.assigned_to) !== Number(user?.id)}
                                   onClick={(e) => e.stopPropagation()}
                                   onChange={(e) => handleStatusChange(task.id, e.target.value, e)}
                                   options={[

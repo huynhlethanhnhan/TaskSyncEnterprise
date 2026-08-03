@@ -148,3 +148,22 @@ def test_log_masking_key_value_secrets():
     assert 'password="[REDACTED]"' in mask_sensitive(log1)
     assert "'smtp_password': '[REDACTED]'" in mask_sensitive(log2)
     assert '"SECRET_KEY": "[REDACTED]"' in mask_sensitive(log3)
+
+
+def test_settings_list_parsing_json_and_comma():
+    """Verify Settings parses CORS_ORIGINS and ALLOWED_HOSTS from both JSON arrays and comma-separated strings."""
+    with patch.dict(
+        os.environ,
+        {
+            "ALLOWED_HOSTS": "localhost,127.0.0.1,backend,frontend",
+            "CORS_ORIGINS": '["http://localhost:5173", "http://localhost:8080"]',
+            "BACKEND_CORS_ORIGINS": "http://localhost:5173,http://localhost:8000",
+        },
+    ):
+        s = Settings()
+        assert s.ALLOWED_HOSTS == ["localhost", "127.0.0.1", "backend", "frontend"]
+        assert s.CORS_ORIGINS == ["http://localhost:5173", "http://localhost:8080"]
+        assert s.BACKEND_CORS_ORIGINS == [
+            "http://localhost:5173",
+            "http://localhost:8000",
+        ]

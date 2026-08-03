@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('bundles one local font for consistent Chrome and Eagle rendering', async () => {
   const css = await read('./src/index.css');
-  const main = await read('./src/main.jsx');
+  const main = await read('./src/main.tsx');
   const bundledFontCss = await read('./node_modules/@fontsource-variable/inter/wght.css');
   assert.match(main, /@fontsource-variable\/inter\/wght\.css/);
   assert.match(bundledFontCss, /@font-face/);
@@ -140,23 +140,46 @@ test('collaboration and leave changes refresh across browser sessions without F5
 test('employee self-service and settings use the shared system UI contracts', async () => {
   const shell = await read('./src/layouts/ApplicationShell.tsx');
   const card = await read('./src/components/common/Card.tsx');
-  const settings = await read('./src/pages/settings/SettingsPage.jsx');
+  const settings = await read('./src/pages/settings/SettingsPage.tsx');
 
   assert.doesNotMatch(shell, /Create Leave Request|vacations-request|PlusCircle/);
-  assert.match(shell, /isAdminOrManager \? ['"]System Settings['"] : ['"]My Settings['"]/);
+  assert.match(shell, /isAdmin \? ['"]System Settings['"] : ['"]My Settings['"]/);
   assert.match(card, /first:pt-4/);
   assert.match(settings, /useTheme/);
   assert.match(settings, /tasksync_language/);
   assert.doesNotMatch(settings, /setTimeout/);
 });
 
-test('task editing is limited to managers and team leaders in the UI', async () => {
+test('task administration is limited while assignees can update status', async () => {
   const taskPage = await read('./src/pages/tasks/TaskPage.tsx');
   const drawer = await read('./src/components/drawers/TaskDrawer.tsx');
 
   assert.match(taskPage, /team\.leader_id/);
   assert.match(taskPage, /const canManageTasks = isAdminOrManager \|\| isTeamLeader/);
   assert.match(taskPage, /canEdit=\{canManageTasks\}/);
-  assert.match(drawer, /if \(!canEdit\) return/);
-  assert.match(drawer, /\{canEdit && \(/);
+  assert.match(drawer, /if \(!canEdit && !isAssignedToCurrentUser\) return/);
+  assert.match(drawer, /const canUpdateStatus = canEdit \|\| isAssignedToCurrentUser/);
+  assert.match(drawer, /disabled=\{!canEdit\}/);
+});
+
+test('organization project metrics navigate to a scoped project list', async () => {
+  const departmentPage = await read('./src/pages/departments/DepartmentPage.tsx');
+  const departmentDetail = await read('./src/pages/departments/DepartmentDetailPage.tsx');
+  const teamDetail = await read('./src/pages/teams/TeamDetailPage.tsx');
+  const employeeDetail = await read('./src/pages/employees/EmployeeDetailPage.tsx');
+  const projectPage = await read('./src/pages/projects/ProjectPage.tsx');
+  const projectDetail = await read('./src/pages/projects/ProjectDetailPage.tsx');
+
+  assert.match(departmentPage, /projects\?department_id=\$\{dept\.id\}/);
+  assert.match(departmentDetail, /projects\?department_id=\$\{department\.id\}/);
+  assert.match(teamDetail, /projects\?team_id=\$\{team\.id\}/);
+  assert.match(employeeDetail, /navigate\(`\/projects\/\$\{p\.id\}`\)/);
+  assert.match(projectPage, /searchParams\.get\('department_id'\)/);
+  assert.match(projectPage, /searchParams\.get\('team_id'\)/);
+  assert.match(projectPage, /useProjects\(projectFilters\)/);
+  assert.match(projectPage, /department_id: departmentId \|\| undefined/);
+  assert.match(
+    projectDetail,
+    /isAdminOrManager\s*\? \[\{ id: 'settings'/,
+  );
 });

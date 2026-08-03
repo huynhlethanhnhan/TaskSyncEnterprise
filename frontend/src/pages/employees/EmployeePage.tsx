@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Plus, Search, Eye, Edit3, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
@@ -25,6 +25,7 @@ import {
 import { useDepartments } from '../../hooks/useDepartments';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useToast } from '../../providers/ToastProvider';
+import { extractApiError } from '../../utils/errorHelpers';
 import { type EmployeeItem } from '../../api/services';
 
 const EmployeePage: React.FC = () => {
@@ -120,7 +121,8 @@ const EmployeePage: React.FC = () => {
       if (err?.response?.status === 403) {
         toast.error('Lỗi phân quyền (403)', 'Bạn không có quyền thực hiện thao tác này trên backend.');
       } else {
-        toast.error('Không thể lưu thông tin nhân viên');
+        const apiError = extractApiError(err, 'Không thể lưu thông tin nhân viên');
+        toast.error(`Lỗi [${apiError.status}]`, apiError.message);
       }
     }
   };

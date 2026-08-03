@@ -1,5 +1,5 @@
 # 📂 FILE: app/routers/v1/backlog.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select, or_
 
@@ -9,6 +9,7 @@ from app.models.backlog_item import BacklogItem
 from app.models.project_member import ProjectMember
 from app.models.task import Task
 from app.models.sprint import Sprint
+from app.models.discussion_topic import DiscussionTopic
 from app.core.deps import get_current_user, RequireManager, RequireEmployee
 from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
 from app.schemas.backlog import (
@@ -29,6 +30,24 @@ router = APIRouter(prefix="/backlog", tags=["Product Backlog"])
 
 def check_project_membership(db: Session, project_id: int, current_user: Employee):
     require_project_access(db, project_id, current_user)
+
+
+def validate_topic_project(
+    db: Session,
+    *,
+    topic_id: int | None,
+    project_id: int,
+) -> None:
+    if topic_id is None:
+        return
+    topic = db.get(DiscussionTopic, topic_id)
+    if topic is None or topic.is_deleted:
+        raise HTTPException(status_code=404, detail="Epic not found")
+    if topic.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Epic must belong to the Backlog item's Project.",
+        )
 
 
 @router.get("", response_model=list[BacklogItemResponse])
@@ -58,6 +77,11 @@ def create_backlog_item(
 ):
     require_project_management(db, data.project_id, current_user)
     values = data.model_dump()
+    validate_topic_project(
+        db,
+        topic_id=values.get("topic_id"),
+        project_id=data.project_id,
+    )
     sprint_id = values.pop("sprint_id", None)
     target_sprint = None
     if sprint_id is not None:
@@ -70,6 +94,13 @@ def create_backlog_item(
             current_sprint_id=None,
         )
         values["status"] = "In Sprint"
+    if values.get("title") is None or not str(values["title"]).strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Title is required.",
+        )
+    if values.get("priority") is None:
+        values["priority"] = "Medium"
     item = BacklogItem(
         **values,
         sprint_id=sprint_id,
@@ -114,7 +145,18 @@ def update_backlog_item(
     require_project_management(db, item.project_id, current_user)
 
     values = data.model_dump(exclude_unset=True)
+    if values.get("title") is not None and not str(values["title"]).strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Title must not be empty.",
+        )
     sprint_id_was_set = "sprint_id" in values
+    if "topic_id" in values:
+        validate_topic_project(
+            db,
+            topic_id=values["topic_id"],
+            project_id=item.project_id,
+        )
     target_sprint_id = values.pop("sprint_id", item.sprint_id)
     if sprint_id_was_set and target_sprint_id != item.sprint_id:
         if target_sprint_id is None:
@@ -203,14 +245,13 @@ def convert_to_task(
         story_points=item.story_points,
         created_by=current_user.id,
     )
+    # Create and link atomically so a failed link cannot leave an orphan Task.
     db.add(task)
+    db.flush()
+    item.task_id = task.id
+    item.status = "Converted"
     db.commit()
     db.refresh(task)
-
-    # Link backlog item to the task and change status
-    item.task_id = task.id
-    item.status = "In Sprint" if item.sprint_id else "Backlog"
-    db.commit()
 
     CacheInvalidator.invalidate_task(task.id, project_id=task.project_id)
     if task.sprint_id is not None:

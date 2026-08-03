@@ -79,9 +79,23 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
   const handleStart = async (id: number) => {
     try {
       await startMutation.mutateAsync(id);
-      toast.success('Sprint đã kích hoạt', 'Sprint được chuyển sang trạng thái Active.');
+      toast.success('Sprint đã kích hoạt', 'Sprint được chuyển sang trạng thái Active thành công.');
     } catch (err: any) {
-      toast.error('Lỗi kích hoạt', err.response?.data?.detail || 'Không thể kích hoạt Sprint.');
+      const status = err.response?.status;
+      const detailRaw = err.response?.data?.message || err.response?.data?.detail;
+      const detailMsg = typeof detailRaw === 'string' ? detailRaw : Array.isArray(detailRaw) ? detailRaw.map((d: any) => d.msg).join(', ') : 'Không thể kích hoạt Sprint.';
+
+      if (status === 409) {
+        toast.error('Xung đột trạng thái Sprint (409 Conflict)', detailMsg);
+      } else if (status === 403) {
+        toast.error('Không có quyền (403 Forbidden)', 'Bạn không có quyền quản lý để kích hoạt Sprint này.');
+      } else if (status === 404) {
+        toast.error('Không tìm thấy (404 Not Found)', 'Sprint không tồn tại hoặc đã bị xóa.');
+      } else if (status === 422) {
+        toast.error('Lỗi dữ liệu (422 Unprocessable Entity)', detailMsg);
+      } else {
+        toast.error('Lỗi hệ thống', detailMsg || 'Không thể kích hoạt Sprint.');
+      }
     }
   };
 

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { useLocation, useNavigate, Outlet } from 'react-router';
 import {
   LayoutDashboard,
   Briefcase,
@@ -212,7 +212,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
         },
         {
           key: '/settings',
-          label: isAdminOrManager ? 'System Settings' : 'My Settings',
+          label: isAdmin ? 'System Settings' : 'My Settings',
           icon: <Settings className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/settings'); setMobileDrawerOpen(false); },
         },

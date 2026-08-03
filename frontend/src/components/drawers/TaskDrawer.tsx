@@ -31,6 +31,8 @@ import {
   Clock,
 } from 'lucide-react';
 import { Avatar } from '../common/Avatar';
+import { Badge } from '../common/Badge';
+import { getDeadlineDisplay } from '../../utils/deadline';
 
 interface TaskDrawerProps {
   isOpen: boolean;
@@ -48,7 +50,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   onClose,
   task,
   projects = [],
-  employees = [],
+  employees: _employees = [],
   onSave,
   isLoading = false,
   canEdit = true,
@@ -154,14 +156,33 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   const [storyPoints, setStoryPoints] = React.useState(0);
   const [isUploading, setIsUploading] = React.useState(false);
 
-  const { data: projectMembers = [] } = useProjectMembers(projectId ? Number(projectId) : null);
+  const { data: projectMembers = [], refetch: refetchProjectMembers } = useProjectMembers(projectId ? Number(projectId) : null);
   const { data: projectSprints = [] } = useSprints(projectId ? Number(projectId) : undefined);
   const { data: projectTopics = [] } = useTopics(projectId ? Number(projectId) : undefined);
 
+  const handleProjectChange = (newProjectId: number | '') => {
+    setProjectId(newProjectId);
+    setAssignedTo('');
+    setSprintId('');
+    setTopicId('');
+  };
+
   const assigneeOptions = React.useMemo(() => {
-    const list = projectMembers.length > 0 ? projectMembers : employees;
-    return list.map((emp) => ({ value: String(emp.id), label: emp.full_name || 'Member' }));
-  }, [projectMembers, employees]);
+    const availableList = projectMembers.length > 0 ? projectMembers : _employees;
+    return availableList.map((emp) => {
+      const codeStr = emp.employee_code ? ` (${emp.employee_code})` : '';
+      const pos = (emp as any).position || emp.job_title;
+      const posStr = pos ? ` - ${pos}` : '';
+      return {
+        value: String(emp.id),
+        label: `${emp.full_name}${codeStr}${posStr}`,
+      };
+    });
+  }, [projectMembers, _employees]);
+
+  const assigneePlaceholder = '-- Chọn Người thực hiện --';
+
+  const isAssigneeDisabled = !canEdit;
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -190,27 +211,49 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
     }
   }, [task, isOpen, projects]);
 
+  const isAssignedToCurrentUser = Boolean(
+    task && (Number(task.assigned_to) === Number(currentUser?.id) || task.assigned_to === currentUser?.id)
+  );
+  const canUpdateStatus = canEdit || isAssignedToCurrentUser;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canEdit) return;
-    if (!title.trim()) return;
+    if (!canEdit && !isAssignedToCurrentUser) return;
+    if (canEdit && !title.trim()) return;
 
-    await onSave({
-      title: title.trim(),
-      name: title.trim(),
-      description: description.trim() || null,
-      status,
-      priority,
-      project_id: projectId ? Number(projectId) : null,
-      assigned_to: assignedTo ? Number(assignedTo) : null,
-      sprint_id: sprintId ? Number(sprintId) : null,
-      topic_id: topicId ? Number(topicId) : null,
-      deadline: deadline || null,
-      story_points: Number(storyPoints),
-    });
+    if (canEdit) {
+      if (assignedTo) {
+        const { data: latestMembers } = await refetchProjectMembers();
+        const memberList = latestMembers || projectMembers;
+        const isValid = memberList.some((m) => Number(m.id) === Number(assignedTo));
+        if (!isValid) {
+          toast.error('Lỗi phân công', 'Nhân viên được chọn chưa phải thành viên của dự án.');
+          return;
+        }
+      }
+
+      await onSave({
+        title: title.trim(),
+        name: title.trim(),
+        description: description.trim() || null,
+        status,
+        priority,
+        project_id: projectId ? Number(projectId) : null,
+        assigned_to: assignedTo ? Number(assignedTo) : null,
+        sprint_id: sprintId ? Number(sprintId) : null,
+        topic_id: topicId ? Number(topicId) : null,
+        deadline: deadline || null,
+        story_points: storyPoints === 0 ? null : storyPoints,
+      });
+    } else if (isAssignedToCurrentUser && task) {
+      await onSave({
+        status,
+        progress_percent: status === 'Done' ? 100 : task.progress_percent || 0,
+      });
+    }
   };
 
-  // Attachment Upload Handler (Vật lý - kết nối API thực tế)
+  // Attachment Upload Handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!task || !e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -241,7 +284,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
     }
   };
 
-  // Attachment Delete Handler (Vật lý - kết nối API thực tế)
+  // Attachment Delete Handler
   const handleDeleteAttachment = async (attachmentId: number) => {
     if (!task) return;
     if (!window.confirm('Xác nhận xóa tài liệu đính kèm này?')) return;
@@ -263,6 +306,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   };
 
   const isEditMode = Boolean(task);
+  const deadlineInfo = getDeadlineDisplay(deadline, status);
 
   return (
     <Drawer
@@ -277,7 +321,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
           <Button variant="outline" size="sm" onClick={onClose} type="button">
             Hủy bỏ
           </Button>
-          {canEdit && (
+          {(canEdit || (isEditMode && isAssignedToCurrentUser)) && (
             <Button variant="primary" size="sm" onClick={handleSubmit} isLoading={isLoading}>
               {isEditMode ? 'Lưu thay đổi' : 'Tạo Mới'}
             </Button>
@@ -507,7 +551,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
 
             {/* Right Column: Metadata Sidebar */}
             <div className="space-y-4">
-              <fieldset disabled={!canEdit} className="border border-border rounded-xl p-4 bg-surface space-y-4">
+              <div className="border border-border rounded-xl p-4 bg-surface space-y-4">
                 <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider border-b border-border pb-2">
                   Thuộc tính & Metadata
                 </h3>
@@ -515,6 +559,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Trạng thái"
                   value={status}
+                  disabled={!canUpdateStatus}
                   onChange={(e) => setStatus(e.target.value)}
                   options={[
                     { value: 'To Do', label: 'To Do' },
@@ -526,6 +571,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Độ ưu tiên"
                   value={priority}
+                  disabled={!canEdit}
                   onChange={(e) => setPriority(e.target.value)}
                   options={[
                     { value: 'High', label: 'Cao (High)' },
@@ -537,7 +583,8 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Thuộc Dự án"
                   value={String(projectId)}
-                  onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
+                  disabled={!canEdit}
+                  onChange={(e) => handleProjectChange(e.target.value ? Number(e.target.value) : '')}
                   options={[
                     { value: '', label: '-- Chọn Dự án --' },
                     ...projects.map((p) => ({ value: String(p.id), label: p.name })),
@@ -547,9 +594,10 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Người Thực hiện"
                   value={String(assignedTo)}
+                  disabled={isAssigneeDisabled}
                   onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : '')}
                   options={[
-                    { value: '', label: '-- Chọn Người thực hiện --' },
+                    { value: '', label: assigneePlaceholder },
                     ...assigneeOptions,
                   ]}
                 />
@@ -557,6 +605,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Gán vào Sprint"
                   value={String(sprintId)}
+                  disabled={!canEdit}
                   onChange={(e) => setSprintId(e.target.value ? Number(e.target.value) : '')}
                   options={[
                     { value: '', label: '-- Không thuộc Sprint --' },
@@ -567,6 +616,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <Select
                   label="Thuộc Epic / Chủ đề"
                   value={String(topicId)}
+                  disabled={!canEdit}
                   onChange={(e) => setTopicId(e.target.value ? Number(e.target.value) : '')}
                   options={[
                     { value: '', label: '-- Không thuộc Epic --' },
@@ -574,20 +624,47 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                   ]}
                 />
 
-                <Input
-                  label="Thời hạn (Deadline)"
-                  type="date"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                />
+                {canEdit ? (
+                  <>
+                    <Input
+                      label="Thời hạn (Deadline)"
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                    />
 
-                <Input
-                  label="Story Points (Jira Estimation)"
-                  type="number"
-                  value={String(storyPoints)}
-                  onChange={(e) => setStoryPoints(Number(e.target.value))}
-                />
-              </fieldset>
+                    <Input
+                      label="Story Points (Jira Estimation)"
+                      type="number"
+                      value={String(storyPoints)}
+                      onChange={(e) => setStoryPoints(Number(e.target.value))}
+                    />
+                  </>
+                ) : (
+                  <div className="space-y-3 pt-3 border-t border-border/40">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block mb-1">Story Points</span>
+                      <div className="text-xs font-bold text-text-primary bg-secondary/30 px-3 py-2 rounded-lg border border-border/40">
+                        {storyPoints > 0 ? `Story Point: ${storyPoints}` : 'Not estimated'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block mb-1">Thời hạn (Deadline)</span>
+                      <div className="flex items-center justify-between gap-2 bg-secondary/30 px-3 py-2 rounded-lg border border-border/40">
+                        <span className="text-xs font-bold text-text-primary">
+                          {deadlineInfo.formattedDeadline}
+                        </span>
+                        {deadlineInfo.badge && (
+                          <Badge variant={deadlineInfo.badge.variant}>
+                            {deadlineInfo.badge.text}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Quick Info summary */}
               <div className="text-[10px] text-text-muted space-y-1 p-3 border border-border/60 rounded-xl bg-accent/20">
@@ -642,7 +719,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
             <Select
               label="Thuộc Dự án"
               value={String(projectId)}
-              onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : '')}
+              onChange={(e) => handleProjectChange(e.target.value ? Number(e.target.value) : '')}
               options={[
                 { value: '', label: '-- Chọn Dự án --' },
                 ...projects.map((p) => ({ value: String(p.id), label: p.name })),
@@ -652,9 +729,10 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
             <Select
               label="Người Thực hiện"
               value={String(assignedTo)}
+              disabled={isAssigneeDisabled}
               onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : '')}
               options={[
-                { value: '', label: '-- Chọn Người thực hiện --' },
+                { value: '', label: assigneePlaceholder },
                 ...assigneeOptions,
               ]}
             />

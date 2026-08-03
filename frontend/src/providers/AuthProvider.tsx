@@ -8,6 +8,7 @@ interface UserProfile {
   email: string;
   role: string;
   role_id?: number | null;
+  employee_code?: string | null;
   avatar_url?: string | null;
   full_name?: string;
   job_title?: string | null;
@@ -61,11 +62,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(userProfile);
   };
 
-  const logout = () => {
+  const logout = React.useCallback(() => {
     queryClient.clear();
     tokenService.clear();
     setUser(null);
-  };
+  }, [queryClient, setUser]);
+
+  React.useEffect(() => {
+    const handleSessionExpired = () => {
+      logout();
+    };
+    window.addEventListener('tasksync:session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('tasksync:session-expired', handleSessionExpired);
+    };
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, setUser, login, logout }}>

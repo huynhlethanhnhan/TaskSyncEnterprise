@@ -9,9 +9,10 @@ from app.schemas.organization_membership import (
 )
 from app.schemas.team import TeamCreate, TeamUpdate, TeamResponse, TeamDetailResponse
 from app.crud import team as crud_team
-from app.core.deps import get_current_user, RequireAdmin
+from app.core.deps import get_current_user, RequireAdmin, RequireManager
 from app.core.constants import (
     ROLE_ADMIN,
+    ROLE_MANAGER,
 )
 from app.services.team_service import can_view_team
 from app.services import organization_membership
@@ -177,13 +178,29 @@ def create_team(data: TeamCreate, db: Session = Depends(get_db)):
     return crud_team._serialize_team(db, res)
 
 
-@router.put(
-    "/{team_id}", response_model=TeamResponse, dependencies=[Depends(RequireAdmin)]
-)
-def update_team(team_id: int, data: TeamUpdate, db: Session = Depends(get_db)):
+@router.put("/{team_id}", response_model=TeamResponse)
+def update_team(
+    team_id: int,
+    data: TeamUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(RequireManager),
+):
     obj = crud_team.get_model_by_id(db, team_id)
     if not obj:
         raise HTTPException(status_code=404, detail="Team not found")
+
+    if current_user.role_id == ROLE_MANAGER:
+        changed_fields = set(data.model_dump(exclude_unset=True))
+        if obj.department_id != current_user.department_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Managers can only update Teams in their Department.",
+            )
+        if changed_fields - {"leader_id"}:
+            raise HTTPException(
+                status_code=403,
+                detail="Managers can only change the Team Leader.",
+            )
     old_department_id = obj.department_id
     res = crud_team.update(db, obj, data)
     from app.cache import CacheInvalidator

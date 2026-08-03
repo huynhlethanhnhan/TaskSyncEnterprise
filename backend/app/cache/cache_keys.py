@@ -41,10 +41,19 @@ def get_project_list_key(
     skip: int = 0,
     limit: int = 20,
     user_id: int | None = None,
+    department_id: int | None = None,
+    team_id: int | None = None,
+    status: str | None = None,
 ) -> str:
     """Generates the cache key for the projects list with pagination parameters."""
     user_part = f":u_{user_id}" if user_id is not None else ""
-    return f"project:list:{skip}:{limit}{user_part}"
+    department_part = f":d_{department_id}" if department_id is not None else ""
+    team_part = f":t_{team_id}" if team_id is not None else ""
+    status_part = f":s_{status}" if status else ""
+    return (
+        f"project:list:{skip}:{limit}{user_part}"
+        f"{department_part}{team_part}{status_part}"
+    )
 
 
 def get_role_key(role_id: int) -> str:

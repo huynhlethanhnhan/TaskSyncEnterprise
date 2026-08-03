@@ -1,11 +1,9 @@
 # 📂 FILE: app/cache/cache_manager.py
-import logging
 from typing import Any, Callable, Optional, Type, TypeVar, List
 from pydantic import BaseModel, TypeAdapter
 from app.cache.cache_service import CacheService
 from app.config import settings
-
-logger = logging.getLogger("cache")
+from app.logging import app_logger as logger
 
 T = TypeVar("T")
 
@@ -117,7 +115,7 @@ class CacheManager:
     def cache_collection(
         self,
         key: str,
-        creator_fn: Callable[[], List[Any]],
+        creator_fn: Callable[[], Any],
         ttl: Optional[int] = None,
         response_model: Optional[Type[List[T]]] = None,
     ) -> List[T]:

@@ -90,3 +90,37 @@ def project_scope_predicate(current_user: Employee):
             )
         ),
     )
+
+
+def validate_project_relationships(
+    db: Session,
+    *,
+    department_id: int | None,
+    team_id: int | None,
+) -> None:
+    from app.models.department import Department
+    from app.core.exceptions import BusinessRuleException
+
+    if department_id is not None:
+        dept = db.get(Department, department_id)
+        if dept is None:
+            raise BusinessRuleException(
+                message="Phòng ban không tồn tại.",
+                error_code="DEPARTMENT_NOT_FOUND",
+                status_code=404,
+            )
+    if team_id is not None:
+        team = db.get(Team, team_id)
+        if team is None or not team.is_active:
+            raise BusinessRuleException(
+                message="Team không tồn tại hoặc đã bị vô hiệu hóa.",
+                error_code="TEAM_NOT_FOUND",
+                status_code=404,
+            )
+        if department_id is not None and team.department_id != department_id:
+            raise BusinessRuleException(
+                message="Team không thuộc Phòng ban của dự án.",
+                error_code="TEAM_DEPARTMENT_MISMATCH",
+                status_code=409,
+            )
+

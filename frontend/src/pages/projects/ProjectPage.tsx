@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Briefcase, Trash2, Edit3, Eye } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { Plus, Search, Briefcase, Trash2, Edit3, Eye, X } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/common/Card';
@@ -27,18 +27,30 @@ import { type ProjectItem } from '../../api/services';
 
 const ProjectPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
   const permissions = usePermissions();
 
-  const { data: projects = [], isLoading, isError, error, refetch } = useProjects();
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const departmentId = searchParams.get('department_id');
+  const teamId = searchParams.get('team_id');
+  const requestedStatus = searchParams.get('status');
+  const [statusFilter, setStatusFilter] = React.useState(requestedStatus || 'all');
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(9);
+  const projectFilters = React.useMemo(
+    () => ({
+      department_id: departmentId || undefined,
+      team_id: teamId || undefined,
+      status: statusFilter === 'all' ? undefined : statusFilter,
+    }),
+    [departmentId, statusFilter, teamId],
+  );
+
+  const { data: projects = [], isLoading, isError, error, refetch } = useProjects(projectFilters);
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
-
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [statusFilter, setStatusFilter] = React.useState('all');
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(9);
 
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
@@ -56,6 +68,26 @@ const ProjectPage: React.FC = () => {
       return matchSearch && matchStatus;
     });
   }, [projects, searchTerm, statusFilter]);
+
+  const organizationFilterLabel = React.useMemo(() => {
+    if (teamId) {
+      const teamName = projects.find((project) => String(project.team_id) === teamId)?.team_name;
+      return teamName ? `Team: ${teamName}` : `Team #${teamId}`;
+    }
+    if (departmentId) {
+      const departmentName = projects.find((project) => String(project.department_id) === departmentId)?.department_name;
+      return departmentName ? `Phòng ban: ${departmentName}` : `Phòng ban #${departmentId}`;
+    }
+    return null;
+  }, [departmentId, projects, teamId]);
+
+  const clearOrganizationFilter = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('department_id');
+    nextParams.delete('team_id');
+    setSearchParams(nextParams);
+    setCurrentPage(1);
+  };
 
   const paginatedProjects = React.useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -105,8 +137,14 @@ const ProjectPage: React.FC = () => {
         toast.success('Tạo dự án mới thành công', `Đã khởi tạo dự án ${data.name}.`);
       }
       setIsDrawerOpen(false);
-    } catch {
-      toast.error('Không thể lưu dự án', 'Đã xảy ra lỗi khi tương tác với API backend.');
+    } catch (err: any) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        (Array.isArray(err?.response?.data?.detail)
+          ? err?.response?.data?.detail[0]?.msg
+          : err?.response?.data?.detail) ||
+        'Không thể lưu dự án. Vui lòng kiểm tra lại thông tin.';
+      toast.error('Lỗi lưu thông tin dự án', errorMsg);
     }
   };
 
@@ -168,6 +206,23 @@ const ProjectPage: React.FC = () => {
           ) : undefined
         }
       />
+
+      {organizationFilterLabel && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border/60 py-3 text-xs">
+          <div className="flex items-center gap-2 text-text-secondary">
+            <Briefcase className="h-4 w-4 text-primary" />
+            <span>Đang lọc dự án theo <strong className="text-text-primary">{organizationFilterLabel}</strong></span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            leftIcon={<X className="h-3.5 w-3.5" />}
+            onClick={clearOrganizationFilter}
+          >
+            Xóa bộ lọc tổ chức
+          </Button>
+        </div>
+      )}
 
       {/* Toolbar & Search Controls */}
       <Card>
@@ -251,6 +306,20 @@ const ProjectPage: React.FC = () => {
 
                 <CardContent className="pt-0 space-y-4">
                   <div className="flex items-center justify-between text-xs border-t border-border/60 pt-3">
+                    <span className="text-text-muted">Phòng ban / Team:</span>
+                    <span className="font-semibold text-text-primary text-right">
+                      {project.department_name ? (
+                        <>
+                          {project.department_name}
+                          {project.team_name ? ` • ${project.team_name}` : ''}
+                        </>
+                      ) : (
+                        <span className="text-text-muted italic">Chưa gán Phòng ban</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs border-t border-border/60 pt-2">
                     <span className="text-text-muted">Ngày khởi tạo:</span>
                     <span className="font-semibold text-text-primary">
                       {project.created_at ? new Date(project.created_at).toLocaleDateString('vi-VN') : 'Mới cập nhật'}

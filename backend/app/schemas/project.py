@@ -15,6 +15,8 @@ class ProjectBase(BaseModel):
     priority: str = "Medium"
 
     budget: float | None = None
+    department_id: int | None = None
+    team_id: int | None = None
 
 
 class ProjectCreate(ProjectBase):
@@ -34,6 +36,8 @@ class ProjectUpdate(BaseModel):
 
     budget: float | None = None
     progress_percent: float | None = None
+    department_id: int | None = None
+    team_id: int | None = None
 
 
 class ProjectResponse(ProjectBase):
@@ -43,13 +47,25 @@ class ProjectResponse(ProjectBase):
     id: int
     progress_percent: float
     created_at: datetime
+    created_by: int | None = None
+    department_name: str | None = None
+    team_name: str | None = None
+
 
 
 class ProjectMemberSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    employee_code: str | None = None
     full_name: str
     avatar_url: str | None = None
     job_title: str | None = None
+    position: str | None = None
     email: str | None = None
+    is_active: bool = True
+
+
+class ProjectMemberAddRequest(BaseModel):
+    employee_id: int
+

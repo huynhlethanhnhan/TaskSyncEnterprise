@@ -1,6 +1,6 @@
 # 📂 FILE: app/schemas/backlog.py
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BacklogItemBase(BaseModel):
@@ -12,12 +12,53 @@ class BacklogItemBase(BaseModel):
     sprint_id: int | None = None
     topic_id: int | None = None
 
+    @field_validator("description", mode="before")
+    @classmethod
+    def normalize_description(cls, value):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            normalized = value.strip()
+            return normalized or None
+        return value
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def normalize_priority(cls, value):
+        if value is None:
+            return "Medium"
+        if isinstance(value, str):
+            normalized = value.strip()
+            return normalized or "Medium"
+        return value
+
+    @field_validator("story_points", mode="before")
+    @classmethod
+    def normalize_story_points(cls, value):
+        if value in (None, "", " "):
+            return 0
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return 0
+            return int(stripped)
+        return value
+
+    @field_validator("sprint_id", "topic_id", mode="before")
+    @classmethod
+    def normalize_optional_ids(cls, value):
+        if value in (None, "", " ", 0):
+            return None
+        return value
+
 
 class BacklogItemCreate(BacklogItemBase):
     project_id: int
 
 
 class BacklogItemUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     title: str | None = None
     description: str | None = None
     priority: str | None = None
@@ -25,7 +66,26 @@ class BacklogItemUpdate(BaseModel):
     story_points: int | None = Field(default=None, ge=0)
     sprint_id: int | None = None
     topic_id: int | None = None
-    task_id: int | None = None
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def normalize_description(cls, value):
+        return BacklogItemBase.normalize_description(value)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def normalize_priority(cls, value):
+        return BacklogItemBase.normalize_priority(value)
+
+    @field_validator("story_points", mode="before")
+    @classmethod
+    def normalize_story_points(cls, value):
+        return BacklogItemBase.normalize_story_points(value)
+
+    @field_validator("sprint_id", "topic_id", mode="before")
+    @classmethod
+    def normalize_optional_ids(cls, value):
+        return BacklogItemBase.normalize_optional_ids(value)
 
 
 class BacklogItemResponse(BacklogItemBase):

@@ -113,7 +113,7 @@ def _create_employee(db, code, email):
     return employee
 
 
-def test_team_leader_can_manage_task_while_regular_employee_is_read_only(client, db):
+def test_team_leader_can_manage_task_and_assigned_employee_can_update_status(client, db):
     department = Department(
         department_code="OPS",
         name="Operations",
@@ -132,10 +132,13 @@ def test_team_leader_can_manage_task_while_regular_employee_is_read_only(client,
 
     leader = _create_employee(db, "LEAD001", "leader@example.com")
     worker = _create_employee(db, "EMP001", "worker@example.com")
+    unassigned_worker = _create_employee(db, "EMP002", "unassigned@example.com")
     leader.department_id = department.id
     leader.team_id = team.id
     worker.department_id = department.id
     worker.team_id = team.id
+    unassigned_worker.department_id = department.id
+    unassigned_worker.team_id = team.id
     team.leader_id = leader.id
 
     project = Project(
@@ -150,6 +153,7 @@ def test_team_leader_can_manage_task_while_regular_employee_is_read_only(client,
     db.add(project)
     db.flush()
     db.add(ProjectMember(project_id=project.id, employee_id=worker.id))
+    db.add(ProjectMember(project_id=project.id, employee_id=unassigned_worker.id))
 
     task = Task(
         project_id=project.id,
@@ -171,10 +175,30 @@ def test_team_leader_can_manage_task_while_regular_employee_is_read_only(client,
         headers=_login(client, leader.email),
     )
     assert leader_response.status_code == 200
+    assert leader_response.json()["title"] == "Leader updated"
 
     worker_response = client.patch(
         f"/api/v1/tasks/{task.id}",
         json={"status": "In Progress"},
         headers=_login(client, worker.email),
     )
-    assert worker_response.status_code == 403
+    assert worker_response.status_code == 200
+    assert worker_response.json()["status"] == "In Progress"
+
+    db.refresh(task)
+    assert task.title == "Leader updated"
+    assert task.status == "In Progress"
+
+    protected_field_response = client.patch(
+        f"/api/v1/tasks/{task.id}",
+        json={"title": "Worker unauthorized change"},
+        headers=_login(client, worker.email),
+    )
+    assert protected_field_response.status_code == 403
+
+    unassigned_response = client.patch(
+        f"/api/v1/tasks/{task.id}",
+        json={"status": "Done"},
+        headers=_login(client, unassigned_worker.email),
+    )
+    assert unassigned_response.status_code == 403

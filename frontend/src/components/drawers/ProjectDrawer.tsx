@@ -5,6 +5,8 @@ import { Textarea } from '../ui/Textarea';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { type ProjectItem } from '../../api/services';
+import { useDepartments } from '../../hooks/useDepartments';
+import { useTeams } from '../../hooks/useTeams';
 
 interface ProjectDrawerProps {
   isOpen: boolean;
@@ -21,10 +23,15 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
   onSave,
   isLoading = false,
 }) => {
+  const { data: departments = [] } = useDepartments();
+  const { data: teams = [] } = useTeams();
+
   const [name, setName] = React.useState('');
   const [projectCode, setProjectCode] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [status, setStatus] = React.useState('Active');
+  const [departmentId, setDepartmentId] = React.useState<number | null>(null);
+  const [teamId, setTeamId] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -32,7 +39,20 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
     setProjectCode(project?.project_code || '');
     setDescription(project?.description || '');
     setStatus(project?.status || 'Active');
+    setDepartmentId(project?.department_id ?? null);
+    setTeamId(project?.team_id ?? null);
   }, [project, isOpen]);
+
+  const availableTeams = React.useMemo(() => {
+    if (!departmentId) return [];
+    return teams.filter((t) => Number(t.department_id) === Number(departmentId));
+  }, [teams, departmentId]);
+
+  const handleDepartmentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value ? Number(e.target.value) : null;
+    setDepartmentId(val);
+    setTeamId(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,8 +62,26 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
       name: name.trim(),
       description: description.trim() || null,
       status,
+      department_id: departmentId ? Number(departmentId) : null,
+      team_id: teamId ? Number(teamId) : null,
     });
   };
+
+  const departmentOptions = [
+    { value: '', label: '-- Chọn Phòng ban phụ trách --' },
+    ...departments.map((d) => ({
+      value: String(d.id),
+      label: d.name,
+    })),
+  ];
+
+  const teamOptions = [
+    { value: '', label: departmentId ? '-- Chọn Team phụ trách (Tùy chọn) --' : '-- Hãy chọn Phòng ban trước --' },
+    ...availableTeams.map((t) => ({
+      value: String(t.id),
+      label: t.name,
+    })),
+  ];
 
   return (
     <Drawer
@@ -83,6 +121,23 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
           required
         />
 
+        <Select
+          label="Phòng ban phụ trách *"
+          value={departmentId ? String(departmentId) : ''}
+          onChange={handleDepartmentChange}
+          options={departmentOptions}
+          required
+        />
+
+        <Select
+          label="Team phụ trách (Primary Team)"
+          value={teamId ? String(teamId) : ''}
+          onChange={(e) => setTeamId(e.target.value ? Number(e.target.value) : null)}
+          options={teamOptions}
+          disabled={!departmentId}
+          helperText={!departmentId ? 'Vui lòng chọn Phòng ban trước khi chọn Team.' : 'Chỉ các Team thuộc Phòng ban đã chọn mới hiển thị.'}
+        />
+
         <Textarea
           label="Mô tả Dự án"
           placeholder="Nhập mục tiêu và mô tả chi tiết..."
@@ -106,3 +161,4 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
     </Drawer>
   );
 };
+

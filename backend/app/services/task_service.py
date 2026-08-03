@@ -8,6 +8,7 @@ from app.models.project_member import ProjectMember
 from app.models.sprint import Sprint
 from app.services.project_access import get_active_project
 from app.services.sprint_service import SPRINT_ACTIVE, SPRINT_PLANNED
+from app.core.exceptions import BusinessRuleException
 
 
 def validate_task_relationships(
@@ -33,9 +34,10 @@ def validate_task_relationships(
                 detail="Sprint does not exist or is deleted.",
             )
         if sprint.project_id != project_id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Task and Sprint must belong to the same Project.",
+            raise BusinessRuleException(
+                message="Task and Sprint must belong to the same Project.",
+                error_code="SPRINT_MISMATCH",
+                status_code=409,
             )
         if sprint.status not in {SPRINT_PLANNED, SPRINT_ACTIVE}:
             raise HTTPException(
@@ -63,9 +65,10 @@ def validate_task_relationships(
             )
         )
         if membership is None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Assignee must be a Project member.",
+            raise BusinessRuleException(
+                message="Nhân viên được chọn chưa phải thành viên của dự án.",
+                error_code="ASSIGNEE_NOT_PROJECT_MEMBER",
+                status_code=409,
             )
 
     if topic_id is not None:
@@ -81,7 +84,9 @@ def validate_task_relationships(
                 detail="Topic does not exist or is deleted.",
             )
         if topic.project_id is not None and topic.project_id != project_id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Task and Topic must belong to the same Project.",
+            raise BusinessRuleException(
+                message="Task and Topic must belong to the same Project.",
+                error_code="TOPIC_MISMATCH",
+                status_code=409,
             )
+

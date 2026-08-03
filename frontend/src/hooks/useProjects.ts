@@ -2,10 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsApi, type ProjectItem } from '../api/services';
 import { isValidEntityId } from '../utils/entityId';
 
-export const useProjects = () => {
+export const useProjects = (params?: Record<string, string | number | undefined>) => {
   return useQuery<ProjectItem[], Error>({
-    queryKey: ['projects'],
-    queryFn: projectsApi.getAll,
+    queryKey: ['projects', params],
+    queryFn: () => projectsApi.getAll(params),
   });
 };
 

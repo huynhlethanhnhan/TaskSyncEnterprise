@@ -10,12 +10,11 @@ from app.core.deps import (
     RequireManager,
     RequireEmployee,
     get_current_user,
-)  # Thêm get_current_user để lấy vết audit
+)
 
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from app.crud import task as crud_task
 
-# --- Bổ sung hạ tầng lưu trữ cho Batch 9 ---
 from app.services.storage_service import StorageService
 from app.models.task_attachment import TaskAttachment
 from app.models.task import Task
@@ -27,7 +26,6 @@ from app.services.project_access import (
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
-# --- Định nghĩa Schema nhanh cho Employee cập nhật tiến độ ---
 class TaskEmployeeUpdate(BaseModel):
     status: str = Field(..., json_schema_extra={"example": "In Progress"})
     progress_percent: float = Field(
@@ -53,13 +51,11 @@ class TaskEmployeeUpdate(BaseModel):
 @router.get(
     "",
     response_model=list[TaskResponse],
-    dependencies=[
-        Depends(RequireEmployee)
-    ],  # <-- Cho phép Employee xem danh sách công việc
+    dependencies=[Depends(RequireEmployee)],
 )
 def get_tasks(
     skip: int = 0,
-    limit: int = 20,
+    limit: int = 1000,
     project_id: int | None = None,
     status: str | None = None,
     db: Session = Depends(get_db),
@@ -96,9 +92,7 @@ def get_tasks(
 @router.get(
     "/{task_id:int}",
     response_model=TaskResponse,
-    dependencies=[
-        Depends(RequireEmployee)
-    ],  # <-- Cho phép Employee xem chi tiết công việc bất kỳ
+    dependencies=[Depends(RequireEmployee)],
 )
 def get_task(
     task_id: int,
@@ -125,6 +119,7 @@ def get_task(
 @router.post(
     "",
     response_model=TaskResponse,
+    status_code=201,
     dependencies=[Depends(RequireEmployee)],
 )
 def create_task(
@@ -132,21 +127,74 @@ def create_task(
     db: Session = Depends(get_db),
     current_user: Employee = Depends(get_current_user),
 ):
+    from app.core.logger import app_logger
+
     require_project_management(db, data.project_id, current_user)
     secured_data = data.model_copy(update={"created_by": current_user.id})
     task = crud_task.create(db, secured_data)
-    db.refresh(task)
 
-    from app.cache import CacheInvalidator
+    try:
+        from app.cache import CacheInvalidator
 
-    CacheInvalidator.invalidate_task(
-        task.id,
-        project_id=task.project_id,
-        employee_id=task.employee_id,
-        sprint_id=task.sprint_id,
-    )
+        CacheInvalidator.invalidate_task(
+            task.id,
+            project_id=task.project_id,
+            employee_id=task.employee_id,
+            sprint_id=task.sprint_id,
+        )
+    except Exception as e:
+        app_logger.warning(f"Cache invalidation failed for task {task.id}: {e}")
 
     return task
+
+
+def verify_task_update_permissions(
+    db: Session, task: Task, data: TaskUpdate, current_user: Employee
+):
+    from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
+    from app.models.team import Team
+    from sqlalchemy import select
+
+    if current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER):
+        require_project_management(db, task.project_id, current_user)
+        return
+
+    is_team_leader = db.scalar(
+        select(Team.id).where(
+            Team.leader_id == current_user.id,
+            Team.is_active == True,  # noqa: E712
+        )
+    )
+    if is_team_leader is not None:
+        require_project_management(db, task.project_id, current_user)
+        return
+
+    if task.assigned_to != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Employee can only update tasks assigned to them.",
+        )
+
+    restricted_fields = {
+        "title",
+        "description",
+        "priority",
+        "assigned_to",
+        "sprint_id",
+        "topic_id",
+        "deadline",
+        "story_points",
+    }
+    set_fields = data.model_fields_set
+    for field in set_fields:
+        if field in restricted_fields:
+            val = getattr(data, field)
+            current_val = getattr(task, field, None)
+            if val != current_val:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Employees are not allowed to modify '{field}'.",
+                )
 
 
 @router.put(
@@ -163,7 +211,8 @@ def update_task(
     obj = crud_task.get_by_id(db, task_id)
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    require_project_management(db, obj.project_id, current_user)
+
+    verify_task_update_permissions(db, obj, data, current_user)
 
     old_project_id = obj.project_id
     old_employee_id = obj.employee_id
@@ -204,7 +253,7 @@ def patch_task(
     if obj is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    require_project_management(db, obj.project_id, current_user)
+    verify_task_update_permissions(db, obj, data, current_user)
 
     old_project_id = obj.project_id
     old_employee_id = obj.employee_id
@@ -272,9 +321,7 @@ def delete_task(
 
 @router.get("/my-tasks", response_model=list[TaskResponse])
 def get_my_tasks(
-    current_user: Employee = Depends(
-        RequireEmployee
-    ),  # Cho cả 3 gọi, nhưng lôi ra User hiện tại để lọc DB
+    current_user: Employee = Depends(RequireEmployee),
     db: Session = Depends(get_db),
 ):
     return crud_task.get_my_tasks(db, employee_id=current_user.id)
@@ -287,14 +334,18 @@ def update_my_task(
     current_user: Employee = Depends(RequireEmployee),
     db: Session = Depends(get_db),
 ):
-    # 1. Tìm task gốc trong DB ra trước
     task = crud_task.get_by_id(db, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    require_project_management(db, task.project_id, current_user)
+    from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
+    is_manager_or_admin = current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER)
+    if not is_manager_or_admin and task.assigned_to != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Employee can only update tasks assigned to them.",
+        )
 
-    # 3. Tiến hành cập nhật giới hạn (Chỉ đổi status và progress)
     old_status = task.status
     task.status = data.status
     task.progress_percent = 100 if data.status == "Done" else data.progress_percent
@@ -330,7 +381,7 @@ def update_my_task(
 
 
 # ==========================================
-# 📂 📁 BỔ SUNG: API ĐÍNH KÈM FILE TÀI LIỆU VÀO TASK (BATCH 9)
+# 📂 📁 BỔ SUNG: API ĐÍNH KÈM FILE TÀI LIỆU VÀO TASK
 # ==========================================
 
 
@@ -342,19 +393,15 @@ def upload_task_attachment(
     file: UploadFile = File(
         ..., description="Chọn file đính kèm báo cáo, tài liệu dưới 20MB"
     ),
-    current_user: Employee = Depends(
-        get_current_user
-    ),  # Xác thực token để lấy thông tin người upload
+    current_user: Employee = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # 1. Kiểm tra xem Task tồn tại vật lý trong hệ thống không
     task = crud_task.get_by_id(db, task_id)
     if task is None:
         raise HTTPException(
             status_code=404, detail="Không tìm thấy Task để đính kèm file!"
         )
 
-    # 1.5 CHỐT CHẶN BẢO MẬT (IDOR): Admin/Manager hoặc Người được phân công Task mới có quyền upload file
     from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
     from app.models.task_assignment import TaskAssignment
     from sqlalchemy import select
@@ -373,10 +420,8 @@ def upload_task_attachment(
                 detail="Bạn không được phân công thực hiện nhiệm vụ này để tải lên tài liệu!",
             )
 
-    # 2. Gọi Storage Service xử lý ghi file vật lý vào thư mục uploads/attachments/
     file_metadata = StorageService.save_attachment(file)
 
-    # 3. Tạo bản ghi chi tiết lưu vào bảng task_attachments trong SQL Server để quản lý dấu vết
     db_attachment = TaskAttachment(
         task_id=task_id,
         file_name=file_metadata["file_name"],
@@ -415,7 +460,7 @@ def upload_task_attachment(
 def delete_task_attachment(
     task_id: int,
     attachment_id: int,
-    current_user: Employee = Depends(RequireEmployee),  # Cho phép cả Employee
+    current_user: Employee = Depends(RequireEmployee),
     db: Session = Depends(get_db),
 ):
     attachment = db.get(TaskAttachment, attachment_id)
@@ -424,7 +469,6 @@ def delete_task_attachment(
             status_code=404, detail="Không tìm thấy tài liệu đính kèm này cho Task!"
         )
 
-    # Phân quyền xóa tài liệu đính kèm: Người upload OR Người được gán task OR Admin/Manager
     from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
 
     is_uploader = attachment.uploaded_by_id == current_user.id

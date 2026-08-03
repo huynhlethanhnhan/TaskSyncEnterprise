@@ -99,7 +99,7 @@ def start_sprint(db: Session, sprint: Sprint) -> Sprint:
     if sprint.status != SPRINT_PLANNED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Only a Planned Sprint can be started.",
+            detail=f"Sprint '{sprint.name}' đang ở trạng thái '{sprint.status}'. Chỉ có Sprint ở trạng thái Planned mới có thể kích hoạt.",
         )
 
     now = datetime.now(UTC).replace(tzinfo=None)
@@ -113,18 +113,18 @@ def start_sprint(db: Session, sprint: Sprint) -> Sprint:
         sprint_status=SPRINT_PLANNED,
     )
 
-    active_sprint_id = db.scalar(
-        select(Sprint.id).where(
+    active_sprint = db.scalar(
+        select(Sprint).where(
             Sprint.project_id == sprint.project_id,
             Sprint.status == SPRINT_ACTIVE,
             Sprint.is_deleted == False,  # noqa: E712
             Sprint.id != sprint.id,
         )
     )
-    if active_sprint_id is not None:
+    if active_sprint is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="There is already an Active Sprint for this Project.",
+            detail=f"Dự án này đang có Sprint '{active_sprint.name}' (ID: {active_sprint.id}) ở trạng thái Active. Vui lòng hoàn thành hoặc đóng Sprint đó trước khi kích hoạt Sprint '{sprint.name}'.",
         )
 
     backlog_count = (
@@ -145,10 +145,11 @@ def start_sprint(db: Session, sprint: Sprint) -> Sprint:
         )
         or 0
     )
+    # Sprints must have at least one Task or Backlog Item before activation
     if backlog_count == 0 and task_count == 0:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Add at least one Backlog Item or Task before starting the Sprint.",
+            detail=f"Sprint '{sprint.name}' chưa có Task hoặc Backlog Item nào. Vui lòng bổ sung ít nhất một công việc trước khi kích hoạt.",
         )
 
     sprint.start_date = start_date

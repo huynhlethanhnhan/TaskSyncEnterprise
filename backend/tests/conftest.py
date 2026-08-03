@@ -2,13 +2,16 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from app.database import Base, get_db
 
 # The application metadata defaults to SQL Server's ``dbo`` schema. Normalize
-# it before importing ``app.main`` so mapper aliases created during application
-# startup never capture a schema-qualified selectable in the SQLite harness.
+# it before importing ``app.models`` and ``app.main`` so mapper aliases created
+# during application startup never capture a schema-qualified selectable in the SQLite harness.
 Base.metadata.schema = None
+import app.models as _app_models  # noqa: F401
+
+for table in Base.metadata.tables.values():
+    table.schema = None
 
 from app.main import app
 
@@ -25,12 +28,14 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 def db():
     from sqlalchemy import text
     from sqlalchemy.sql.schema import DefaultClause
+    import app.models  # noqa: F401
 
     # Intercept and adapt metadata dynamically for SQLite. Clearing only each
     # table schema leaves ORM aliases able to inherit MetaData(schema="dbo"),
     # which makes joined dashboard queries target a nonexistent dbo database.
     Base.metadata.schema = None
-    for table in Base.metadata.tables.values():
+    for key in list(Base.metadata.tables.keys()):
+        table = Base.metadata.tables[key]
         table.schema = None
         for column in table.columns:
             if column.server_default is not None and isinstance(
@@ -46,13 +51,13 @@ def db():
     # engine-level compilation cache can otherwise reuse SQL compiled before
     # normalization (for example, ``dbo.employees`` from an earlier test).
     engine.clear_compiled_cache()
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine, checkfirst=True)
     db = TestingSessionLocal()
     try:
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        Base.metadata.drop_all(bind=engine, checkfirst=True)
 
 
 @pytest.fixture(scope="function")

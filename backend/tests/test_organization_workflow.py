@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from app.core.constants import ROLE_ADMIN, ROLE_EMPLOYEE, ROLE_MANAGER
 from app.crud import department as crud_department
 from app.crud import employee as crud_employee
+from app.crud import project as crud_project
 from app.crud import team as crud_team
 from app.models.department import Department
 from app.models.employee import Employee
@@ -213,6 +214,59 @@ def test_department_metrics_follow_project_membership(db):
     assert result["project_count"] == 2
     assert result["completed_project_count"] == 1
     assert result["sprint_count"] == 2
+
+
+def test_project_filters_follow_member_department_and_team(db):
+    department = _department("OPS", "Vận hành")
+    other_department = _department("IT", "Công nghệ")
+    db.add_all([department, other_department])
+    db.flush()
+    team = _team(department.id, "OPS-1", "Vận hành nhóm 1")
+    db.add(team)
+    db.flush()
+    admin = _employee("ADM-1", "admin@example.com", ROLE_ADMIN)
+    member = _employee(
+        "EMP-1",
+        "member@example.com",
+        ROLE_EMPLOYEE,
+        department.id,
+        team.id,
+    )
+    db.add_all([admin, member])
+    db.flush()
+    member_project = Project(
+        project_code="PRJ-MEMBER",
+        name="Member-linked project",
+        status="Completed",
+        priority="Medium",
+        progress_percent=100,
+        is_deleted=False,
+        created_at=datetime(2026, 1, 1),
+    )
+    other_project = Project(
+        project_code="PRJ-OTHER",
+        name="Other project",
+        status="Active",
+        priority="Medium",
+        progress_percent=10,
+        department_id=other_department.id,
+        is_deleted=False,
+        created_at=datetime(2026, 1, 1),
+    )
+    db.add_all([member_project, other_project])
+    db.flush()
+    db.add(ProjectMember(project_id=member_project.id, employee_id=member.id))
+    db.commit()
+
+    department_projects = crud_project.get_all(db, admin, department_id=department.id)
+    team_projects = crud_project.get_all(db, admin, team_id=team.id)
+    completed_projects = crud_project.get_all(
+        db, admin, department_id=department.id, status="Completed"
+    )
+
+    assert [project.id for project in department_projects] == [member_project.id]
+    assert [project.id for project in team_projects] == [member_project.id]
+    assert [project.id for project in completed_projects] == [member_project.id]
 
 
 def test_department_move_clears_an_incompatible_team(db):

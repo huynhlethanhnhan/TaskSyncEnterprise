@@ -96,3 +96,8 @@ class Employee(Base):
     @property
     def team_name(self) -> str | None:
         return self.team.name if self.team else None
+
+    @property
+    def position(self) -> str | None:
+        return self.job_title
+

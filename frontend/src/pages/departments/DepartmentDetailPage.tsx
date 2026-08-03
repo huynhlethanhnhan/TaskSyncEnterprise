@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { AxiosError } from 'axios';
 import { ArrowLeft, ArrowRightLeft, Briefcase, Building2, CircleCheckBig, RefreshCw, UserMinus, UserPlus, Users } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -19,6 +19,7 @@ import {
   useDepartmentTransferTargets,
   useRemoveDepartmentMember,
   useTransferDepartmentMember,
+  useUpdateDepartment,
 } from '../../hooks/useDepartments';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
@@ -34,6 +35,8 @@ const DepartmentDetailPage: React.FC = () => {
   const [selectedCandidate, setSelectedCandidate] = React.useState('');
   const [transferMember, setTransferMember] = React.useState<DepartmentMemberItem | null>(null);
   const [targetDepartmentId, setTargetDepartmentId] = React.useState('');
+  const [changeManagerOpen, setChangeManagerOpen] = React.useState(false);
+  const [selectedManager, setSelectedManager] = React.useState('');
 
   const { data: department, isLoading, isError, refetch } = useDepartmentDetail(deptId);
   const { data: candidates = [], isLoading: candidatesLoading } =
@@ -43,10 +46,26 @@ const DepartmentDetailPage: React.FC = () => {
   const addMember = useAddDepartmentMember();
   const removeMember = useRemoveDepartmentMember();
   const transferDepartmentMember = useTransferDepartmentMember();
+  const updateDepartment = useUpdateDepartment();
 
   const role = (user?.role || '').toLowerCase();
   const isAdmin = role === 'admin' || Number(user?.role_id) === 1;
   const isManager = role === 'manager' || Number(user?.role_id) === 2;
+
+  const handleChangeManager = async () => {
+    if (!selectedManager) return;
+    try {
+      await updateDepartment.mutateAsync({
+        id: deptId,
+        payload: { manager_id: Number(selectedManager) },
+      });
+      toast.success('Đã cập nhật Trưởng phòng', 'Phòng ban đã có Trưởng phòng mới.');
+      setChangeManagerOpen(false);
+      refetch();
+    } catch (error) {
+      toast.error('Không thể cập nhật Trưởng phòng', errorMessage(error));
+    }
+  };
   const canManageMembers = isAdmin || isManager;
   const canManageMember = (member: DepartmentMemberItem) =>
     canManageMembers &&
@@ -164,7 +183,22 @@ const DepartmentDetailPage: React.FC = () => {
 
               <div className="flex items-center justify-between py-2 border-b border-border/60">
                 <span className="text-text-muted">Trưởng phòng:</span>
-                <span className="font-bold text-text-primary">{department.manager_name || 'Chưa chỉ định'}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-text-primary">{department.manager_name || 'Chưa chỉ định'}</span>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-1.5 text-[10px]"
+                      onClick={() => {
+                        setSelectedManager(department.manager_id ? String(department.manager_id) : '');
+                        setChangeManagerOpen(true);
+                      }}
+                    >
+                      Đổi
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between py-2 border-b border-border/60">
@@ -172,16 +206,26 @@ const DepartmentDetailPage: React.FC = () => {
                 <Badge variant="primary">{department.employee_count ?? deptEmployees.length} thành viên</Badge>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2">
-                <div className="rounded-lg bg-primary/5 p-2 text-center">
+                <button
+                  type="button"
+                  className="rounded-lg bg-primary/5 p-2 text-center transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  onClick={() => navigate(`/projects?department_id=${department.id}`)}
+                  title="Mở các dự án của phòng ban"
+                >
                   <Briefcase className="mx-auto h-4 w-4 text-primary" />
                   <div className="mt-1 font-bold">{department.project_count ?? 0}</div>
                   <div className="text-[10px] text-text-muted">Dự án</div>
-                </div>
-                <div className="rounded-lg bg-emerald-500/5 p-2 text-center">
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg bg-emerald-500/5 p-2 text-center transition-colors hover:bg-emerald-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  onClick={() => navigate(`/projects?department_id=${department.id}&status=Completed`)}
+                  title="Mở các dự án đã hoàn thành của phòng ban"
+                >
                   <CircleCheckBig className="mx-auto h-4 w-4 text-emerald-500" />
                   <div className="mt-1 font-bold">{department.completed_project_count ?? 0}</div>
                   <div className="text-[10px] text-text-muted">Đã xong</div>
-                </div>
+                </button>
                 <div className="rounded-lg bg-amber-500/5 p-2 text-center">
                   <RefreshCw className="mx-auto h-4 w-4 text-amber-500" />
                   <div className="mt-1 font-bold">{department.sprint_count ?? 0}</div>
@@ -371,6 +415,38 @@ const DepartmentDetailPage: React.FC = () => {
             ...transferTargets.map((item) => ({
               value: String(item.id),
               label: item.name,
+            })),
+          ]}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={changeManagerOpen}
+        onClose={() => setChangeManagerOpen(false)}
+        title="Chỉ định Trưởng phòng mới"
+        description="Chọn nhân viên đảm nhận vị trí Trưởng phòng ban."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setChangeManagerOpen(false)}>Hủy</Button>
+            <Button
+              onClick={handleChangeManager}
+              disabled={!selectedManager}
+              isLoading={updateDepartment.isPending}
+            >
+              Lưu thay đổi
+            </Button>
+          </>
+        }
+      >
+        <Select
+          label="Trưởng phòng mới"
+          value={selectedManager}
+          onChange={(event) => setSelectedManager(event.target.value)}
+          options={[
+            { value: '', label: '-- Chọn Trưởng phòng --' },
+            ...deptEmployees.map((emp) => ({
+              value: String(emp.id),
+              label: `${emp.full_name} (${emp.employee_code || emp.email})`,
             })),
           ]}
         />

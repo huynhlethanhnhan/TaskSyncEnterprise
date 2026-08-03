@@ -40,7 +40,7 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [priority, setPriority] = React.useState('Medium');
-  const [storyPoints, setStoryPoints] = React.useState(0);
+  const [storyPoints, setStoryPoints] = React.useState<number | ''>('');
   const [sprintId, setSprintId] = React.useState<number | ''>('');
   const [topicId, setTopicId] = React.useState<number | ''>('');
   const [epicTitle, setEpicTitle] = React.useState('');
@@ -65,26 +65,39 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    const normalizedTitle = title.trim();
+    if (!normalizedTitle) {
+      toast.error('Thiếu tiêu đề', 'Vui lòng nhập tiêu đề cho hạng mục backlog.');
+      return;
+    }
+    const normalizedPriority = priority?.trim() || 'Medium';
+    const normalizedStoryPoints = storyPoints === '' ? 0 : Number(storyPoints);
+    const normalizedPayload = {
+      project_id: projectId,
+      title: normalizedTitle,
+      description: description.trim() || null,
+      priority: normalizedPriority,
+      story_points: Number.isFinite(normalizedStoryPoints) && normalizedStoryPoints >= 0 ? normalizedStoryPoints : 0,
+      sprint_id: sprintId ? Number(sprintId) : null,
+      topic_id: topicId ? Number(topicId) : null,
+    };
     try {
-      await createMutation.mutateAsync({
-        project_id: projectId,
-        title: title.trim(),
-        description: description.trim() || null,
-        priority,
-        story_points: Number(storyPoints),
-        sprint_id: sprintId ? Number(sprintId) : null,
-        topic_id: topicId ? Number(topicId) : null,
-      });
+      await createMutation.mutateAsync(normalizedPayload);
       setTitle('');
       setDescription('');
       setPriority('Medium');
-      setStoryPoints(0);
+      setStoryPoints('');
       setSprintId('');
       setTopicId('');
       toast.success('Thành công', 'Đã thêm một hạng mục mới vào Product Backlog.');
     } catch (err: any) {
-      toast.error('Lỗi', err.response?.data?.detail || 'Không thể tạo backlog item.');
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((item: any) => item?.msg || item?.loc?.join('.')).filter(Boolean).join('\n')
+          : err?.response?.data?.message || 'Không thể tạo backlog item.';
+      toast.error('Lỗi tạo Backlog', message);
     }
   };
 
@@ -93,7 +106,9 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
       await convertMutation.mutateAsync({ id });
       toast.success('Chuyển đổi thành công', 'Hạng mục backlog đã được chuyển thành Task công việc.');
     } catch (err: any) {
-      toast.error('Lỗi', err.response?.data?.detail || 'Không thể chuyển đổi hạng mục.');
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể chuyển đổi hạng mục.';
+      toast.error('Lỗi chuyển đổi', message);
     }
   };
 
@@ -102,8 +117,10 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
     try {
       await deleteMutation.mutateAsync({ id, projectId });
       toast.success('Đã xóa', 'Hạng mục backlog đã được loại bỏ.');
-    } catch {
-      toast.error('Lỗi', 'Không thể xóa hạng mục này.');
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể xóa hạng mục này.';
+      toast.error('Lỗi xóa', message);
     }
   };
 
@@ -114,8 +131,10 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
     try {
       await updateMutation.mutateAsync({ id, payload: { priority: newPriority } });
       toast.success('Đã cập nhật độ ưu tiên');
-    } catch {
-      toast.error('Lỗi', 'Không thể cập nhật độ ưu tiên.');
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể cập nhật độ ưu tiên.';
+      toast.error('Lỗi cập nhật', message);
     }
   };
 
@@ -130,8 +149,10 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
     try {
       await updateMutation.mutateAsync({ id, payload: { story_points: newSp } });
       toast.success('Đã cập nhật Story Points');
-    } catch {
-      toast.error('Lỗi', 'Không thể cập nhật story points.');
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể cập nhật story points.';
+      toast.error('Lỗi cập nhật', message);
     }
   };
 
@@ -140,7 +161,9 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
       await updateMutation.mutateAsync({ id, payload: { sprint_id: targetSprintId } });
       toast.success('Thành công', 'Đã cập nhật Sprint cho hạng mục backlog.');
     } catch (err: any) {
-      toast.error('Lỗi', err.response?.data?.detail || 'Không thể cập nhật Sprint.');
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể cập nhật Sprint.';
+      toast.error('Lỗi cập nhật Sprint', message);
     }
   };
 
@@ -148,8 +171,10 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
     try {
       await updateMutation.mutateAsync({ id, payload: { topic_id: targetEpicId } });
       toast.success('Thành công', 'Đã cập nhật Epic cho hạng mục backlog.');
-    } catch {
-      toast.error('Lỗi', 'Không thể cập nhật Epic.');
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể cập nhật Epic.';
+      toast.error('Lỗi cập nhật Epic', message);
     }
   };
 
@@ -166,7 +191,7 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
-      <div className="lg:col-span-3 rounded-xl border border-primary/20 bg-primary/[0.04] px-4 py-3">
+      <div className="lg:col-span-3 rounded-xl border border-primary/20 bg-primary/4 px-4 py-3">
         <p className="text-xs font-bold text-text-primary">
           Project → Epic → User Story / Product Backlog → Task → Sprint
         </p>
@@ -216,7 +241,9 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                     label="Story Points"
                     type="number"
                     value={storyPoints}
-                    onChange={(e) => setStoryPoints(Number(e.target.value))}
+                    onChange={(e) =>
+                      setStoryPoints(e.target.value === '' ? '' : Number(e.target.value))
+                    }
                     min={0}
                   />
                 </div>
@@ -306,7 +333,7 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                 {backlogItems.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3.5 rounded-xl border border-border bg-surface hover:border-primary/30 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs"
+                    className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-3.5 text-xs transition-all hover:border-primary/30"
                   >
                     <div className="space-y-1.5 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -346,18 +373,18 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                           </Badge>
                         )}
                       </div>
-                      <h4 className="font-bold text-text-primary text-sm truncate">{item.title}</h4>
+                      <h4 className="break-words text-sm font-bold text-text-primary">{item.title}</h4>
                       {item.description && (
                         <p className="text-text-muted line-clamp-2 leading-relaxed">{item.description}</p>
                       )}
                     </div>
 
                     {isManagerOrAdmin && (
-                      <div className="flex items-center gap-2 flex-wrap shrink-0 self-end md:self-center">
+                      <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                         <select
                           value={item.sprint_id || ''}
                           onChange={(e) => handleQuickSprintAssign(item.id, e.target.value ? Number(e.target.value) : null)}
-                          className="text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                          className="w-full min-w-0 max-w-full text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium sm:w-44 sm:flex-none"
                           title="Gán nhanh Sprint"
                         >
                           <option value="">-- Gán Sprint --</option>
@@ -374,7 +401,7 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                         <select
                           value={item.topic_id || ''}
                           onChange={(e) => handleQuickEpicAssign(item.id, e.target.value ? Number(e.target.value) : null)}
-                          className="text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                          className="w-full min-w-0 max-w-full text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium sm:w-56 sm:flex-1"
                           title="Gán nhanh Epic"
                         >
                           <option value="">-- Gán Epic --</option>

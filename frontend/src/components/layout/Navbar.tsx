@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Search, Bell, Sun, Moon, Command, CheckCheck, ExternalLink } from 'lucide-react';
 import { Avatar } from '../common/Avatar';
 import { Dropdown } from '../common/Dropdown';
@@ -248,7 +248,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* User Profile Dropdown */}
         <Dropdown
           trigger={
-            <div className="flex items-center gap-2 rounded-md p-1 pr-2 hover:bg-secondary transition-colors">
+            <button
+              type="button"
+              aria-label="Open account menu"
+              className="flex items-center gap-2 rounded-md p-1 pr-2 hover:bg-secondary transition-colors"
+            >
               <Avatar
                 src={user?.avatar_url}
                 name={user?.name || 'Admin'}
@@ -259,7 +263,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <p className="max-w-32 truncate text-xs font-semibold text-text-primary">{user?.name || 'Admin'}</p>
                 <p className="max-w-32 truncate text-[10px] text-text-muted">{user?.role || 'User'}</p>
               </div>
-            </div>
+            </button>
           }
           items={profileMenuItems}
         />

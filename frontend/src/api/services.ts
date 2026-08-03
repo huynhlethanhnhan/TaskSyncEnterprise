@@ -41,6 +41,9 @@ export interface ProjectItem {
   description?: string | null;
   status: string;
   department_id?: number | null;
+  team_id?: number | null;
+  department_name?: string | null;
+  team_name?: string | null;
   manager_id?: number | null;
   created_at?: string;
   updated_at?: string;
@@ -154,8 +157,8 @@ export const dashboardApi = {
 };
 
 export const projectsApi = {
-  getAll: async (): Promise<ProjectItem[]> => {
-    const res = await api.get('/projects');
+  getAll: async (params?: Record<string, string | number | undefined>): Promise<ProjectItem[]> => {
+    const res = await api.get('/projects', { params });
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
   getById: async (id: number): Promise<ProjectItem> => {
@@ -176,6 +179,10 @@ export const projectsApi = {
   getMembers: async (projectId: number): Promise<Partial<EmployeeItem>[]> => {
     const res = await api.get(`/projects/${projectId}/members`);
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  addMember: async (projectId: number, employeeId: number): Promise<any> => {
+    const res = await api.post(`/projects/${projectId}/members`, { employee_id: employeeId });
+    return res.data?.data || res.data;
   },
 };
 

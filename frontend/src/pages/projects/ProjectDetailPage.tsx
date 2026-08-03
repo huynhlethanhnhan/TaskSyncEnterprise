@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import {
   ArrowLeft,
   Plus,
@@ -37,6 +37,7 @@ import { TopicsManager } from '../../components/topics/TopicsManager';
 import { FilesManager } from '../../components/files/FilesManager';
 import { useAuth } from '../../providers/AuthProvider';
 import { useTeams } from '../../hooks/useTeams';
+import { useDepartments } from '../../hooks/useDepartments';
 
 const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -56,6 +57,7 @@ const ProjectDetailPage: React.FC = () => {
   const { data: allTasks = [], refetch: refetchTasks } = useTasks(isStaff);
   const { data: employees = [] } = useEmployees();
   const { data: teams = [] } = useTeams();
+  const { data: departments = [] } = useDepartments();
   const isTeamLeader = teams.some((team) => Number(team.leader_id) === Number(user?.id));
   const canManageTasks = isAdminOrManager || isTeamLeader;
   const updateProject = useUpdateProject();
@@ -72,6 +74,8 @@ const ProjectDetailPage: React.FC = () => {
   const [projCode, setProjCode] = React.useState('');
   const [projDesc, setProjDesc] = React.useState('');
   const [projStatus, setProjStatus] = React.useState('Active');
+  const [projDeptId, setProjDeptId] = React.useState<number | null>(null);
+  const [projTeamId, setProjTeamId] = React.useState<number | null>(null);
   const [isSavingSettings, setIsSavingSettings] = React.useState(false);
 
   React.useEffect(() => {
@@ -80,6 +84,8 @@ const ProjectDetailPage: React.FC = () => {
       setProjCode(project.project_code || '');
       setProjDesc(project.description || '');
       setProjStatus(project.status || 'Active');
+      setProjDeptId(project.department_id ?? null);
+      setProjTeamId(project.team_id ?? null);
     }
   }, [project]);
 
@@ -150,12 +156,20 @@ const ProjectDetailPage: React.FC = () => {
           project_code: projCode.trim(),
           description: projDesc.trim() || null,
           status: projStatus,
+          department_id: projDeptId ? Number(projDeptId) : null,
+          team_id: projTeamId ? Number(projTeamId) : null,
         },
       });
       toast.success('Cập nhật cài đặt dự án thành công');
       refetch();
-    } catch {
-      toast.error('Lỗi khi lưu cài đặt dự án');
+    } catch (err: any) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        (Array.isArray(err?.response?.data?.detail)
+          ? err?.response?.data?.detail[0]?.msg
+          : err?.response?.data?.detail) ||
+        'Lỗi khi lưu cài đặt dự án';
+      toast.error('Cập nhật thất bại', errorMsg);
     } finally {
       setIsSavingSettings(false);
     }
@@ -194,7 +208,9 @@ const ProjectDetailPage: React.FC = () => {
     { id: 'files', label: 'Files', icon: <FolderOpen className="h-4 w-4" /> },
     { id: 'discussions', label: 'Discussions', icon: <MessageSquare className="h-4 w-4" /> },
     { id: 'activity', label: 'Activity', icon: <Activity className="h-4 w-4" /> },
-    { id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
+    ...(isAdminOrManager
+      ? [{ id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> }]
+      : []),
   ];
 
   return (
@@ -336,6 +352,20 @@ const ProjectDetailPage: React.FC = () => {
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
                     <span className="text-text-muted">Trạng thái:</span>
                     <Badge variant="primary" showDot>{project.status || 'Active'}</Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-border/60">
+                    <span className="text-text-muted">Phòng ban:</span>
+                    <span className="font-semibold text-text-primary">
+                      {project.department_name || <span className="text-text-muted italic">Chưa gán</span>}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-border/60">
+                    <span className="text-text-muted">Team phụ trách:</span>
+                    <span className="font-semibold text-text-primary">
+                      {project.team_name || <span className="text-text-muted italic">Chưa gán</span>}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
@@ -563,7 +593,7 @@ const ProjectDetailPage: React.FC = () => {
         )}
 
         {/* SETTINGS TAB */}
-        {activeTab === 'settings' && (
+        {activeTab === 'settings' && isAdminOrManager && (
           <Card>
             <CardHeader>
               <CardTitle>Thiết lập dự án</CardTitle>
@@ -582,6 +612,38 @@ const ProjectDetailPage: React.FC = () => {
                   value={projCode}
                   onChange={(e) => setProjCode(e.target.value)}
                   required
+                />
+                <Select
+                  label="Phòng ban phụ trách *"
+                  value={projDeptId ? String(projDeptId) : ''}
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : null;
+                    setProjDeptId(val);
+                    setProjTeamId(null);
+                  }}
+                  options={[
+                    { value: '', label: '-- Chọn Phòng ban phụ trách --' },
+                    ...departments.map((d) => ({
+                      value: String(d.id),
+                      label: d.name,
+                    })),
+                  ]}
+                  required
+                />
+                <Select
+                  label="Team phụ trách (Primary Team)"
+                  value={projTeamId ? String(projTeamId) : ''}
+                  onChange={(e) => setProjTeamId(e.target.value ? Number(e.target.value) : null)}
+                  options={[
+                    { value: '', label: projDeptId ? '-- Chọn Team (Tùy chọn) --' : '-- Chọn Phòng ban trước --' },
+                    ...teams
+                      .filter((t) => Number(t.department_id) === Number(projDeptId))
+                      .map((t) => ({
+                        value: String(t.id),
+                        label: t.name,
+                      })),
+                  ]}
+                  disabled={!projDeptId}
                 />
                 <Textarea
                   label="Mô tả chi tiết"
