@@ -95,6 +95,9 @@ def test_seed_reset_breaks_organization_cycles_before_deleting(db):
     assert db.scalar(select(func.count(Department.id))) == 0
     assert db.scalar(select(func.count(Team.id))) == 0
 
+    from app.seeds.seed_roles import seed_roles
+    seed_roles(db)
+
 
 def test_seed_cache_clear_removes_stale_entity_ids(monkeypatch):
     cleared_patterns = []

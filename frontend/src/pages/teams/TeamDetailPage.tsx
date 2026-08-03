@@ -35,6 +35,7 @@ import {
   useTeamMemberCandidates,
   useTeamTransferTargets,
   useTransferTeamMember,
+  useUpdateTeam,
 } from '../../hooks/useTeams';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
@@ -51,6 +52,8 @@ const TeamDetailPage: React.FC = () => {
   const [selectedCandidate, setSelectedCandidate] = React.useState('');
   const [transferMember, setTransferMember] = React.useState<TeamMemberItem | null>(null);
   const [targetTeamId, setTargetTeamId] = React.useState('');
+  const [changeLeaderOpen, setChangeLeaderOpen] = React.useState(false);
+  const [selectedLeader, setSelectedLeader] = React.useState('');
 
   const {
     data: team,
@@ -65,12 +68,28 @@ const TeamDetailPage: React.FC = () => {
   const addMember = useAddTeamMember();
   const removeMember = useRemoveTeamMember();
   const transferTeamMember = useTransferTeamMember();
+  const updateTeam = useUpdateTeam();
 
   const role = (user?.role || '').toLowerCase();
   const isAdmin = role === 'admin' || Number(user?.role_id) === 1;
   const isManager = role === 'manager' || Number(user?.role_id) === 2;
   const isLeader = Number(user?.id) === Number(team?.leader_id);
   const canManageMembers = isAdmin || isManager || isLeader;
+
+  const handleChangeLeader = async () => {
+    if (!selectedLeader) return;
+    try {
+      await updateTeam.mutateAsync({
+        id: teamId,
+        payload: { leader_id: Number(selectedLeader) },
+      });
+      toast.success('Đã cập nhật Trưởng nhóm', 'Team đã có Trưởng nhóm mới.');
+      setChangeLeaderOpen(false);
+      refetch();
+    } catch (error) {
+      toast.error('Không thể cập nhật Trưởng nhóm', errorMessage(error));
+    }
+  };
   const canManageMember = (member: TeamMemberItem) =>
     canManageMembers &&
     (isAdmin || (member.role_id === 3 && Number(member.id) !== Number(user?.id)));
@@ -219,9 +238,24 @@ const TeamDetailPage: React.FC = () => {
                   Trưởng nhóm:
                 </span>
 
-                <span className="font-bold text-text-primary">
-                  {team.leader_name || 'Chưa chỉ định'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-text-primary">
+                    {team.leader_name || 'Chưa chỉ định'}
+                  </span>
+                  {(isAdmin || isManager) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-1.5 text-[10px]"
+                      onClick={() => {
+                        setSelectedLeader(team.leader_id ? String(team.leader_id) : '');
+                        setChangeLeaderOpen(true);
+                      }}
+                    >
+                      Đổi
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between py-2">
@@ -438,6 +472,38 @@ const TeamDetailPage: React.FC = () => {
             ...transferTargets.map((item) => ({
               value: String(item.id),
               label: item.name,
+            })),
+          ]}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={changeLeaderOpen}
+        onClose={() => setChangeLeaderOpen(false)}
+        title="Chỉ định Trưởng nhóm mới"
+        description="Chọn thành viên đảm nhận vị trí Team Leader."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setChangeLeaderOpen(false)}>Hủy</Button>
+            <Button
+              onClick={handleChangeLeader}
+              disabled={!selectedLeader}
+              isLoading={updateTeam.isPending}
+            >
+              Lưu thay đổi
+            </Button>
+          </>
+        }
+      >
+        <Select
+          label="Trưởng nhóm mới"
+          value={selectedLeader}
+          onChange={(event) => setSelectedLeader(event.target.value)}
+          options={[
+            { value: '', label: '-- Chọn Trưởng nhóm --' },
+            ...members.map((member) => ({
+              value: String(member.id),
+              label: `${member.full_name} (${member.employee_code || member.email})`,
             })),
           ]}
         />

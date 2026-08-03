@@ -21,4 +21,4 @@ class TaskAssignment(Base):
     )
 
     task = relationship("Task", back_populates="assignments")
-    employee = relationship("Employee")
+    employee = relationship("Employee", lazy="joined")

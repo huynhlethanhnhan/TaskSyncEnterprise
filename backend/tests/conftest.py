@@ -50,13 +50,13 @@ def db():
     # engine-level compilation cache can otherwise reuse SQL compiled before
     # normalization (for example, ``dbo.employees`` from an earlier test).
     engine.clear_compiled_cache()
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine, checkfirst=True)
     db = TestingSessionLocal()
     try:
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        Base.metadata.drop_all(bind=engine, checkfirst=True)
 
 
 @pytest.fixture(scope="function")

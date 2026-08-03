@@ -277,7 +277,7 @@ const TaskPage: React.FC = () => {
       id: 'department',
       header: 'Phòng ban',
       cell: ({ row }: { row: { original: TaskItem } }) => {
-        const emp = (row.original as any).assignee || employees.find((e) => e.id === row.original.assigned_to);
+        const emp = employees.find((e) => Number(e.id) === Number(row.original.assigned_to)) || (row.original as any).assignee;
         const dept = emp?.department_id ? departmentMap.get(emp.department_id) : null;
         return dept ? (
           <span className="font-semibold text-text-primary">{dept.name}</span>
@@ -290,7 +290,7 @@ const TaskPage: React.FC = () => {
       accessorKey: 'assigned_to',
       header: 'Người thực hiện',
       cell: ({ row }: { row: { original: TaskItem } }) => {
-        const emp = (row.original as any).assignee || employees.find((e) => e.id === row.original.assigned_to);
+        const emp = employees.find((e) => Number(e.id) === Number(row.original.assigned_to)) || (row.original as any).assignee;
         return emp ? (
           <div className="flex items-center gap-2">
             <Avatar name={emp.full_name} src={emp.avatar_url} size="sm" />
@@ -434,7 +434,7 @@ const TaskPage: React.FC = () => {
                   ) : (
                     colTasks.map((task) => {
                       const proj = projects.find((p) => p.id === task.project_id);
-                      const assignee = (task as any).assignee || employees.find((e) => e.id === task.assigned_to);
+                      const assignee = employees.find((e) => Number(e.id) === Number(task.assigned_to)) || (task as any).assignee;
 
                       return (
                         <Card

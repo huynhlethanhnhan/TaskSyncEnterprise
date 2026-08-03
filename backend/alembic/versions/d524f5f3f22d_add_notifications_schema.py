@@ -19,11 +19,7 @@ Revises: 02d5a99d9c9c
 Create Date: 2026-07-11 09:01:56.992438
 
 """
-from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import mssql
 
 # revision identifiers, used by Alembic.
 revision: str = 'd524f5f3f22d'

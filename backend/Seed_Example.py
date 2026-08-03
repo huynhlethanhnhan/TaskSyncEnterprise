@@ -425,7 +425,14 @@ def _reset_demo_data(db) -> None:
     db.execute(update(Employee).values(manager_id=None))
     db.flush()
     for table in reversed(Base.metadata.sorted_tables):
-        db.execute(table.delete())
+        try:
+            if hasattr(db, "begin_nested"):
+                with db.begin_nested():
+                    db.execute(table.delete())
+            else:
+                db.execute(table.delete())
+        except Exception:
+            pass
     db.commit()
 
 
@@ -487,7 +494,8 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
         password_hash = get_password_hash(DEMO_PASSWORD)
         employees: dict[str, Employee] = {}
         for record in plan["employees"]:
-            manager = employees.get(record.get("manager_code"))
+            manager_code = record.get("manager_code")
+            manager = employees.get(manager_code) if manager_code else None
             department_code = record.get("department_code")
             team_index = record.get("team_index", 0)
             employee = Employee(

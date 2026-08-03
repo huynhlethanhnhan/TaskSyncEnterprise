@@ -168,10 +168,8 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   };
 
   const assigneeOptions = React.useMemo(() => {
-    if (!projectId || projectMembers.length === 0) {
-      return [];
-    }
-    return projectMembers.map((emp) => {
+    const availableList = projectMembers.length > 0 ? projectMembers : _employees;
+    return availableList.map((emp) => {
       const codeStr = emp.employee_code ? ` (${emp.employee_code})` : '';
       const pos = (emp as any).position || emp.job_title;
       const posStr = pos ? ` - ${pos}` : '';
@@ -180,15 +178,11 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
         label: `${emp.full_name}${codeStr}${posStr}`,
       };
     });
-  }, [projectId, projectMembers]);
+  }, [projectMembers, _employees]);
 
-  const assigneePlaceholder = !projectId
-    ? '-- Chọn Dự án trước --'
-    : projectMembers.length === 0
-    ? 'Dự án chưa có thành viên'
-    : '-- Chọn Người thực hiện --';
+  const assigneePlaceholder = '-- Chọn Người thực hiện --';
 
-  const isAssigneeDisabled = !canEdit || !projectId || projectMembers.length === 0;
+  const isAssigneeDisabled = !canEdit;
 
   React.useEffect(() => {
     if (!isOpen) return;

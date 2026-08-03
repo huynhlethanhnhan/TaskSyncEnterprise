@@ -69,8 +69,8 @@ class Task(Base):
         "TaskChecklist", back_populates="task", cascade="all, delete-orphan"
     )
 
-    sprint = relationship("Sprint", back_populates="tasks")
-    topic = relationship("DiscussionTopic")
+    sprint = relationship("Sprint", back_populates="tasks", lazy="joined")
+    topic = relationship("DiscussionTopic", lazy="joined")
 
     attachments = relationship(
         "TaskAttachment",
