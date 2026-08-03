@@ -17,7 +17,9 @@ client = TestClient(app)
 
 
 def get_auth_headers(client: TestClient, email: str, password: str = "password123"):
-    resp = client.post("/api/v1/auth/login", data={"username": email, "password": password})
+    resp = client.post(
+        "/api/v1/auth/login", data={"username": email, "password": password}
+    )
     assert resp.status_code == 200, f"Login failed for {email}: {resp.text}"
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -26,7 +28,9 @@ def get_auth_headers(client: TestClient, email: str, password: str = "password12
 @pytest.fixture
 def org_setup(db: Session):
     # Department 1: Engineering
-    dept_eng = Department(department_code="ENG-DEPT", name="Engineering", is_active=True)
+    dept_eng = Department(
+        department_code="ENG-DEPT", name="Engineering", is_active=True
+    )
     # Department 2: Marketing
     dept_mkt = Department(department_code="MKT-DEPT", name="Marketing", is_active=True)
     db.add_all([dept_eng, dept_mkt])
@@ -35,9 +39,19 @@ def org_setup(db: Session):
     db.refresh(dept_mkt)
 
     # Team 1 under Engineering: Backend Team
-    team_be = Team(team_code="ENG-BE", name="Backend Team", department_id=dept_eng.id, is_active=True)
+    team_be = Team(
+        team_code="ENG-BE",
+        name="Backend Team",
+        department_id=dept_eng.id,
+        is_active=True,
+    )
     # Team 2 under Marketing: Growth Team
-    team_growth = Team(team_code="MKT-GRO", name="Growth Team", department_id=dept_mkt.id, is_active=True)
+    team_growth = Team(
+        team_code="MKT-GRO",
+        name="Growth Team",
+        department_id=dept_mkt.id,
+        is_active=True,
+    )
     db.add_all([team_be, team_growth])
     db.commit()
     db.refresh(team_be)
@@ -104,7 +118,9 @@ def org_setup(db: Session):
     }
 
 
-def test_01_create_project_with_valid_department_and_team(client: TestClient, org_setup: dict):
+def test_01_create_project_with_valid_department_and_team(
+    client: TestClient, org_setup: dict
+):
     headers = get_auth_headers(client, org_setup["admin"].email)
     payload = {
         "project_code": "PRJ-TEST-01",
@@ -149,7 +165,9 @@ def test_03_reject_mismatched_department_and_team(client: TestClient, org_setup:
         "name": "Invalid Org Pair Project",
         "status": "Planning",
         "department_id": org_setup["dept_eng"].id,
-        "team_id": org_setup["team_growth"].id,  # Growth Team belongs to Marketing, not Engineering!
+        "team_id": org_setup[
+            "team_growth"
+        ].id,  # Growth Team belongs to Marketing, not Engineering!
     }
     resp = client.post("/api/v1/projects", json=payload, headers=headers)
     assert resp.status_code == 409, f"Expected 409, got {resp.status_code}: {resp.text}"
@@ -157,7 +175,9 @@ def test_03_reject_mismatched_department_and_team(client: TestClient, org_setup:
     assert data["error_code"] == "TEAM_DEPARTMENT_MISMATCH"
 
 
-def test_04_update_project_department_resets_or_validates_team(client: TestClient, org_setup: dict):
+def test_04_update_project_department_resets_or_validates_team(
+    client: TestClient, org_setup: dict
+):
     headers = get_auth_headers(client, org_setup["admin"].email)
     # Create valid project in Engineering with Backend Team
     create_resp = client.post(
@@ -190,7 +210,9 @@ def test_04_update_project_department_resets_or_validates_team(client: TestClien
     assert updated["team_name"] == "Growth Team"
 
 
-def test_05_project_member_department_and_team_constraints(client: TestClient, org_setup: dict):
+def test_05_project_member_department_and_team_constraints(
+    client: TestClient, org_setup: dict
+):
     headers = get_auth_headers(client, org_setup["admin"].email)
     # Create project in Engineering & Backend Team
     create_resp = client.post(
@@ -231,18 +253,28 @@ def test_05_project_member_department_and_team_constraints(client: TestClient, o
     assert add_mkt.status_code == 409, add_mkt.text
 
 
-def test_06_task_assignee_validation_and_project_change(client: TestClient, org_setup: dict, db: Session):
+def test_06_task_assignee_validation_and_project_change(
+    client: TestClient, org_setup: dict, db: Session
+):
     headers = get_auth_headers(client, org_setup["admin"].email)
 
     # Create Project A & Project B
     prj_a = client.post(
         "/api/v1/projects",
-        json={"project_code": "PRJ-TSK-A", "name": "Task Project A", "department_id": org_setup["dept_eng"].id},
+        json={
+            "project_code": "PRJ-TSK-A",
+            "name": "Task Project A",
+            "department_id": org_setup["dept_eng"].id,
+        },
         headers=headers,
     ).json()
     prj_b = client.post(
         "/api/v1/projects",
-        json={"project_code": "PRJ-TSK-B", "name": "Task Project B", "department_id": org_setup["dept_eng"].id},
+        json={
+            "project_code": "PRJ-TSK-B",
+            "name": "Task Project B",
+            "department_id": org_setup["dept_eng"].id,
+        },
         headers=headers,
     ).json()
 

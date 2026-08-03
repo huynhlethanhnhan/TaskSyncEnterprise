@@ -17,9 +17,15 @@ def seed_tasks(
     random.seed(2026)
     now = datetime.now(UTC).replace(tzinfo=None)
 
-    emp001 = next((e for e in employees if e.employee_code == "employee001"), employees[0])
-    prj_test = next((p for p in projects if p.project_code == "PRJ-SPRINT-TEST"), projects[0])
-    sprint_b = next((s for s in sprints if s.name == "Sprint B (Planned Eligible)"), None)
+    emp001 = next(
+        (e for e in employees if e.employee_code == "employee001"), employees[0]
+    )
+    prj_test = next(
+        (p for p in projects if p.project_code == "PRJ-SPRINT-TEST"), projects[0]
+    )
+    sprint_b = next(
+        (s for s in sprints if s.name == "Sprint B (Planned Eligible)"), None
+    )
 
     created_tasks = []
 
@@ -109,22 +115,28 @@ def seed_tasks(
 
     # 2. Generate remaining tasks up to 105 total tasks
     statuses = (
-        ["To Do"] * 23 +
-        ["In Progress"] * 23 +
-        ["Review"] * 15 +
-        ["Blocked"] * 9 +
-        ["Done"] * 24
+        ["To Do"] * 23
+        + ["In Progress"] * 23
+        + ["Review"] * 15
+        + ["Blocked"] * 9
+        + ["Done"] * 24
     )
     priorities = ["Low", "Medium", "High", "Critical"]
     sp_options = [1, 2, 3, 5, 8, 13, None]
 
     for idx, status in enumerate(statuses, start=6):
-        title = f"Task #{idx:03d}: Cập nhật mô hình dữ liệu và kiểm thử hệ thống ({status})"
+        title = (
+            f"Task #{idx:03d}: Cập nhật mô hình dữ liệu và kiểm thử hệ thống ({status})"
+        )
         task = db.query(Task).filter_by(title=title).first()
         if not task:
             prj = random.choice(projects)
             prj_sprints = [s for s in sprints if s.project_id == prj.id]
-            spr = random.choice(prj_sprints) if prj_sprints and random.random() > 0.3 else None
+            spr = (
+                random.choice(prj_sprints)
+                if prj_sprints and random.random() > 0.3
+                else None
+            )
 
             # Calculate deadline
             d_choice = random.random()

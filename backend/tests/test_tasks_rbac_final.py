@@ -33,14 +33,32 @@ def get_auth_header(emp):
 
 @pytest.fixture
 def setup_rbac_data(db):
-    admin = create_test_employee(db, "admin_test@enterprise.com", ROLE_ADMIN, "Admin User")
-    manager = create_test_employee(db, "manager_test@enterprise.com", ROLE_MANAGER, "Manager User")
-    emp1 = create_test_employee(db, "emp1_test@enterprise.com", ROLE_EMPLOYEE, "Employee One")
-    emp2 = create_test_employee(db, "emp2_test@enterprise.com", ROLE_EMPLOYEE, "Employee Two")
+    admin = create_test_employee(
+        db, "admin_test@enterprise.com", ROLE_ADMIN, "Admin User"
+    )
+    manager = create_test_employee(
+        db, "manager_test@enterprise.com", ROLE_MANAGER, "Manager User"
+    )
+    emp1 = create_test_employee(
+        db, "emp1_test@enterprise.com", ROLE_EMPLOYEE, "Employee One"
+    )
+    emp2 = create_test_employee(
+        db, "emp2_test@enterprise.com", ROLE_EMPLOYEE, "Employee Two"
+    )
 
     # Projects
-    proj1 = Project(project_code="PRJ_ALPHA", name="Project Alpha", created_by=manager.id, is_deleted=False)
-    proj2 = Project(project_code="PRJ_BETA", name="Project Beta", created_by=admin.id, is_deleted=False)
+    proj1 = Project(
+        project_code="PRJ_ALPHA",
+        name="Project Alpha",
+        created_by=manager.id,
+        is_deleted=False,
+    )
+    proj2 = Project(
+        project_code="PRJ_BETA",
+        name="Project Beta",
+        created_by=admin.id,
+        is_deleted=False,
+    )
     db.add_all([proj1, proj2])
     db.commit()
 
@@ -50,7 +68,9 @@ def setup_rbac_data(db):
     db.commit()
 
     # Sprints
-    sprint1 = Sprint(name="Sprint 1", project_id=proj1.id, is_deleted=False, status="Active")
+    sprint1 = Sprint(
+        name="Sprint 1", project_id=proj1.id, is_deleted=False, status="Active"
+    )
     db.add(sprint1)
     db.commit()
 
@@ -222,7 +242,9 @@ def test_11_task_consistency_in_sprint_and_project(client, setup_rbac_data):
     assert res.status_code == 200
     all_tasks = res.json()
 
-    sprint_res = client.get(f"/api/v1/tasks?sprint_id={data['sprint1'].id}", headers=headers)
+    sprint_res = client.get(
+        f"/api/v1/tasks?sprint_id={data['sprint1'].id}", headers=headers
+    )
     assert sprint_res.status_code == 200
     sprint_tasks = sprint_res.json()
 

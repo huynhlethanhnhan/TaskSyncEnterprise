@@ -52,7 +52,6 @@ class ProjectResponse(ProjectBase):
     team_name: str | None = None
 
 
-
 class ProjectMemberSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -68,4 +67,3 @@ class ProjectMemberSummaryResponse(BaseModel):
 
 class ProjectMemberAddRequest(BaseModel):
     employee_id: int
-

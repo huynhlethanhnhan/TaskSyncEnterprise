@@ -5,6 +5,7 @@ Cases:
 - Two distinct requests with different keys both succeed (201)
 - Retry with a fresh key after prior error returns 201
 """
+
 import pytest
 from unittest.mock import PropertyMock, patch
 from fastapi import FastAPI
@@ -111,9 +112,12 @@ def test_4xx_does_not_leave_pending_lock(stateful_redis_ec):
         if isinstance(stored, bytes):
             stored = stored.decode("utf-8")
         import json
+
         try:
             data = json.loads(stored)
-            assert data.get("status") != "PENDING", "Key must not remain PENDING after 4xx"
+            assert (
+                data.get("status") != "PENDING"
+            ), "Key must not remain PENDING after 4xx"
         except (json.JSONDecodeError, AttributeError):
             pass  # Non-JSON stored value is not PENDING
 
@@ -132,9 +136,12 @@ def test_4xx_422_does_not_leave_pending_lock(stateful_redis_ec):
         if isinstance(stored, bytes):
             stored = stored.decode("utf-8")
         import json
+
         try:
             data = json.loads(stored)
-            assert data.get("status") != "PENDING", "Key must not remain PENDING after 422"
+            assert (
+                data.get("status") != "PENDING"
+            ), "Key must not remain PENDING after 422"
         except (json.JSONDecodeError, AttributeError):
             pass
 

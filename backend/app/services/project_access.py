@@ -123,4 +123,3 @@ def validate_project_relationships(
                 error_code="TEAM_DEPARTMENT_MISMATCH",
                 status_code=409,
             )
-

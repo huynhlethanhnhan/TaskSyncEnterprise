@@ -29,9 +29,13 @@ def _init_roles_and_dept(db):
         emp_role = Role(id=ROLE_EMPLOYEE, role_name="Employee")
         db.add(emp_role)
 
-    dept = db.query(Department).filter(Department.department_code == "STAB-DEPT").first()
+    dept = (
+        db.query(Department).filter(Department.department_code == "STAB-DEPT").first()
+    )
     if not dept:
-        dept = Department(name="Stabilization Dept", department_code="STAB-DEPT", is_active=True)
+        dept = Department(
+            name="Stabilization Dept", department_code="STAB-DEPT", is_active=True
+        )
         db.add(dept)
 
     db.commit()
@@ -80,6 +84,7 @@ def _create_project(db, name_prefix="Prj"):
 
 # ── TEST SUITE (25 Cases) ──────────────────────────────────────────────────────
 
+
 # Case 1: Task creation without assignee -> 201 Created
 def test_01_create_task_without_assignee(client, db):
     _init_roles_and_dept(db)
@@ -87,11 +92,15 @@ def test_01_create_task_without_assignee(client, db):
     proj = _create_project(db)
     headers = _get_auth_headers(client, admin)
 
-    resp = client.post("/api/v1/tasks", json={
-        "title": "Unassigned Task",
-        "project_id": proj.id,
-        "assigned_to": None,
-    }, headers=headers)
+    resp = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Unassigned Task",
+            "project_id": proj.id,
+            "assigned_to": None,
+        },
+        headers=headers,
+    )
     assert resp.status_code == 201, resp.json()
     assert resp.json()["assigned_to"] is None
 
@@ -100,17 +109,23 @@ def test_01_create_task_without_assignee(client, db):
 def test_02_create_task_with_project_member(client, db):
     _init_roles_and_dept(db)
     admin = _create_user(db, f"adm2_{uuid.uuid4().hex[:4]}@stab.com", ROLE_ADMIN)
-    emp = _create_user(db, f"emp2_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Project Member")
+    emp = _create_user(
+        db, f"emp2_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Project Member"
+    )
     proj = _create_project(db)
     db.add(ProjectMember(project_id=proj.id, employee_id=emp.id))
     db.commit()
 
     headers = _get_auth_headers(client, admin)
-    resp = client.post("/api/v1/tasks", json={
-        "title": "Member Task",
-        "project_id": proj.id,
-        "assigned_to": emp.id,
-    }, headers=headers)
+    resp = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Member Task",
+            "project_id": proj.id,
+            "assigned_to": emp.id,
+        },
+        headers=headers,
+    )
     assert resp.status_code == 201, resp.json()
     assert resp.json()["assigned_to"] == emp.id
 
@@ -119,15 +134,21 @@ def test_02_create_task_with_project_member(client, db):
 def test_03_create_task_with_non_member_assignee(client, db):
     _init_roles_and_dept(db)
     admin = _create_user(db, f"adm3_{uuid.uuid4().hex[:4]}@stab.com", ROLE_ADMIN)
-    non_member = _create_user(db, f"nonm3_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Non Member")
+    non_member = _create_user(
+        db, f"nonm3_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Non Member"
+    )
     proj = _create_project(db)
     headers = _get_auth_headers(client, admin)
 
-    resp = client.post("/api/v1/tasks", json={
-        "title": "Non Member Task",
-        "project_id": proj.id,
-        "assigned_to": non_member.id,
-    }, headers=headers)
+    resp = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Non Member Task",
+            "project_id": proj.id,
+            "assigned_to": non_member.id,
+        },
+        headers=headers,
+    )
     assert resp.status_code == 409, resp.json()
 
 
@@ -135,15 +156,21 @@ def test_03_create_task_with_non_member_assignee(client, db):
 def test_04_non_member_assignee_error_code(client, db):
     _init_roles_and_dept(db)
     admin = _create_user(db, f"adm4_{uuid.uuid4().hex[:4]}@stab.com", ROLE_ADMIN)
-    non_member = _create_user(db, f"nonm4_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE)
+    non_member = _create_user(
+        db, f"nonm4_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE
+    )
     proj = _create_project(db)
     headers = _get_auth_headers(client, admin)
 
-    resp = client.post("/api/v1/tasks", json={
-        "title": "Non Member Task EC",
-        "project_id": proj.id,
-        "assigned_to": non_member.id,
-    }, headers=headers)
+    resp = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Non Member Task EC",
+            "project_id": proj.id,
+            "assigned_to": non_member.id,
+        },
+        headers=headers,
+    )
     assert resp.status_code == 409
     body = resp.json()
     assert body.get("error_code") == "ASSIGNEE_NOT_PROJECT_MEMBER"
@@ -163,11 +190,15 @@ def test_05_project_change_reset_assignee_contract(client, db):
 
     headers = _get_auth_headers(client, admin)
     # Attempting to assign emp to proj_b must fail with 409
-    resp = client.post("/api/v1/tasks", json={
-        "title": "Proj B Task with Proj A Member",
-        "project_id": proj_b.id,
-        "assigned_to": emp.id,
-    }, headers=headers)
+    resp = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Proj B Task with Proj A Member",
+            "project_id": proj_b.id,
+            "assigned_to": emp.id,
+        },
+        headers=headers,
+    )
     assert resp.status_code == 409
 
 
@@ -175,7 +206,9 @@ def test_05_project_change_reset_assignee_contract(client, db):
 def test_06_07_get_project_members_contract(client, db):
     _init_roles_and_dept(db)
     admin = _create_user(db, f"adm6_{uuid.uuid4().hex[:4]}@stab.com", ROLE_ADMIN)
-    emp = _create_user(db, f"emp6_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Dev One")
+    emp = _create_user(
+        db, f"emp6_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Dev One"
+    )
     proj = _create_project(db)
     db.add(ProjectMember(project_id=proj.id, employee_id=emp.id))
     db.commit()
@@ -200,11 +233,15 @@ def test_08_assigned_to_stores_employee_id(client, db):
     db.commit()
 
     headers = _get_auth_headers(client, admin)
-    resp = client.post("/api/v1/tasks", json={
-        "title": "Emp ID Task",
-        "project_id": proj.id,
-        "assigned_to": emp.id,
-    }, headers=headers)
+    resp = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Emp ID Task",
+            "project_id": proj.id,
+            "assigned_to": emp.id,
+        },
+        headers=headers,
+    )
     assert resp.status_code == 201
     assert resp.json()["assigned_to"] == emp.id
 
@@ -225,7 +262,9 @@ def test_09_empty_project_members(client, db):
 def test_10_inactive_project_member_excluded(client, db):
     _init_roles_and_dept(db)
     admin = _create_user(db, f"adm10_{uuid.uuid4().hex[:4]}@stab.com", ROLE_ADMIN)
-    emp_inactive = _create_user(db, f"inact10_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE)
+    emp_inactive = _create_user(
+        db, f"inact10_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE
+    )
     emp_inactive.is_active = False
     proj = _create_project(db)
     db.add(ProjectMember(project_id=proj.id, employee_id=emp_inactive.id))
@@ -250,19 +289,27 @@ def test_11_12_sprint_project_mapping(client, db):
 
     headers = _get_auth_headers(client, admin)
     # Same project -> success (201)
-    resp1 = client.post("/api/v1/tasks", json={
-        "title": "Task Sprint Same Proj",
-        "project_id": proj_a.id,
-        "sprint_id": sprint_a.id,
-    }, headers=headers)
+    resp1 = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Task Sprint Same Proj",
+            "project_id": proj_a.id,
+            "sprint_id": sprint_a.id,
+        },
+        headers=headers,
+    )
     assert resp1.status_code == 201
 
     # Different project -> 409 Conflict
-    resp2 = client.post("/api/v1/tasks", json={
-        "title": "Task Sprint Mismatch",
-        "project_id": proj_b.id,
-        "sprint_id": sprint_a.id,
-    }, headers=headers)
+    resp2 = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Task Sprint Mismatch",
+            "project_id": proj_b.id,
+            "sprint_id": sprint_a.id,
+        },
+        headers=headers,
+    )
     assert resp2.status_code == 409
     assert resp2.json().get("error_code") == "SPRINT_MISMATCH"
 
@@ -274,25 +321,35 @@ def test_13_14_topic_project_mapping(client, db):
     proj_a = _create_project(db, "Proj A")
     proj_b = _create_project(db, "Proj B")
 
-    topic_a = DiscussionTopic(project_id=proj_a.id, title="Topic A", content="A", created_by_id=admin.id)
+    topic_a = DiscussionTopic(
+        project_id=proj_a.id, title="Topic A", content="A", created_by_id=admin.id
+    )
     db.add(topic_a)
     db.commit()
 
     headers = _get_auth_headers(client, admin)
     # Same project -> success (201)
-    resp1 = client.post("/api/v1/tasks", json={
-        "title": "Task Topic Same Proj",
-        "project_id": proj_a.id,
-        "topic_id": topic_a.id,
-    }, headers=headers)
+    resp1 = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Task Topic Same Proj",
+            "project_id": proj_a.id,
+            "topic_id": topic_a.id,
+        },
+        headers=headers,
+    )
     assert resp1.status_code == 201
 
     # Different project -> 409 Conflict
-    resp2 = client.post("/api/v1/tasks", json={
-        "title": "Task Topic Mismatch",
-        "project_id": proj_b.id,
-        "topic_id": topic_a.id,
-    }, headers=headers)
+    resp2 = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "Task Topic Mismatch",
+            "project_id": proj_b.id,
+            "topic_id": topic_a.id,
+        },
+        headers=headers,
+    )
     assert resp2.status_code == 409
     assert resp2.json().get("error_code") == "TOPIC_MISMATCH"
 
@@ -305,22 +362,38 @@ def test_15_16_17_18_story_points_validation(client, db):
     headers = _get_auth_headers(client, admin)
 
     # 15: null -> 201
-    r15 = client.post("/api/v1/tasks", json={"title": "SP Null", "project_id": proj.id, "story_points": None}, headers=headers)
+    r15 = client.post(
+        "/api/v1/tasks",
+        json={"title": "SP Null", "project_id": proj.id, "story_points": None},
+        headers=headers,
+    )
     assert r15.status_code == 201
     assert r15.json()["story_points"] is None
 
     # 16: 0 -> 201, coerced to null
-    r16 = client.post("/api/v1/tasks", json={"title": "SP Zero", "project_id": proj.id, "story_points": 0}, headers=headers)
+    r16 = client.post(
+        "/api/v1/tasks",
+        json={"title": "SP Zero", "project_id": proj.id, "story_points": 0},
+        headers=headers,
+    )
     assert r16.status_code == 201
     assert r16.json()["story_points"] is None
 
     # 17: 3 -> 201
-    r17 = client.post("/api/v1/tasks", json={"title": "SP Three", "project_id": proj.id, "story_points": 3}, headers=headers)
+    r17 = client.post(
+        "/api/v1/tasks",
+        json={"title": "SP Three", "project_id": proj.id, "story_points": 3},
+        headers=headers,
+    )
     assert r17.status_code == 201
     assert r17.json()["story_points"] == 3
 
     # 18: 4 (non-Fibonacci) -> 422
-    r18 = client.post("/api/v1/tasks", json={"title": "SP Four Invalid", "project_id": proj.id, "story_points": 4}, headers=headers)
+    r18 = client.post(
+        "/api/v1/tasks",
+        json={"title": "SP Four Invalid", "project_id": proj.id, "story_points": 4},
+        headers=headers,
+    )
     assert r18.status_code == 422
 
 
@@ -331,23 +404,31 @@ def test_19_20_employee_creation_and_password_policy(client, db):
     headers = _get_auth_headers(client, admin)
 
     # 19: Valid employee creation -> 201 Created
-    r19 = client.post("/api/v1/employees", json={
-        "full_name": "Valid Emp",
-        "email": f"valid_{uuid.uuid4().hex[:6]}@stab.com",
-        "password": "TaskSync@2026",
-        "role_id": emp_role.id,
-        "department_id": dept.id,
-    }, headers=headers)
+    r19 = client.post(
+        "/api/v1/employees",
+        json={
+            "full_name": "Valid Emp",
+            "email": f"valid_{uuid.uuid4().hex[:6]}@stab.com",
+            "password": "TaskSync@2026",
+            "role_id": emp_role.id,
+            "department_id": dept.id,
+        },
+        headers=headers,
+    )
     assert r19.status_code == 201, r19.json()
 
     # 20: Weak password "123" -> 422 Validation Error
-    r20 = client.post("/api/v1/employees", json={
-        "full_name": "Weak Pass Emp",
-        "email": f"weak_{uuid.uuid4().hex[:6]}@stab.com",
-        "password": "123",
-        "role_id": emp_role.id,
-        "department_id": dept.id,
-    }, headers=headers)
+    r20 = client.post(
+        "/api/v1/employees",
+        json={
+            "full_name": "Weak Pass Emp",
+            "email": f"weak_{uuid.uuid4().hex[:6]}@stab.com",
+            "password": "123",
+            "role_id": emp_role.id,
+            "department_id": dept.id,
+        },
+        headers=headers,
+    )
     assert r20.status_code == 422, r20.json()
 
 
@@ -358,11 +439,15 @@ def test_21_22_team_validation_and_duplicate_code(client, db):
     headers = _get_auth_headers(client, admin)
 
     # 21: Blank/whitespace team code -> 422
-    r21 = client.post("/api/v1/teams", json={
-        "team_code": "   ",
-        "name": "Blank Team",
-        "department_id": dept.id,
-    }, headers=headers)
+    r21 = client.post(
+        "/api/v1/teams",
+        json={
+            "team_code": "   ",
+            "name": "Blank Team",
+            "department_id": dept.id,
+        },
+        headers=headers,
+    )
     assert r21.status_code == 422, r21.json()
 
     # 22: Duplicate team_code -> 409
@@ -378,12 +463,22 @@ def test_21_22_team_validation_and_duplicate_code(client, db):
 # Case 23, 24, 25: RBAC Task Update Permissions
 def test_23_24_25_rbac_task_update_permissions(client, db):
     _init_roles_and_dept(db)
-    emp_assigned = _create_user(db, f"emp_a_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Worker A")
-    emp_unassigned = _create_user(db, f"emp_u_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Worker U")
+    emp_assigned = _create_user(
+        db, f"emp_a_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Worker A"
+    )
+    emp_unassigned = _create_user(
+        db, f"emp_u_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Worker U"
+    )
     proj = _create_project(db)
 
     # Create task assigned to emp_assigned
-    task = Task(project_id=proj.id, title="Assigned Task", status="To Do", story_points=2, progress_percent=0.0)
+    task = Task(
+        project_id=proj.id,
+        title="Assigned Task",
+        status="To Do",
+        story_points=2,
+        progress_percent=0.0,
+    )
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -395,24 +490,36 @@ def test_23_24_25_rbac_task_update_permissions(client, db):
     headers_unassigned = _get_auth_headers(client, emp_unassigned)
 
     # 23: Assigned employee can update status and progress_percent -> 200
-    r23 = client.put(f"/api/v1/tasks/my-task/{task.id}", json={
-        "status": "In Progress",
-        "progress_percent": 50.0,
-    }, headers=headers_assigned)
+    r23 = client.put(
+        f"/api/v1/tasks/my-task/{task.id}",
+        json={
+            "status": "In Progress",
+            "progress_percent": 50.0,
+        },
+        headers=headers_assigned,
+    )
     assert r23.status_code == 200, r23.json()
     assert r23.json()["status"] == "In Progress"
     assert r23.json()["progress_percent"] == 50.0
 
     # 24: Assigned employee cannot update protected fields (title, story_points) -> 403
-    r24 = client.put(f"/api/v1/tasks/{task.id}", json={
-        "title": "Hacked Title",
-        "story_points": 8,
-    }, headers=headers_assigned)
+    r24 = client.put(
+        f"/api/v1/tasks/{task.id}",
+        json={
+            "title": "Hacked Title",
+            "story_points": 8,
+        },
+        headers=headers_assigned,
+    )
     assert r24.status_code == 403, r24.json()
 
     # 25: Unassigned employee cannot update task status -> 403
-    r25 = client.put(f"/api/v1/tasks/my-task/{task.id}", json={
-        "status": "Done",
-        "progress_percent": 100.0,
-    }, headers=headers_unassigned)
+    r25 = client.put(
+        f"/api/v1/tasks/my-task/{task.id}",
+        json={
+            "status": "Done",
+            "progress_percent": 100.0,
+        },
+        headers=headers_unassigned,
+    )
     assert r25.status_code == 403, r25.json()

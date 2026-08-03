@@ -30,8 +30,14 @@ def test_seed_dataset_integrity_and_business_rules(db):
     # 5. Check business rule: max 1 Active Sprint per Project
     projects = db.query(Project).all()
     for prj in projects:
-        active_sprints = db.query(Sprint).filter_by(project_id=prj.id, status="Active", is_deleted=False).all()
-        assert len(active_sprints) <= 1, f"Project {prj.name} has {len(active_sprints)} active sprints!"
+        active_sprints = (
+            db.query(Sprint)
+            .filter_by(project_id=prj.id, status="Active", is_deleted=False)
+            .all()
+        )
+        assert (
+            len(active_sprints) <= 1
+        ), f"Project {prj.name} has {len(active_sprints)} active sprints!"
 
     # 6. Check PRJ-SPRINT-TEST project structure
     prj_test = db.query(Project).filter_by(project_code="PRJ-SPRINT-TEST").first()

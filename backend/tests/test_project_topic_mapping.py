@@ -6,6 +6,7 @@ Cases:
 - Admin sees all topics without project filter
 - Projects return at least 1 topic after topics are seeded
 """
+
 import uuid
 import pytest
 from app.models.role import Role
@@ -25,11 +26,15 @@ def _ensure_setup(db):
 
     dept = db.query(Department).filter(Department.department_code == "IT-TOP").first()
     if not dept:
-        dept = Department(name="IT Topic Test", department_code="IT-TOP", is_active=True)
+        dept = Department(
+            name="IT Topic Test", department_code="IT-TOP", is_active=True
+        )
         db.add(dept)
         db.commit()
 
-    admin = db.query(Employee).filter(Employee.email == "topic_adm@topictest.com").first()
+    admin = (
+        db.query(Employee).filter(Employee.email == "topic_adm@topictest.com").first()
+    )
     if not admin:
         admin = Employee(
             employee_code="EMP-TOPIC-CC",

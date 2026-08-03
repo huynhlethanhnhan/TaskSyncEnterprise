@@ -90,7 +90,7 @@ push cũng hoàn tất với kết quả `success`.
 
 | Gate | Kết quả | Evidence |
 | --- | --- | --- |
-| Backend Pytest | PASS | `414 passed in 479.05s` (clean rerun without concurrent Uvicorn log writer) |
+| Backend Pytest | PASS | `414 passed in 321.54s` after repository Black normalization |
 | Backend Ruff | PASS | `ruff check .` |
 | Backend Black | PASS | các Python file đã thay đổi |
 | Alembic heads/current | PASS | `05252bd1d012 (head)` |
@@ -142,6 +142,9 @@ Luồng đã kiểm tra bằng browser trên MSSQL local:
   failure do Uvicorn local ghi cùng file log. Test logging chạy riêng PASS; sau
   khi dừng Uvicorn, full suite chạy sạch `414 passed`. Backend đã được khởi động
   lại và `/health` trả `healthy`.
+- **Master CI normalization:** Run master đầu tiên dừng ở Black vì phạm vi diff
+  với master cũ bao gồm 36 file Python lịch sử. Black được áp dụng cơ học cho
+  toàn backend; Ruff, Black check và full suite `414 passed` sau normalization.
 
 ## Screenshots
 
