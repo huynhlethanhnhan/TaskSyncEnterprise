@@ -330,7 +330,17 @@ const EmployeeDetailPage: React.FC = () => {
                         <h4 className="text-xs font-bold text-text-primary">{p.name}</h4>
                         <p className="text-[11px] text-text-muted mt-0.5">{p.description || 'Chưa có mô tả chi tiết'}</p>
                       </div>
-                      <Badge variant="primary">{p.status}</Badge>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge variant="primary">{p.status}</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          leftIcon={<Briefcase className="h-3.5 w-3.5" />}
+                          onClick={() => navigate(`/projects/${p.id}`)}
+                        >
+                          Mở dự án
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}

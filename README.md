@@ -174,7 +174,9 @@ Tất cả các tài khoản demo sử dụng chung một mật khẩu chuẩn:
 | **System Admin** | `admin@tasksync.example.com` | Quản trị toàn bộ hệ thống, phân quyền, đổi trưởng phòng/trưởng nhóm |
 | **IT Manager** | `manager.it@tasksync.example.com` | Quản lý phòng IT, xem dự án, quản lý công việc phòng ban |
 | **Product Manager** | `manager.product@tasksync.example.com` | Quản lý phòng Sản phẩm & Product Backlog |
-| **Developer Employee** | `huynh.le.thanh.nhan@tasksync.example.com` | Nhân viên thực thi công việc, cập nhật tiến độ task |
+| **Operations Manager** | `manager.ops@tasksync.example.com` | Quản lý phòng Vận hành, đổi trưởng nhóm và quản lý dự án/phân công |
+| **Operations Team Leader** | `employee015@tasksync.example.com` | Quản lý thành viên Team Vận hành và công việc trong dự án |
+| **Operations Employee** | `employee014@tasksync.example.com` | Nhân viên thực thi công việc và cập nhật task được giao |
 
 ---
 

@@ -4,6 +4,7 @@ import { AxiosError } from 'axios';
 import {
   ArrowLeft,
   ArrowRightLeft,
+  Briefcase,
   Building2,
   Tag,
   UserCheck,
@@ -190,14 +191,24 @@ const TeamDetailPage: React.FC = () => {
           />
         }
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<ArrowLeft className="h-4 w-4" />}
-            onClick={() => navigate('/teams')}
-          >
-            Quay lại
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Briefcase className="h-4 w-4" />}
+              onClick={() => navigate(`/projects?team_id=${team.id}`)}
+            >
+              Dự án của nhóm
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<ArrowLeft className="h-4 w-4" />}
+              onClick={() => navigate('/teams')}
+            >
+              Quay lại
+            </Button>
+          </div>
         }
       />
 

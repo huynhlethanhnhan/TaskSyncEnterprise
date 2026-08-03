@@ -208,7 +208,9 @@ const ProjectDetailPage: React.FC = () => {
     { id: 'files', label: 'Files', icon: <FolderOpen className="h-4 w-4" /> },
     { id: 'discussions', label: 'Discussions', icon: <MessageSquare className="h-4 w-4" /> },
     { id: 'activity', label: 'Activity', icon: <Activity className="h-4 w-4" /> },
-    { id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
+    ...(isAdminOrManager
+      ? [{ id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> }]
+      : []),
   ];
 
   return (
@@ -591,7 +593,7 @@ const ProjectDetailPage: React.FC = () => {
         )}
 
         {/* SETTINGS TAB */}
-        {activeTab === 'settings' && (
+        {activeTab === 'settings' && isAdminOrManager && (
           <Card>
             <CardHeader>
               <CardTitle>Thiết lập dự án</CardTitle>

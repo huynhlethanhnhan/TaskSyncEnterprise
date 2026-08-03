@@ -157,8 +157,8 @@ export const dashboardApi = {
 };
 
 export const projectsApi = {
-  getAll: async (): Promise<ProjectItem[]> => {
-    const res = await api.get('/projects');
+  getAll: async (params?: Record<string, string | number | undefined>): Promise<ProjectItem[]> => {
+    const res = await api.get('/projects', { params });
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
   getById: async (id: number): Promise<ProjectItem> => {

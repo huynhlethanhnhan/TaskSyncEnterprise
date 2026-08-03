@@ -36,13 +36,33 @@ router = APIRouter(prefix="/projects", tags=["Projects"])
 def get_projects(
     skip: int = 0,
     limit: int = settings.DEFAULT_PAGE_SIZE,
+    department_id: int | None = None,
+    team_id: int | None = None,
+    status: str | None = None,
     db: Session = Depends(get_db),
     current_user: Employee = Depends(get_current_user),
 ):
-    key = get_project_list_key(skip, limit, user_id=current_user.id)
+    key = get_project_list_key(
+        skip,
+        limit,
+        user_id=current_user.id,
+        department_id=department_id,
+        team_id=team_id,
+        status=status,
+    )
     return cache_manager.cache_collection(
         key=key,
-        creator_fn=lambda: list(crud_project.get_all(db, current_user, skip, limit)),
+        creator_fn=lambda: list(
+            crud_project.get_all(
+                db,
+                current_user,
+                skip,
+                limit,
+                department_id=department_id,
+                team_id=team_id,
+                status=status,
+            )
+        ),
         ttl=settings.CACHE_TTL_PROJECT,
         response_model=list[ProjectResponse],
     )
@@ -221,10 +241,7 @@ def add_project_member(
                 error_code="EMPLOYEE_DEPARTMENT_MISMATCH",
                 status_code=409,
             )
-        if (
-            project.team_id is not None
-            and emp.team_id != project.team_id
-        ):
+        if project.team_id is not None and emp.team_id != project.team_id:
             raise BusinessRuleException(
                 message="Nhân viên không thuộc Team phụ trách dự án.",
                 error_code="EMPLOYEE_TEAM_MISMATCH",
@@ -259,4 +276,3 @@ def add_project_member(
         "project_id": project_id,
         "employee_id": data.employee_id,
     }
-

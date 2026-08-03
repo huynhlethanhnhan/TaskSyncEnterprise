@@ -143,7 +143,7 @@ test('employee self-service and settings use the shared system UI contracts', as
   const settings = await read('./src/pages/settings/SettingsPage.tsx');
 
   assert.doesNotMatch(shell, /Create Leave Request|vacations-request|PlusCircle/);
-  assert.match(shell, /isAdminOrManager \? ['"]System Settings['"] : ['"]My Settings['"]/);
+  assert.match(shell, /isAdmin \? ['"]System Settings['"] : ['"]My Settings['"]/);
   assert.match(card, /first:pt-4/);
   assert.match(settings, /useTheme/);
   assert.match(settings, /tasksync_language/);
@@ -160,4 +160,26 @@ test('task administration is limited while assignees can update status', async (
   assert.match(drawer, /if \(!canEdit && !isAssignedToCurrentUser\) return/);
   assert.match(drawer, /const canUpdateStatus = canEdit \|\| isAssignedToCurrentUser/);
   assert.match(drawer, /disabled=\{!canEdit\}/);
+});
+
+test('organization project metrics navigate to a scoped project list', async () => {
+  const departmentPage = await read('./src/pages/departments/DepartmentPage.tsx');
+  const departmentDetail = await read('./src/pages/departments/DepartmentDetailPage.tsx');
+  const teamDetail = await read('./src/pages/teams/TeamDetailPage.tsx');
+  const employeeDetail = await read('./src/pages/employees/EmployeeDetailPage.tsx');
+  const projectPage = await read('./src/pages/projects/ProjectPage.tsx');
+  const projectDetail = await read('./src/pages/projects/ProjectDetailPage.tsx');
+
+  assert.match(departmentPage, /projects\?department_id=\$\{dept\.id\}/);
+  assert.match(departmentDetail, /projects\?department_id=\$\{department\.id\}/);
+  assert.match(teamDetail, /projects\?team_id=\$\{team\.id\}/);
+  assert.match(employeeDetail, /navigate\(`\/projects\/\$\{p\.id\}`\)/);
+  assert.match(projectPage, /searchParams\.get\('department_id'\)/);
+  assert.match(projectPage, /searchParams\.get\('team_id'\)/);
+  assert.match(projectPage, /useProjects\(projectFilters\)/);
+  assert.match(projectPage, /department_id: departmentId \|\| undefined/);
+  assert.match(
+    projectDetail,
+    /isAdminOrManager\s*\? \[\{ id: 'settings'/,
+  );
 });

@@ -206,16 +206,26 @@ const DepartmentDetailPage: React.FC = () => {
                 <Badge variant="primary">{department.employee_count ?? deptEmployees.length} thành viên</Badge>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2">
-                <div className="rounded-lg bg-primary/5 p-2 text-center">
+                <button
+                  type="button"
+                  className="rounded-lg bg-primary/5 p-2 text-center transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  onClick={() => navigate(`/projects?department_id=${department.id}`)}
+                  title="Mở các dự án của phòng ban"
+                >
                   <Briefcase className="mx-auto h-4 w-4 text-primary" />
                   <div className="mt-1 font-bold">{department.project_count ?? 0}</div>
                   <div className="text-[10px] text-text-muted">Dự án</div>
-                </div>
-                <div className="rounded-lg bg-emerald-500/5 p-2 text-center">
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg bg-emerald-500/5 p-2 text-center transition-colors hover:bg-emerald-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  onClick={() => navigate(`/projects?department_id=${department.id}&status=Completed`)}
+                  title="Mở các dự án đã hoàn thành của phòng ban"
+                >
                   <CircleCheckBig className="mx-auto h-4 w-4 text-emerald-500" />
                   <div className="mt-1 font-bold">{department.completed_project_count ?? 0}</div>
                   <div className="text-[10px] text-text-muted">Đã xong</div>
-                </div>
+                </button>
                 <div className="rounded-lg bg-amber-500/5 p-2 text-center">
                   <RefreshCw className="mx-auto h-4 w-4 text-amber-500" />
                   <div className="mt-1 font-bold">{department.sprint_count ?? 0}</div>

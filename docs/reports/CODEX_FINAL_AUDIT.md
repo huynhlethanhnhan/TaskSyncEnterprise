@@ -90,14 +90,14 @@ push cũng hoàn tất với kết quả `success`.
 
 | Gate | Kết quả | Evidence |
 | --- | --- | --- |
-| Backend Pytest | PASS | `413 passed in 443.32s` |
+| Backend Pytest | PASS | `414 passed in 479.05s` (clean rerun without concurrent Uvicorn log writer) |
 | Backend Ruff | PASS | `ruff check .` |
 | Backend Black | PASS | các Python file đã thay đổi |
 | Alembic heads/current | PASS | `05252bd1d012 (head)` |
 | Alembic upgrade MSSQL | PASS | `alembic upgrade head` |
 | Frontend ESLint | PASS | `npm run lint` |
 | Frontend TypeScript | PASS | `npm run typecheck` |
-| Frontend contracts | PASS | `22 passed, 0 failed` |
+| Frontend contracts | PASS | `23 passed, 0 failed` |
 | Frontend production build | PASS | Vite 8 build thành công |
 | Playwright acceptance | PASS | 9/9, console errors 0, unexpected network errors 0 |
 | Bandit Medium/High | PASS | 0 issues; seed identifiers dùng allowlist tĩnh |
@@ -118,9 +118,30 @@ Luồng đã kiểm tra bằng browser trên MSSQL local:
 - Unexpected network error trong acceptance: 0
 - Không có HTTP 500, unhandled exception, unhandled promise hoặc React Error
   Boundary trong phiên nghiệm thu: PASS
-- RBAC Admin/Manager/Team Leader/Employee: PASS qua backend API regression suite;
-  browser acceptance account Employee không khả dụng nên nhánh browser Employee
-  được ghi nhận là skipped, không được dùng thay thế cho API test.
+- RBAC Admin/Manager/Team Leader/Employee: PASS qua backend API regression suite
+  và browser manual test bằng các tài khoản seed thật.
+
+### Role and organization follow-up (2026-08-03)
+
+- **Admin:** System Settings hiển thị đầy đủ và tải cấu hình persistent từ
+  `/settings/system`; Manager/Team Leader/Employee chỉ thấy My Settings.
+- **Manager:** `manager.ops@tasksync.example.com` đổi trưởng nhóm OPS-T1 từ
+  Phan Hoàng Long sang Trương Gia Linh thành công, giao diện cập nhật ngay.
+- **Team Leader:** Trương Gia Linh sau khi được chỉ định có thể thêm/chuyển/gỡ
+  nhân viên thường và thêm task trong dự án, nhưng không có quyền tự đổi trưởng
+  nhóm hay sửa System Settings/Project Settings.
+- **Employee:** `employee014@tasksync.example.com` không thấy nút Đổi/Thêm/
+  Chuyển/Gỡ ở team, không thấy Project Settings hoặc Thêm công việc.
+- **Data restoration:** Manager đã đổi trưởng nhóm OPS-T1 về Phan Hoàng Long sau
+  kiểm thử, giữ nguyên trạng thái demo ban đầu.
+- **Project navigation:** KPI dự án ở Department list/detail, nút dự án tại Team
+  detail và dự án trong Employee detail đều dẫn đến Project list/detail. Bộ lọc
+  `department_id`, `team_id`, `status` tính cả quan hệ Project Member nên khớp
+  với KPI phòng ban dù project seed chưa gán trực tiếp tổ chức.
+- **Logging test note:** Lần full-suite đầu có `413 passed` và một logging E2E
+  failure do Uvicorn local ghi cùng file log. Test logging chạy riêng PASS; sau
+  khi dừng Uvicorn, full suite chạy sạch `414 passed`. Backend đã được khởi động
+  lại và `/health` trả `healthy`.
 
 ## Screenshots
 
