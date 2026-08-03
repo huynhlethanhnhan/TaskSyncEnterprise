@@ -16,7 +16,7 @@ import { useEmployees } from '../../hooks/useEmployees';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
 import { extractApiError } from '../../utils/errorHelpers';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 const TeamPage: React.FC = () => {
   const navigate = useNavigate();

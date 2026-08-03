@@ -217,6 +217,18 @@ jobs:
         run: |
           npm ci
 
+      - name: Run frontend lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run frontend typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Run frontend contract tests
+        working-directory: frontend
+        run: npm test
+
       - name: Verify frontend production build
         working-directory: frontend
         run: |

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { useLocation, useNavigate, Outlet } from 'react-router';
 import {
   LayoutDashboard,
   Briefcase,

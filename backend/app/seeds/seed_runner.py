@@ -79,12 +79,12 @@ def safe_reset_database(db: Session, confirm: bool) -> dict[str, int]:
 
     for table_name in TABLES_TO_RESET:
         try:
-            # Check if table exists
-            check_stmt = text(f"SELECT COUNT(*) FROM {table_name}")
+            # Identifiers come only from the module-owned allowlist above.
+            check_stmt = text(f"SELECT COUNT(*) FROM {table_name}")  # nosec B608
             count = db.execute(check_stmt).scalar() or 0
 
             if count > 0:
-                del_stmt = text(f"DELETE FROM {table_name}")
+                del_stmt = text(f"DELETE FROM {table_name}")  # nosec B608
                 db.execute(del_stmt)
                 db.commit()
             deleted_counts[table_name] = count

@@ -333,7 +333,7 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                 {backlogItems.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3.5 rounded-xl border border-border bg-surface hover:border-primary/30 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs"
+                    className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-3.5 text-xs transition-all hover:border-primary/30"
                   >
                     <div className="space-y-1.5 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -373,18 +373,18 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                           </Badge>
                         )}
                       </div>
-                      <h4 className="font-bold text-text-primary text-sm truncate">{item.title}</h4>
+                      <h4 className="break-words text-sm font-bold text-text-primary">{item.title}</h4>
                       {item.description && (
                         <p className="text-text-muted line-clamp-2 leading-relaxed">{item.description}</p>
                       )}
                     </div>
 
                     {isManagerOrAdmin && (
-                      <div className="flex items-center gap-2 flex-wrap shrink-0 self-end md:self-center">
+                      <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                         <select
                           value={item.sprint_id || ''}
                           onChange={(e) => handleQuickSprintAssign(item.id, e.target.value ? Number(e.target.value) : null)}
-                          className="text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                          className="w-full min-w-0 max-w-full text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium sm:w-44 sm:flex-none"
                           title="Gán nhanh Sprint"
                         >
                           <option value="">-- Gán Sprint --</option>
@@ -401,7 +401,7 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                         <select
                           value={item.topic_id || ''}
                           onChange={(e) => handleQuickEpicAssign(item.id, e.target.value ? Number(e.target.value) : null)}
-                          className="text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                          className="w-full min-w-0 max-w-full text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium sm:w-56 sm:flex-1"
                           title="Gán nhanh Epic"
                         >
                           <option value="">-- Gán Epic --</option>

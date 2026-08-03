@@ -57,6 +57,8 @@ class BacklogItemCreate(BacklogItemBase):
 
 
 class BacklogItemUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     title: str | None = None
     description: str | None = None
     priority: str | None = None
@@ -64,7 +66,26 @@ class BacklogItemUpdate(BaseModel):
     story_points: int | None = Field(default=None, ge=0)
     sprint_id: int | None = None
     topic_id: int | None = None
-    task_id: int | None = None
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def normalize_description(cls, value):
+        return BacklogItemBase.normalize_description(value)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def normalize_priority(cls, value):
+        return BacklogItemBase.normalize_priority(value)
+
+    @field_validator("story_points", mode="before")
+    @classmethod
+    def normalize_story_points(cls, value):
+        return BacklogItemBase.normalize_story_points(value)
+
+    @field_validator("sprint_id", "topic_id", mode="before")
+    @classmethod
+    def normalize_optional_ids(cls, value):
+        return BacklogItemBase.normalize_optional_ids(value)
 
 
 class BacklogItemResponse(BacklogItemBase):

@@ -1,7 +1,7 @@
 # TaskSyncEnterprise — Nền Tảng Quản Lý Công Việc & Dự Án Doanh Nghiệp
 
 [![Release Candidate](https://img.shields.io/badge/Release%20Candidate-v1.0.0--RC1-blue.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
-[![Backend Pytest](https://img.shields.io/badge/Backend%20Pytest-410%20Passed-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
+[![Backend Pytest](https://img.shields.io/badge/Backend%20Pytest-413%20Passed-success.svg)](docs/reports/CODEX_FINAL_AUDIT.md)
 [![Frontend Vite](https://img.shields.io/badge/Vite%20Build-Passed-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
 [![Alembic Clean Database](https://img.shields.io/badge/Alembic%20Migrations-Verified%20Clean-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
 
@@ -28,7 +28,7 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 - **Backend Framework**: Python 3.12+, FastAPI, Uvicorn (REST API v1)
 - **Cơ sở Dữ liệu & ORM**: MS SQL Server 2022 / SQLEXPRESS, SQLAlchemy 2.0, Alembic, `pymssql`
 - **Frontend Framework**: React 19, TypeScript, Vite, TailwindCSS v4, TanStack React Query
-- **Kiểm thử & Chất lượng**: Pytest (410 tests), Playwright E2E, Ruff, Black, Python Compileall
+- **Kiểm thử & Chất lượng**: Pytest (413 tests), Playwright E2E, Ruff, Black, ESLint, TypeScript
 
 > [!NOTE]
 > **Docker Release Disclaimer**: Docker SQL schema is not validated in this release. Local Windows + Python venv + MSSQL is the verified path.
@@ -196,6 +196,8 @@ python -m black --check .
 # Build sản phẩm Frontend
 cd ..\frontend
 npm run lint
+npm run typecheck
+npm test
 npm run build
 ```
 
@@ -206,5 +208,5 @@ cd frontend
 node e2e/capture-screenshots.mjs
 ```
 
-Ảnh chụp sẽ tự động lưu vào: `docs/testing/screenshots/antigravity-final/`
-Báo cáo chi tiết xem tại: [ANTIGRAVITY_FINAL_RELEASE_REVIEW.md](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
+Ảnh chụp tự động của Codex được lưu tại: `docs/testing/screenshots/codex/`
+Báo cáo chi tiết xem tại: [CODEX_FINAL_AUDIT.md](docs/reports/CODEX_FINAL_AUDIT.md)

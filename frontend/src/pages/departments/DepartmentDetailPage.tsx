@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { AxiosError } from 'axios';
 import { ArrowLeft, ArrowRightLeft, Briefcase, Building2, CircleCheckBig, RefreshCw, UserMinus, UserPlus, Users } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';

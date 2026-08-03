@@ -8,6 +8,7 @@ from app.models.task_assignment import TaskAssignment
 from app.models.project_member import ProjectMember
 from app.models.sprint import Sprint
 from app.models.backlog_item import BacklogItem
+from app.models.discussion_topic import DiscussionTopic
 from app.models.task_checklist import TaskChecklist
 from app.models.task_comment import TaskComment
 from app.models.user_feedback import UserFeedback
@@ -239,6 +240,10 @@ def test_sprint_lifecycle_and_backlog(client, db, setup_data):
     assert response.status_code == 200
     task_id = response.json()["id"]
     assert response.json()["story_points"] == 5
+    backlog_response = client.get(f"/api/v1/backlog/{backlog_id}", headers=mgr_headers)
+    assert backlog_response.status_code == 200
+    assert backlog_response.json()["task_id"] == task_id
+    assert backlog_response.json()["status"] == "Converted"
 
     # 5. Start sprint
     response = client.patch(f"/api/v1/sprints/{sprint_id}/start", headers=mgr_headers)
@@ -291,6 +296,57 @@ def test_backlog_creation_normalizes_empty_optional_fields(client, db, setup_dat
     assert payload["story_points"] == 0
     assert payload["sprint_id"] is None
     assert payload["topic_id"] is None
+
+
+def test_backlog_rejects_cross_project_epic_and_client_task_link(
+    client, db, setup_data
+):
+    mgr_headers = get_headers(client, "mgr@test.com")
+    project = setup_data["project"]
+    other_project = Project(
+        name="Other Project",
+        project_code="OTHERPRJ",
+        status="Active",
+        priority="Medium",
+        is_deleted=False,
+    )
+    db.add(other_project)
+    db.flush()
+    foreign_epic = DiscussionTopic(
+        project_id=other_project.id,
+        title="Foreign Epic",
+        content="Must not be linked across projects",
+        status="Open",
+        created_by_id=setup_data["manager"].id,
+    )
+    db.add(foreign_epic)
+    db.commit()
+
+    response = client.post(
+        "/api/v1/backlog",
+        json={
+            "project_id": project.id,
+            "title": "Invalid epic mapping",
+            "topic_id": foreign_epic.id,
+        },
+        headers=mgr_headers,
+    )
+    assert response.status_code == 409, response.json()
+
+    item = BacklogItem(
+        project_id=project.id,
+        title="Protected task link",
+        created_by_id=setup_data["manager"].id,
+    )
+    db.add(item)
+    db.commit()
+
+    response = client.put(
+        f"/api/v1/backlog/{item.id}",
+        json={"task_id": setup_data["task"].id},
+        headers=mgr_headers,
+    )
+    assert response.status_code == 422, response.json()
 
 
 def test_feedback_module(client, db, setup_data):
