@@ -94,18 +94,19 @@ Tất cả các tiêu chí chất lượng (Quality Gates) đặt ra đều đ�
 
 | Quality Gate Test | Công Cụ / Command | Kết Quả Execution | Trạng Thái |
 | :--- | :--- | :--- | :---: |
-| **Backend Unit & Integration Tests** | `pytest -q` | **410 passed in 229.27s** | ✅ PASS |
+| **Backend Unit & Integration Tests** | `pytest -q` | **416 passed in 250.42s** | ✅ PASS |
 | **Backend Linter** | `ruff check .` | **All checks passed!** | ✅ PASS |
 | **Backend Code Formatter** | `black --check` | **Passed on modified files** | ✅ PASS |
 | **Alembic Database Migration** | `alembic current & heads` | **05252bd1d012 (head)** | ✅ PASS |
 | **Python Code Compilation** | `compileall app alembic` | **100% clean compilation** | ✅ PASS |
 | **Frontend Linter** | `npm run lint` | **0 errors, 0 warnings** | ✅ PASS |
-| **Frontend Production Build** | `npm run build` | **Built in 2.78s (`dist/`)** | ✅ PASS |
+| **Frontend Production Build** | `npm run build` | **Built in 1.80s (`dist/`)** | ✅ PASS |
 | **Playwright Local Acceptance E2E** | `node run-acceptance.mjs` | **9/9 tests passed (0 failed)** | ✅ PASS |
-| **Docker Runtime Validation** | Docker | **SKIPPED** (Per release criteria) | ⏸️ SKIPPED |
+| **Docker Runtime Validation** | `scripts/docker_smoke_test.ps1` | **Images built; SQL Server/Redis healthy; backend/frontend HTTP 200; Alembic at head** | ✅ PASS |
 
 > **Ghi chú về Docker**:  
-> *Docker SQL schema is not validated in this release. Local Windows + Python venv + MSSQL is the verified path.*
+> Docker Compose đã được xác nhận trên database sạch với project cô lập và tự
+> cleanup. Local Windows + Python venv + MSSQL vẫn là đường chạy phát triển.
 
 ---
 

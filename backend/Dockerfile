@@ -48,8 +48,9 @@ RUN mkdir -p /app/uploads/avatars /app/uploads/attachments /app/logs \
 # Copy application source code under tasksync ownership
 COPY --chown=tasksync:tasksync . .
 
-# Ensure entrypoint script is executable
-RUN chmod +x /app/entrypoint.sh
+# Normalize Windows checkouts and ensure the Linux entrypoint is executable.
+RUN sed -i 's/\r$//' /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh
 
 # Run subsequent operations and process as unprivileged user
 USER tasksync
