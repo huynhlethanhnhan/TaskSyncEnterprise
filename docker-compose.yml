@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: tasksync-backend
     ports:
-      - "8000:8000"
+      - "${BACKEND_HOST_PORT:-8000}:8000"
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required; copy .env.example to .env}
@@ -35,7 +35,7 @@ services:
         - VITE_API_URL=${VITE_API_URL:-/api/v1}
     container_name: tasksync-frontend
     ports:
-      - "8080:8080"
+      - "${FRONTEND_HOST_PORT:-8080}:8080"
     depends_on:
       backend:
         condition: service_healthy
@@ -45,7 +45,7 @@ services:
     image: redis:7-alpine
     container_name: tasksync-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -59,7 +59,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: tasksync-sqlserver
     ports:
-      - "1433:1433"
+      - "${MSSQL_HOST_PORT:-1433}:1433"
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:?MSSQL_SA_PASSWORD is required}

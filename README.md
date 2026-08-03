@@ -1,7 +1,7 @@
 # TaskSyncEnterprise — Nền Tảng Quản Lý Công Việc & Dự Án Doanh Nghiệp
 
 [![Release Candidate](https://img.shields.io/badge/Release%20Candidate-v1.0.0--RC1-blue.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
-[![Backend Pytest](https://img.shields.io/badge/Backend%20Pytest-413%20Passed-success.svg)](docs/reports/CODEX_FINAL_AUDIT.md)
+[![Backend Pytest](https://img.shields.io/badge/Backend%20Pytest-416%20Passed-success.svg)](docs/reports/CODEX_FINAL_AUDIT.md)
 [![Frontend Vite](https://img.shields.io/badge/Vite%20Build-Passed-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
 [![Alembic Clean Database](https://img.shields.io/badge/Alembic%20Migrations-Verified%20Clean-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
 
@@ -20,6 +20,7 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 - 🏛️ [Tài liệu Kiến trúc Hệ thống (SYSTEM_ARCHITECTURE.md)](docs/architecture/SYSTEM_ARCHITECTURE.md)
 - 📊 [Sơ đồ Quan hệ Dữ liệu & ERD (MODULE_RELATIONSHIP.md)](docs/architecture/MODULE_RELATIONSHIP.md)
 - 🔒 [Ma trận Phân quyền RBAC (RBAC_PERMISSION_MATRIX.md)](docs/architecture/RBAC_PERMISSION_MATRIX.md)
+- 🧭 [Roadmap Sản phẩm & AI (AI_PRODUCT_ROADMAP.md)](docs/roadmap/AI_PRODUCT_ROADMAP.md)
 
 ---
 
@@ -28,10 +29,10 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 - **Backend Framework**: Python 3.12+, FastAPI, Uvicorn (REST API v1)
 - **Cơ sở Dữ liệu & ORM**: MS SQL Server 2022 / SQLEXPRESS, SQLAlchemy 2.0, Alembic, `pymssql`
 - **Frontend Framework**: React 19, TypeScript, Vite, TailwindCSS v4, TanStack React Query
-- **Kiểm thử & Chất lượng**: Pytest (413 tests), Playwright E2E, Ruff, Black, ESLint, TypeScript
+- **Kiểm thử & Chất lượng**: Pytest (416 tests), Playwright E2E, Ruff, Black, ESLint, TypeScript
 
 > [!NOTE]
-> **Docker Release Disclaimer**: Docker SQL schema is not validated in this release. Local Windows + Python venv + MSSQL is the verified path.
+> Local Windows + Python venv + MSSQL là đường chạy phát triển. Docker Compose là đường chạy tích hợp đầy đủ và được kiểm tra bằng `scripts/docker_smoke_test.ps1` trước khi phát hành.
 
 ---
 
@@ -42,16 +43,17 @@ Trước khi khởi tạo dự án trên Windows local, cần cài đặt:
 2. **Microsoft SQL Server** (MSSQLSERVER hoặc SQLEXPRESS)
 3. **Node.js v20+** và `npm`
 4. **Git**
+5. **Docker Desktop** nếu chạy stack container
 
 ---
 
 ## 5. Hướng Dẫn Khởi Tạo Dự Án Từ Đầu (Windows Local)
 
-### 🚀 Bước 1: Clone Nhánh `develop`
+### 🚀 Bước 1: Clone Nhánh `master`
 
 ```powershell
-# Clone nhánh develop duy nhất
-git clone --branch develop --single-branch https://github.com/huynhlethanhnhan/TaskSyncEnterprise.git TaskSyncEnterprise
+# Clone bản release ổn định
+git clone --branch master --single-branch https://github.com/huynhlethanhnhan/TaskSyncEnterprise.git TaskSyncEnterprise
 
 # Di chuyển vào thư mục dự án
 cd TaskSyncEnterprise
@@ -164,7 +166,41 @@ cd TaskSyncEnterprise\backend
 
 ---
 
-## 🔑 6. Tài Khoản Đăng Nhập Mẫu (Demo Credentials)
+## 6. Chạy Toàn Bộ Hệ Thống Bằng Docker
+
+Tạo file môi trường rồi khởi động backend, frontend, SQL Server và Redis:
+
+```powershell
+Copy-Item .env.example .env
+# Cập nhật SECRET_KEY và MSSQL_SA_PASSWORD trong .env trước khi chạy.
+docker compose --env-file .env config --quiet
+docker compose --env-file .env up -d --build
+docker compose ps
+```
+
+Nếu các cổng mặc định đang được ứng dụng local sử dụng, thay đổi
+`MSSQL_HOST_PORT`, `REDIS_HOST_PORT`, `BACKEND_HOST_PORT` và
+`FRONTEND_HOST_PORT` trong `.env`.
+
+- Frontend: `http://localhost:8080`
+- Backend health: `http://localhost:8000/health`
+- API docs: `http://localhost:8000/docs`
+
+Chạy smoke test tích hợp có tự động cleanup:
+
+```powershell
+.\scripts\docker_smoke_test.ps1
+```
+
+Tắt stack nhưng giữ volume dữ liệu:
+
+```powershell
+docker compose down
+```
+
+---
+
+## 7. Tài Khoản Đăng Nhập Mẫu (Demo Credentials)
 
 Tất cả các tài khoản demo sử dụng chung một mật khẩu chuẩn:
 - **Mật khẩu chung:** `TaskSync@2026`
@@ -180,7 +216,22 @@ Tất cả các tài khoản demo sử dụng chung một mật khẩu chuẩn:
 
 ---
 
-## 🧪 7. Kiểm Thử Tự Động & Báo Cáo Bằng Chứng
+## 8. Roadmap Sản Phẩm & AI
+
+Roadmap ưu tiên chất lượng dữ liệu và quyền riêng tư trước khi đưa AI vào quy trình:
+
+| Giai đoạn | Mục tiêu chính | Điều kiện kiểm soát |
+| :--- | :--- | :--- |
+| **1. Data foundation** | Sprint history, effort, blocker, skill profile, dữ liệu velocity/burndown thật | Dataset tái lập, không orphan, tối thiểu 10 Sprint/project demo |
+| **2. AI trợ lý an toàn** | Tóm tắt Project/Sprint, gợi ý Task và acceptance criteria, semantic search | RBAC, PII policy, prompt registry và AI audit log |
+| **3. Dự báo & tối ưu** | Cảnh báo deadline, workload/capacity và ước lượng story point | Chỉ đề xuất kèm lý do/độ tin cậy; không tự giao việc hoặc đánh giá nhân viên |
+| **4. Production governance** | Evaluation, cost/latency budget, fallback, retention và red-team | Có kiểm thử prompt injection, consent và delete workflow |
+
+Chi tiết phạm vi, tiêu chí hoàn thành và backlog kỹ thuật nằm tại [Roadmap mở rộng sản phẩm và AI](docs/roadmap/AI_PRODUCT_ROADMAP.md).
+
+---
+
+## 9. Kiểm Thử Tự Động & Báo Cáo Bằng Chứng
 
 ### Kiểm Thử Tự Động Backend & Frontend Build
 

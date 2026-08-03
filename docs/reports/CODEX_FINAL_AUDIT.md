@@ -90,11 +90,12 @@ push cũng hoàn tất với kết quả `success`.
 
 | Gate | Kết quả | Evidence |
 | --- | --- | --- |
-| Backend Pytest | PASS | `414 passed in 321.54s` after repository Black normalization |
+| Backend Pytest | PASS | `416 passed in 250.42s` |
 | Backend Ruff | PASS | `ruff check .` |
 | Backend Black | PASS | các Python file đã thay đổi |
 | Alembic heads/current | PASS | `05252bd1d012 (head)` |
 | Alembic upgrade MSSQL | PASS | `alembic upgrade head` |
+| Docker clean bootstrap | PASS | Backend/frontend image build, SQL Server/Redis healthy, HTTP 200 và Alembic `05252bd1d012 (head)` |
 | Frontend ESLint | PASS | `npm run lint` |
 | Frontend TypeScript | PASS | `npm run typecheck` |
 | Frontend contracts | PASS | `23 passed, 0 failed` |
@@ -145,6 +146,10 @@ Luồng đã kiểm tra bằng browser trên MSSQL local:
 - **Master CI normalization:** Run master đầu tiên dừng ở Black vì phạm vi diff
   với master cũ bao gồm 36 file Python lịch sử. Black được áp dụng cơ học cho
   toàn backend; Ruff, Black check và full suite `414 passed` sau normalization.
+- **Docker clean bootstrap (2026-08-03):** `scripts/docker_smoke_test.ps1` chạy
+  trên project cô lập `tasksync-smoke`, tự tạo database mới, chạy Alembic tới
+  `05252bd1d012 (head)`, xác nhận backend/frontend HTTP 200 và cleanup toàn bộ
+  container, network, volume thử nghiệm. Full suite sau thay đổi đạt `416 passed`.
 
 ## Screenshots
 

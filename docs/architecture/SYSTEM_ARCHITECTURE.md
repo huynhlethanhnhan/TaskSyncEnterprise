@@ -142,8 +142,8 @@ flowchart LR
     Project -->|Phân rã thành| Epic
     Project -->|Chứa| Backlog
     Project -->|Quản lý qua| Sprint
-    Backlog -->|Liên kết (Option)| Epic
-    Backlog -->|Gán vào (Option)| Sprint
+    Backlog -->|"Liên kết tùy chọn"| Epic
+    Backlog -->|"Gán vào tùy chọn"| Sprint
     Backlog -->|Chuyển đổi thành| Task
     Task -->|Bao gồm| TaskAssignment
 ```
