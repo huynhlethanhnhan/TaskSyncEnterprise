@@ -33,6 +33,14 @@ def user_can_access_project(
         return True
     if project.created_by == current_user.id:
         return True
+    if project.team_id is not None and current_user.team_id == project.team_id:
+        return True
+    if (
+        project.team_id is None
+        and project.department_id is not None
+        and current_user.department_id == project.department_id
+    ):
+        return True
     membership_id = db.scalar(
         select(ProjectMember.id).where(
             ProjectMember.project_id == project.id,
@@ -84,6 +92,17 @@ def project_scope_predicate(current_user: Employee):
         return None
     return or_(
         Project.created_by == current_user.id,
+        (
+            Project.team_id == current_user.team_id
+            if current_user.team_id is not None
+            else False
+        ),
+        (
+            (Project.team_id.is_(None))
+            & (Project.department_id == current_user.department_id)
+            if current_user.department_id is not None
+            else False
+        ),
         Project.id.in_(
             select(ProjectMember.project_id).where(
                 ProjectMember.employee_id == current_user.id
@@ -101,9 +120,15 @@ def validate_project_relationships(
     from app.models.department import Department
     from app.core.exceptions import BusinessRuleException
 
+    if team_id is not None and department_id is None:
+        raise BusinessRuleException(
+            message="Project có Team thì phải có Phòng ban.",
+            error_code="PROJECT_DEPARTMENT_REQUIRED",
+            status_code=409,
+        )
     if department_id is not None:
         dept = db.get(Department, department_id)
-        if dept is None:
+        if dept is None or not dept.is_active:
             raise BusinessRuleException(
                 message="Phòng ban không tồn tại.",
                 error_code="DEPARTMENT_NOT_FOUND",

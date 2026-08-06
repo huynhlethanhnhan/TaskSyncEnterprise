@@ -325,3 +325,344 @@ def test_06_task_assignee_validation_and_project_change(
     assert updated_task["project_id"] == prj_b["id"]
     assert updated_task["sprint_id"] is None
     assert updated_task["assigned_to"] is None
+
+
+def test_07_team_member_is_eligible_without_explicit_project_membership(
+    client: TestClient, org_setup: dict
+):
+    """Team membership is the primary assignment source for team projects."""
+    headers = get_auth_headers(client, org_setup["admin"].email)
+    project = client.post(
+        "/api/v1/projects",
+        json={
+            "project_code": "PRJ-TEAM-ELIGIBLE",
+            "name": "Team-derived assignees",
+            "department_id": org_setup["dept_eng"].id,
+            "team_id": org_setup["team_be"].id,
+        },
+        headers=headers,
+    ).json()
+
+    members_response = client.get(
+        f"/api/v1/projects/{project['id']}/members", headers=headers
+    )
+    assert members_response.status_code == 200, members_response.text
+    member_ids = {member["id"] for member in members_response.json()}
+    assert org_setup["dev_be"].id in member_ids
+    assert org_setup["mkt_spec"].id not in member_ids
+
+    team_member_headers = get_auth_headers(client, org_setup["dev_be"].email)
+    team_member_response = client.get(
+        f"/api/v1/projects/{project['id']}/eligible-assignees",
+        headers=team_member_headers,
+    )
+    assert team_member_response.status_code == 200
+
+    task_response = client.post(
+        "/api/v1/tasks",
+        json={
+            "project_id": project["id"],
+            "title": "Assign a direct team member",
+            "assigned_to": org_setup["dev_be"].id,
+            "status": "To Do",
+            "priority": "Medium",
+        },
+        headers=headers,
+    )
+    assert task_response.status_code in (200, 201), task_response.text
+
+
+def test_08_project_without_organization_has_no_eligible_assignees(
+    client: TestClient, org_setup: dict
+):
+    headers = get_auth_headers(client, org_setup["admin"].email)
+    project = client.post(
+        "/api/v1/projects",
+        json={"project_code": "PRJ-NO-ORG", "name": "No organization"},
+        headers=headers,
+    ).json()
+
+    response = client.get(
+        f"/api/v1/projects/{project['id']}/eligible-assignees", headers=headers
+    )
+    assert response.status_code == 200
+    assert response.json() == []
+
+    task_response = client.post(
+        "/api/v1/tasks",
+        json={
+            "project_id": project["id"],
+            "title": "Must remain unassigned",
+            "assigned_to": org_setup["dev_be"].id,
+        },
+        headers=headers,
+    )
+    assert task_response.status_code == 409
+    assert task_response.json()["error_code"] == "ASSIGNEE_NOT_PROJECT_MEMBER"
+
+
+def test_09_changing_project_team_replaces_eligible_assignees(
+    client: TestClient, org_setup: dict
+):
+    headers = get_auth_headers(client, org_setup["admin"].email)
+    project = client.post(
+        "/api/v1/projects",
+        json={
+            "project_code": "PRJ-SWITCH-TEAM",
+            "name": "Switch team",
+            "department_id": org_setup["dept_eng"].id,
+            "team_id": org_setup["team_be"].id,
+        },
+        headers=headers,
+    ).json()
+
+    before = client.get(
+        f"/api/v1/projects/{project['id']}/eligible-assignees", headers=headers
+    ).json()
+    assert org_setup["dev_be"].id in {employee["id"] for employee in before}
+
+    update_response = client.put(
+        f"/api/v1/projects/{project['id']}",
+        json={
+            "department_id": org_setup["dept_mkt"].id,
+            "team_id": org_setup["team_growth"].id,
+        },
+        headers=headers,
+    )
+    assert update_response.status_code == 200, update_response.text
+
+    after = client.get(
+        f"/api/v1/projects/{project['id']}/eligible-assignees", headers=headers
+    ).json()
+    after_ids = {employee["id"] for employee in after}
+    assert org_setup["mkt_spec"].id in after_ids
+    assert org_setup["dev_be"].id not in after_ids
+
+
+def test_10_inactive_team_member_is_not_eligible(
+    client: TestClient, org_setup: dict, db: Session
+):
+    headers = get_auth_headers(client, org_setup["admin"].email)
+    org_setup["dev_be"].is_active = False
+    db.commit()
+    project = client.post(
+        "/api/v1/projects",
+        json={
+            "project_code": "PRJ-INACTIVE",
+            "name": "Inactive member",
+            "department_id": org_setup["dept_eng"].id,
+            "team_id": org_setup["team_be"].id,
+        },
+        headers=headers,
+    ).json()
+
+    response = client.get(
+        f"/api/v1/projects/{project['id']}/eligible-assignees", headers=headers
+    )
+    assert org_setup["dev_be"].id not in {
+        employee["id"] for employee in response.json()
+    }
+
+
+def test_11_task_reassignment_rejects_employee_from_another_team(
+    client: TestClient, org_setup: dict
+):
+    headers = get_auth_headers(client, org_setup["admin"].email)
+    project = client.post(
+        "/api/v1/projects",
+        json={
+            "project_code": "PRJ-REASSIGN",
+            "name": "Reassignment",
+            "department_id": org_setup["dept_eng"].id,
+            "team_id": org_setup["team_be"].id,
+        },
+        headers=headers,
+    ).json()
+    task = client.post(
+        "/api/v1/tasks",
+        json={
+            "project_id": project["id"],
+            "title": "Initially valid",
+            "assigned_to": org_setup["dev_be"].id,
+        },
+        headers=headers,
+    ).json()
+
+    response = client.put(
+        f"/api/v1/tasks/{task['id']}",
+        json={"assigned_to": org_setup["mkt_spec"].id},
+        headers=headers,
+    )
+    assert response.status_code == 409
+    assert response.json()["error_code"] == "ASSIGNEE_NOT_PROJECT_MEMBER"
+
+
+def test_12_task_rejects_sprint_from_another_project(
+    client: TestClient, org_setup: dict
+):
+    headers = get_auth_headers(client, org_setup["admin"].email)
+    project_a = client.post(
+        "/api/v1/projects",
+        json={
+            "project_code": "PRJ-SPRINT-A",
+            "name": "Sprint A",
+            "department_id": org_setup["dept_eng"].id,
+        },
+        headers=headers,
+    ).json()
+    project_b = client.post(
+        "/api/v1/projects",
+        json={
+            "project_code": "PRJ-SPRINT-B",
+            "name": "Sprint B",
+            "department_id": org_setup["dept_eng"].id,
+        },
+        headers=headers,
+    ).json()
+    sprint_b = client.post(
+        "/api/v1/sprints",
+        json={
+            "project_id": project_b["id"],
+            "name": "Foreign Sprint",
+            "status": "Planned",
+        },
+        headers=headers,
+    ).json()
+
+    response = client.post(
+        "/api/v1/tasks",
+        json={
+            "project_id": project_a["id"],
+            "sprint_id": sprint_b["id"],
+            "title": "Wrong sprint",
+        },
+        headers=headers,
+    )
+    assert response.status_code == 409
+    assert response.json()["error_code"] == "SPRINT_MISMATCH"
+
+
+def test_13_department_only_project_uses_direct_department_members(
+    client: TestClient, org_setup: dict
+):
+    headers = get_auth_headers(client, org_setup["admin"].email)
+    project = client.post(
+        "/api/v1/projects",
+        json={
+            "project_code": "PRJ-DEPT-ONLY",
+            "name": "Department only",
+            "department_id": org_setup["dept_eng"].id,
+        },
+        headers=headers,
+    ).json()
+    response = client.get(
+        f"/api/v1/projects/{project['id']}/eligible-assignees", headers=headers
+    )
+    ids = {employee["id"] for employee in response.json()}
+    assert {org_setup["mgr_eng"].id, org_setup["dev_be"].id} <= ids
+    assert org_setup["mkt_spec"].id not in ids
+
+
+def test_14_explicit_members_are_unioned_deduplicated_and_filtered_when_inactive(
+    client: TestClient, org_setup: dict, db: Session
+):
+    headers = get_auth_headers(client, org_setup["admin"].email)
+    explicit_active = Employee(
+        employee_code="EMP-EXPLICIT-ACTIVE",
+        full_name="Explicit Active",
+        email="explicit.active@tasksync.com",
+        password_hash=get_password_hash("password123"),
+        role_id=ROLE_EMPLOYEE,
+        department_id=org_setup["dept_mkt"].id,
+        team_id=org_setup["team_growth"].id,
+        is_active=True,
+    )
+    explicit_inactive = Employee(
+        employee_code="EMP-EXPLICIT-INACTIVE",
+        full_name="Explicit Inactive",
+        email="explicit.inactive@tasksync.com",
+        password_hash=get_password_hash("password123"),
+        role_id=ROLE_EMPLOYEE,
+        department_id=org_setup["dept_mkt"].id,
+        team_id=org_setup["team_growth"].id,
+        is_active=False,
+    )
+    db.add_all([explicit_active, explicit_inactive])
+    db.commit()
+    project = client.post(
+        "/api/v1/projects",
+        json={
+            "project_code": "PRJ-EXPLICIT",
+            "name": "Explicit union",
+            "department_id": org_setup["dept_eng"].id,
+            "team_id": org_setup["team_be"].id,
+        },
+        headers=headers,
+    ).json()
+    db.add_all(
+        [
+            ProjectMember(project_id=project["id"], employee_id=explicit_active.id),
+            ProjectMember(project_id=project["id"], employee_id=explicit_inactive.id),
+            ProjectMember(project_id=project["id"], employee_id=org_setup["dev_be"].id),
+        ]
+    )
+    db.commit()
+
+    response = client.get(
+        f"/api/v1/projects/{project['id']}/eligible-assignees", headers=headers
+    )
+    ids = [employee["id"] for employee in response.json()]
+    assert explicit_active.id in ids
+    assert explicit_inactive.id not in ids
+    assert ids.count(org_setup["dev_be"].id) == 1
+
+
+def test_15_project_list_and_detail_return_the_same_organization(
+    client: TestClient, org_setup: dict
+):
+    headers = get_auth_headers(client, org_setup["admin"].email)
+    created = client.post(
+        "/api/v1/projects",
+        json={
+            "project_code": "PRJ-SERIALIZER",
+            "name": "Serializer consistency",
+            "department_id": org_setup["dept_eng"].id,
+            "team_id": org_setup["team_be"].id,
+        },
+        headers=headers,
+    ).json()
+    detail = client.get(f"/api/v1/projects/{created['id']}", headers=headers).json()
+    listed = client.get("/api/v1/projects", headers=headers).json()
+    list_item = next(project for project in listed if project["id"] == created["id"])
+
+    for field in ("department_id", "department_name", "team_id", "team_name"):
+        assert list_item[field] == detail[field] == created[field]
+
+
+def test_16_employee_team_transfer_updates_eligibility_immediately(
+    client: TestClient, org_setup: dict, db: Session
+):
+    headers = get_auth_headers(client, org_setup["admin"].email)
+    project = client.post(
+        "/api/v1/projects",
+        json={
+            "project_code": "PRJ-TRANSFER",
+            "name": "Employee transfer",
+            "department_id": org_setup["dept_eng"].id,
+            "team_id": org_setup["team_be"].id,
+        },
+        headers=headers,
+    ).json()
+
+    before = client.get(
+        f"/api/v1/projects/{project['id']}/eligible-assignees", headers=headers
+    ).json()
+    assert org_setup["dev_be"].id in {employee["id"] for employee in before}
+
+    org_setup["dev_be"].department_id = org_setup["dept_mkt"].id
+    org_setup["dev_be"].team_id = org_setup["team_growth"].id
+    db.commit()
+    after = client.get(
+        f"/api/v1/projects/{project['id']}/eligible-assignees", headers=headers
+    ).json()
+    assert org_setup["dev_be"].id not in {employee["id"] for employee in after}

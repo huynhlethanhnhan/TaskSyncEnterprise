@@ -162,6 +162,19 @@ test('task administration is limited while assignees can update status', async (
   assert.match(drawer, /disabled=\{!canEdit\}/);
 });
 
+test('task assignees are project-scoped and never fall back to global employees', async () => {
+  const drawer = await read('./src/components/drawers/TaskDrawer.tsx');
+  const hooks = await read('./src/hooks/useProjects.ts');
+  const services = await read('./src/api/services.ts');
+
+  assert.match(hooks, /queryKey:\s*\['project-eligible-assignees', projectId\]/);
+  assert.match(hooks, /getEligibleAssignees\(projectId!, signal\)/);
+  assert.match(services, /\/eligible-assignees`/);
+  assert.doesNotMatch(drawer, /projectMembers\.length > 0 \? projectMembers : _employees/);
+  assert.match(drawer, /setAssignedTo\(''\)/);
+  assert.match(drawer, /Không có Người thực hiện phù hợp/);
+});
+
 test('organization project metrics navigate to a scoped project list', async () => {
   const departmentPage = await read('./src/pages/departments/DepartmentPage.tsx');
   const departmentDetail = await read('./src/pages/departments/DepartmentDetailPage.tsx');

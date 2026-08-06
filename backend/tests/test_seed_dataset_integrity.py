@@ -4,6 +4,8 @@ from app.models.employee import Employee
 from app.models.project import Project
 from app.models.sprint import Sprint
 from app.models.task import Task
+from app.models.task_assignment import TaskAssignment
+from app.models.team import Team
 from app.core.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE
 
 
@@ -14,6 +16,7 @@ def test_seed_dataset_integrity_and_business_rules(db):
 
     # 2. Check counts match expectations
     assert summary["Employees"] == 32
+    assert summary["Teams"] == 5
     assert summary["Projects"] == 8
     assert summary["Sprints"] >= 14
     assert summary["Tasks"] >= 99
@@ -47,3 +50,24 @@ def test_seed_dataset_integrity_and_business_rules(db):
     assert "Sprint A (Past Completed)" in sprint_names
     assert "Sprint B (Planned Eligible)" in sprint_names
     assert "Sprint C (Planned Conflict Test)" in sprint_names
+
+    # 7. Every organization and assignment relation follows the shared rules.
+    teams = {team.id: team for team in db.query(Team).all()}
+    for employee in db.query(Employee).filter(Employee.team_id.is_not(None)).all():
+        assert teams[employee.team_id].department_id == employee.department_id
+    for project in projects:
+        assert project.department_id is not None
+        if project.team_id is not None:
+            assert teams[project.team_id].department_id == project.department_id
+
+    assignments = db.query(TaskAssignment).all()
+    for assignment in assignments:
+        task = db.get(Task, assignment.task_id)
+        project = db.get(Project, task.project_id)
+        employee = db.get(Employee, assignment.employee_id)
+        assert employee.is_active and not employee.is_deleted
+        assert (
+            employee.team_id == project.team_id
+            if project.team_id is not None
+            else employee.department_id == project.department_id
+        )

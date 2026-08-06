@@ -46,6 +46,7 @@ def test_manual_task_creation_regression(client, db):
             description="Test",
             status="Active",
             created_by=admin.id,
+            department_id=dept.id,
         )
         db.add(project)
         db.commit()

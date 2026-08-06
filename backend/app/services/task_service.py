@@ -3,9 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.discussion_topic import DiscussionTopic
-from app.models.employee import Employee
-from app.models.project_member import ProjectMember
 from app.models.sprint import Sprint
+from app.services.project_assignment import validate_project_assignee
 from app.services.project_access import get_active_project
 from app.services.sprint_service import SPRINT_ACTIVE, SPRINT_PLANNED
 from app.core.exceptions import BusinessRuleException
@@ -46,30 +45,7 @@ def validate_task_relationships(
             )
 
     if assigned_to is not None:
-        employee = db.scalar(
-            select(Employee).where(
-                Employee.id == assigned_to,
-                Employee.is_active == True,  # noqa: E712
-                Employee.is_deleted == False,  # noqa: E712
-            )
-        )
-        if employee is None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Assignee does not exist or is inactive.",
-            )
-        membership = db.scalar(
-            select(ProjectMember.id).where(
-                ProjectMember.project_id == project_id,
-                ProjectMember.employee_id == assigned_to,
-            )
-        )
-        if membership is None:
-            raise BusinessRuleException(
-                message="Nhân viên được chọn chưa phải thành viên của dự án.",
-                error_code="ASSIGNEE_NOT_PROJECT_MEMBER",
-                status_code=409,
-            )
+        validate_project_assignee(db, project_id, assigned_to)
 
     if topic_id is not None:
         topic = db.scalar(

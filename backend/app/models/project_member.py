@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, DateTime, text
+from sqlalchemy import ForeignKey, DateTime, UniqueConstraint, text
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -9,6 +9,13 @@ from app.database import Base
 
 class ProjectMember(Base):
     __tablename__ = "project_members"
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id",
+            "employee_id",
+            name="uq_project_members_project_employee",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

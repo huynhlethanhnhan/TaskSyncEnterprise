@@ -5,15 +5,6 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# Patch Alembic's foreign key comparison to be a no-op to prevent false positive FK/schema checks on SQL Server
-import alembic.autogenerate.compare.constraints as alembic_constraints
-from alembic.util.langhelpers import PriorityDispatchResult
-
-def dummy_compare(*args, **kwargs):
-    return PriorityDispatchResult.CONTINUE
-
-alembic_constraints._compare_foreign_keys.__code__ = dummy_compare.__code__
-
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -46,6 +37,8 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_server_default=False,
+        include_schemas=True,
+        version_table_schema="dbo",
         include_object=include_object,
     )
 
@@ -56,10 +49,10 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     from app.config import settings  # Import cấu hình từ file của bạn
-    
+
     configuration = config.get_section(config.config_ini_section) or {}
     configuration["sqlalchemy.url"] = settings.SQLALCHEMY_DATABASE_URI
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -67,10 +60,15 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # pymssql normalizes dbo to None during reflection. Use a sentinel default
+        # so Alembic compares reflected dbo FKs with schema-qualified metadata.
+        connection.dialect.default_schema_name = "__alembic_no_default__"
         context.configure(
-            connection=connection, 
+            connection=connection,
             target_metadata=target_metadata,
             compare_server_default=False,
+            include_schemas=True,
+            version_table_schema="dbo",
             include_object=include_object,
         )
 

@@ -160,17 +160,6 @@ def update(db: Session, obj: Task, data: TaskUpdate):
         if not assignee_was_set:
             assigned_to = None
             assignee_was_set = True
-        elif assigned_to is not None:
-            from app.models.project_member import ProjectMember
-
-            is_member = db.scalar(
-                select(ProjectMember.id).where(
-                    ProjectMember.project_id == target_project_id,
-                    ProjectMember.employee_id == assigned_to,
-                )
-            )
-            if is_member is None:
-                assigned_to = None
 
     target_sprint_id = task_data.get("sprint_id") if sprint_was_set else obj.sprint_id
 

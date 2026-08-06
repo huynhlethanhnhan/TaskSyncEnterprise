@@ -36,6 +36,7 @@ export const useUpdateProject = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['projects', id] });
+      queryClient.invalidateQueries({ queryKey: ['project-eligible-assignees', id] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -54,8 +55,8 @@ export const useDeleteProject = () => {
 
 export const useProjectMembers = (projectId?: number | null) => {
   return useQuery({
-    queryKey: ['project-members', projectId],
-    queryFn: () => projectsApi.getMembers(projectId!),
+    queryKey: ['project-eligible-assignees', projectId],
+    queryFn: ({ signal }) => projectsApi.getEligibleAssignees(projectId!, signal),
     enabled: isValidEntityId(projectId),
   });
 };

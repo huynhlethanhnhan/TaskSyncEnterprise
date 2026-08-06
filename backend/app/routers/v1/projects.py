@@ -132,9 +132,11 @@ def update_project(
     from app.services.project_access import validate_project_relationships
 
     target_department_id = (
-        data.department_id if data.department_id is not None else obj.department_id
+        data.department_id
+        if "department_id" in data.model_fields_set
+        else obj.department_id
     )
-    target_team_id = data.team_id if data.team_id is not None else obj.team_id
+    target_team_id = data.team_id if "team_id" in data.model_fields_set else obj.team_id
     validate_project_relationships(
         db, department_id=target_department_id, team_id=target_team_id
     )
@@ -172,15 +174,18 @@ def delete_project(
     response_model=list[ProjectMemberSummaryResponse],
     summary="List project members",
 )
+@router.get(
+    "/{project_id:int}/eligible-assignees",
+    response_model=list[ProjectMemberSummaryResponse],
+    summary="List eligible project assignees",
+)
 def get_project_members(
     project_id: int,
     db: Session = Depends(get_db),
     current_user: Employee = Depends(get_current_user),
 ):
     from app.models.project import Project
-    from app.models.project_member import ProjectMember
-    from app.models.employee import Employee
-    from sqlalchemy import select
+    from app.services.project_assignment import get_eligible_project_assignees
 
     project = db.get(Project, project_id)
     if not project or project.is_deleted:
@@ -188,18 +193,7 @@ def get_project_members(
 
     require_project_access(db, project_id, current_user)
 
-    members_stmt = (
-        select(Employee)
-        .join(ProjectMember, Employee.id == ProjectMember.employee_id)
-        .where(
-            ProjectMember.project_id == project_id,
-            Employee.is_deleted == False,  # noqa: E712
-            Employee.is_active == True,  # noqa: E712
-        )
-    )
-    members = db.scalars(members_stmt).all()
-
-    return members
+    return get_eligible_project_assignees(db, project_id)
 
 
 @router.post(
@@ -229,24 +223,24 @@ def add_project_member(
     if not emp or emp.is_deleted or not emp.is_active:
         raise HTTPException(404, "Employee not found or is inactive.")
 
-    from app.core.constants import ROLE_ADMIN
-
-    if emp.role_id != ROLE_ADMIN:
-        if (
-            project.department_id is not None
-            and emp.department_id != project.department_id
-        ):
-            raise BusinessRuleException(
-                message="Nhân viên không thuộc Phòng ban phụ trách dự án.",
-                error_code="EMPLOYEE_DEPARTMENT_MISMATCH",
-                status_code=409,
-            )
-        if project.team_id is not None and emp.team_id != project.team_id:
-            raise BusinessRuleException(
-                message="Nhân viên không thuộc Team phụ trách dự án.",
-                error_code="EMPLOYEE_TEAM_MISMATCH",
-                status_code=409,
-            )
+    if project.department_id is None and project.team_id is None:
+        raise BusinessRuleException(
+            message="Dự án chưa được gán Phòng ban hoặc Team.",
+            error_code="PROJECT_ORGANIZATION_REQUIRED",
+            status_code=409,
+        )
+    if project.department_id is not None and emp.department_id != project.department_id:
+        raise BusinessRuleException(
+            message="Nhân viên không thuộc Phòng ban phụ trách dự án.",
+            error_code="EMPLOYEE_DEPARTMENT_MISMATCH",
+            status_code=409,
+        )
+    if project.team_id is not None and emp.team_id != project.team_id:
+        raise BusinessRuleException(
+            message="Nhân viên không thuộc Team phụ trách dự án.",
+            error_code="EMPLOYEE_TEAM_MISMATCH",
+            status_code=409,
+        )
 
     existing = db.scalar(
         select(ProjectMember).where(

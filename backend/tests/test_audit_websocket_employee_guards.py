@@ -1,6 +1,7 @@
 # 📂 FILE: tests/test_audit_websocket_employee_guards.py
 import pytest
 from app.models.employee import Employee
+from app.models.department import Department
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.core.security import get_password_hash
@@ -40,12 +41,23 @@ def setup_rbac_data(db):
     employee_member = create_user(db, "emp_member@test.com", ROLE_EMPLOYEE)
     employee_outsider = create_user(db, "emp_outsider@test.com", ROLE_EMPLOYEE)
 
+    department = Department(
+        department_code="GUARD-DEPT",
+        name="Guard Department",
+        is_active=True,
+    )
+    db.add(department)
+    db.commit()
+    db.refresh(department)
+    employee_member.department_id = department.id
+
     project = Project(
         name="Guard Project",
         project_code="GPRJ01",
         status="Active",
         priority="High",
         is_deleted=False,
+        department_id=department.id,
     )
     db.add(project)
     db.commit()
