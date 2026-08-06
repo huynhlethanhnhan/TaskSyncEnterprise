@@ -6,7 +6,7 @@ The Department → Team → Employee → Project → Task/Sprint relationship fl
 
 The frontend no longer falls back to the global employee directory. Its query key contains `projectId`, stale selections are cleared when the project changes, React Query cancellation is propagated to the request, and organization changes invalidate the scoped cache. A corrective Alembic revision adds the missing project foreign keys, indexes, and project-member uniqueness constraint without rewriting released history.
 
-The live database was inspected read-only and was not upgraded, reset, or modified. All functional, backend, frontend, migration, and browser acceptance quality gates passed cleanly.
+The live database was inspected read-only and was not upgraded, reset, or modified. All functional, backend, frontend, migration, browser acceptance quality gates, and remote GitHub Actions CI workflows passed cleanly.
 
 ## 2. Root Cause
 
@@ -68,7 +68,7 @@ Project writes reject a Team outside the selected Department. Admin permissions 
 - As per Phase 3 Case A guidelines, the 21 unrelated legacy files were **NOT reformatted** to preserve git history and pull request scope hygiene.
 - All 22 changed Python files in this change set were formatted using `black` to ensure 100% compliance with `ci.yml`'s `black --check` step on changed files.
 
-## 7. Quality Gate Execution Results
+## 7. Local Quality Gate Execution Results
 
 ### Backend Quality Gates:
 - `python -m ruff check .`: **PASS — All checks passed!**
@@ -92,7 +92,27 @@ Project writes reject a Team outside the selected Department. Admin permissions 
 ### Redis Availability:
 - Redis was offline during local verification; the application operated using its built-in memory/fallback cache path without errors.
 
-## 8. Files Changed
+## 8. Git Commit & Remote CI Verification Results
+
+- **Feature Branch:** `fix/project-relationship-migration`
+- **Feature Commit SHA:** `7d70181b5c464efc9ea990ef570fdb0aedec9424`
+- **Develop Merge Commit SHA:** `259fd9fb86782c207562037ebe084c6a9c5d3e59`
+- **GitHub Actions Workflow:** `CI Foundation`
+- **Run ID:** `31069095608`
+- **Executed Jobs:**
+  1. `Repository Hygiene & Security Gate`: **success**
+  2. `Frontend CI (Node 22)`: **success**
+  3. `Backend CI (Python 3.12)`: **success**
+  4. `Docker Production Hardening Validation`: **success**
+- **Final Conclusion:** `success`
+- **Execution Time:** ~3 minutes 45 seconds
+
+### Safeguard Confirmations:
+- **README Status:** `README.md` and all `README*` files were **UNTOUCHED** (`git diff` empty).
+- **Master Branch Status:** `master` branch remains unchanged (`git log -1` matches origin/master).
+- **Live Database Status:** Database `TaskSyncEnterprise` was **NOT migrated** (remains at revision `05252bd1d012`).
+
+## 9. Files Changed
 
 - Backend relationship logic: `app/services/project_assignment.py`, `app/services/project_access.py`, `app/services/task_service.py`, `app/crud/task.py`, `app/routers/v1/projects.py`, `app/models/project.py`, `app/models/project_member.py`.
 - Migration: `backend/alembic/env.py`, `backend/alembic/versions/6a4c9e2f1b70_align_project_relationship_constraints.py`.
@@ -102,8 +122,6 @@ Project writes reject a Team outside the selected Department. Admin permissions 
 - Frontend: `frontend/src/api/services.ts`, `frontend/src/hooks/useProjects.ts`, `frontend/src/hooks/useNotifications.ts`, `frontend/src/components/drawers/TaskDrawer.tsx`, `frontend/ui-contract.test.mjs`, `frontend/e2e/run-acceptance.mjs`.
 - Documentation: `docs/reports/PROJECT_RELATIONSHIP_MIGRATION_FIX_REPORT.md` (this report). No README or CHANGELOG modified.
 
-## 9. Verification Summary & Remaining Risks
+## 10. Remaining Risks
 
-- **Live Database:** Contains 103 pre-existing relationship inconsistencies. Live database was NOT migrated or touched; data remediation must precede live migration.
-- **Repository Scope:** `README.md`, `master` branch, and pre-existing files were strictly preserved.
-- **CI / GitHub Actions:** Pending remote execution post-push.
+- **Live Database Remediation:** The live database contains 103 pre-existing relationship inconsistencies. Data remediation must be executed before applying revision `6a4c9e2f1b70` to the production database.
