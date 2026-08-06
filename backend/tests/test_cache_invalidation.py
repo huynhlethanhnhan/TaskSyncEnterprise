@@ -1,6 +1,5 @@
 # 📂 FILE: backend/tests/test_cache_invalidation.py
 import logging
-from logging import ERROR
 import pytest
 from unittest.mock import MagicMock, patch
 from app.cache import CacheInvalidator, cache_service, cache_keys
@@ -63,9 +62,7 @@ def test_dashboard_invalidation(mock_redis):
     CacheInvalidator.invalidate_dashboard()
 
     # Should delete keys matching pattern dashboard:*
-    mock_redis.scan.assert_any_call(
-        cursor=0, match="dashboard:*", count=100
-    )
+    mock_redis.scan.assert_any_call(cursor=0, match="dashboard:*", count=100)
 
 
 def test_employee_update_invalidation(mock_redis):
@@ -87,9 +84,7 @@ def test_employee_update_invalidation(mock_redis):
     )
 
     # 3. Invalidate dashboard
-    mock_redis.scan.assert_any_call(
-        cursor=0, match="dashboard:*", count=100
-    )
+    mock_redis.scan.assert_any_call(cursor=0, match="dashboard:*", count=100)
 
 
 def test_department_delete_invalidation(mock_redis):
@@ -105,9 +100,7 @@ def test_department_delete_invalidation(mock_redis):
     )
 
     # Invalidate dashboard
-    mock_redis.scan.assert_any_call(
-        cursor=0, match="dashboard:*", count=100
-    )
+    mock_redis.scan.assert_any_call(cursor=0, match="dashboard:*", count=100)
 
 
 def test_project_create_invalidation(mock_redis):
@@ -120,9 +113,7 @@ def test_project_create_invalidation(mock_redis):
     )
 
     # Invalidate dashboard
-    mock_redis.scan.assert_any_call(
-        cursor=0, match="dashboard:*", count=100
-    )
+    mock_redis.scan.assert_any_call(cursor=0, match="dashboard:*", count=100)
 
 
 def test_task_update_invalidation(mock_redis):
@@ -150,19 +141,17 @@ def test_task_update_invalidation(mock_redis):
     )
 
     # Invalidate dashboard
-    mock_redis.scan.assert_any_call(
-        cursor=0, match="dashboard:*", count=100
-    )
+    mock_redis.scan.assert_any_call(cursor=0, match="dashboard:*", count=100)
 
 
 def test_invalidation_with_integer_delete_result_does_not_log_exception(
     mock_redis, caplog
 ):
-    caplog.set_level(ERROR, logger="cache")
+    caplog.set_level(logging.ERROR, logger="cache")
 
     CacheInvalidator.invalidate_task(task_id=101)
 
-    assert not [record for record in caplog.records if record.levelno >= ERROR]
+    assert not [record for record in caplog.records if record.levelno >= logging.ERROR]
 
 
 def test_redis_unavailable():

@@ -48,4 +48,3 @@ def get_dashboard_analytics(
         data=analytics_data,
         message="Dashboard analytical breakdowns retrieved successfully.",
     )
-

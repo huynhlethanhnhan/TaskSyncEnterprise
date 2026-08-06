@@ -48,12 +48,16 @@ def test_seed_reset_clears_every_organization_reference_before_table_deletes():
 
 
 def test_seed_reset_breaks_organization_cycles_before_deleting(db):
-    role = Role(
-        id=3,
-        role_name="employee",
-        description="Employee",
-        is_system=True,
-    )
+    role = db.get(Role, 3)
+    if not role:
+        role = Role(
+            id=3,
+            role_name="employee",
+            description="Employee",
+            is_system=True,
+        )
+        db.add(role)
+        db.flush()
     department = Department(
         department_code="OPS",
         name="Vận hành",

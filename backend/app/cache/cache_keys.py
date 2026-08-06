@@ -66,19 +66,22 @@ def get_role_list_key() -> str:
     return "role:list"
 
 
-def get_dashboard_summary_key(user_id: int | None = None, role_id: int | None = None) -> str:
+def get_dashboard_summary_key(
+    user_id: int | None = None, role_id: int | None = None
+) -> str:
     """Generates the role/user-scoped cache key for the dashboard summary."""
     if user_id is None or role_id is None:
         return "dashboard:summary"
     return f"dashboard:summary:u_{user_id}:r_{role_id}"
 
 
-def get_dashboard_analytics_key(user_id: int | None = None, role_id: int | None = None) -> str:
+def get_dashboard_analytics_key(
+    user_id: int | None = None, role_id: int | None = None
+) -> str:
     """Generates the role/user-scoped cache key for dashboard analytics."""
     if user_id is None or role_id is None:
         return "dashboard:analytics"
     return f"dashboard:analytics:u_{user_id}:r_{role_id}"
-
 
 
 def get_task_list_key(

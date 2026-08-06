@@ -35,7 +35,9 @@ def check_project_membership(
     if not project_id:
         return
     project = db.scalar(
-        select(Project).where(Project.id == project_id, Project.is_deleted == False)  # noqa: E712
+        select(Project).where(
+            Project.id == project_id, Project.is_deleted == False
+        )  # noqa: E712
     )
     if not project:
         raise HTTPException(
@@ -159,7 +161,6 @@ def create_topic(
     resp.reply_count = 0
     resp.replies = []
     return resp
-
 
 
 @router.get("/{topic_id:int}", response_model=DiscussionTopicResponse)

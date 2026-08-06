@@ -419,4 +419,3 @@ class CacheInvalidator:
                 extra={"operation": "INVALIDATE_FAILED", "error": str(e)},
                 exc_info=True,
             )
-

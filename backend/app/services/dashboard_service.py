@@ -29,7 +29,9 @@ class DashboardService:
         if current_user is None:
             key = get_dashboard_summary_key()
         else:
-            key = get_dashboard_summary_key(user_id=current_user.id, role_id=current_user.role_id)
+            key = get_dashboard_summary_key(
+                user_id=current_user.id, role_id=current_user.role_id
+            )
 
         return cache_manager.get_or_set(
             key=key,
@@ -37,7 +39,9 @@ class DashboardService:
             ttl=settings.CACHE_TTL_DASHBOARD,
         )
 
-    def _get_overview_db(self, db: Session, current_user: Employee | None = None) -> dict:
+    def _get_overview_db(
+        self, db: Session, current_user: Employee | None = None
+    ) -> dict:
         """Retrieves general widget overview metrics directly from database based on RBAC."""
         if db.bind and db.bind.dialect.name == "mssql":
             now_val = func.sysutcdatetime()
@@ -57,12 +61,16 @@ class DashboardService:
             )
             active_employees_q = (
                 select(func.count(Employee.id))
-                .where(Employee.is_deleted == False, Employee.is_active == True)  # noqa: E712
+                .where(
+                    Employee.is_deleted == False, Employee.is_active == True
+                )  # noqa: E712
                 .scalar_subquery()
             )
             inactive_employees_q = (
                 select(func.count(Employee.id))
-                .where(Employee.is_deleted == False, Employee.is_active == False)  # noqa: E712
+                .where(
+                    Employee.is_deleted == False, Employee.is_active == False
+                )  # noqa: E712
                 .scalar_subquery()
             )
             total_departments_q = (
@@ -78,7 +86,9 @@ class DashboardService:
             )
             active_projects_q = (
                 select(func.count(Project.id))
-                .where(Project.is_deleted == False, Project.status == "Active")  # noqa: E712
+                .where(
+                    Project.is_deleted == False, Project.status == "Active"
+                )  # noqa: E712
                 .scalar_subquery()
             )
 
@@ -144,15 +154,16 @@ class DashboardService:
             )
             total_departments_q = (
                 select(func.count(Department.id))
-                .where(Department.is_active == True, (Department.id == dept_id) if dept_id else false())  # noqa: E712
+                .where(
+                    Department.is_active == True,
+                    (Department.id == dept_id) if dept_id else false(),
+                )  # noqa: E712
                 .scalar_subquery()
             )
 
-            proj_clause = (
-                or_(
-                    (Project.department_id == dept_id) if dept_id else false(),
-                    Project.created_by == user_id,
-                )
+            proj_clause = or_(
+                (Project.department_id == dept_id) if dept_id else false(),
+                Project.created_by == user_id,
             )
             total_projects_q = (
                 select(func.count(Project.id))
@@ -161,7 +172,9 @@ class DashboardService:
             )
             active_projects_q = (
                 select(func.count(Project.id))
-                .where(Project.is_deleted == False, Project.status == "Active", proj_clause)  # noqa: E712
+                .where(
+                    Project.is_deleted == False, Project.status == "Active", proj_clause
+                )  # noqa: E712
                 .scalar_subquery()
             )
 
@@ -170,9 +183,7 @@ class DashboardService:
                 if dept_id
                 else select(Employee.id).where(Employee.id == user_id)
             )
-            dept_proj_ids = (
-                select(Project.id).where(proj_clause)
-            )
+            dept_proj_ids = select(Project.id).where(proj_clause)
 
             task_scope = or_(
                 Task.project_id.in_(dept_proj_ids),
@@ -190,12 +201,16 @@ class DashboardService:
             )
             completed_tasks_q = (
                 select(func.count(Task.id))
-                .where(Task.is_deleted == False, Task.status == "Done", task_scope)  # noqa: E712
+                .where(
+                    Task.is_deleted == False, Task.status == "Done", task_scope
+                )  # noqa: E712
                 .scalar_subquery()
             )
             pending_tasks_q = (
                 select(func.count(Task.id))
-                .where(Task.is_deleted == False, Task.status != "Done", task_scope)  # noqa: E712
+                .where(
+                    Task.is_deleted == False, Task.status != "Done", task_scope
+                )  # noqa: E712
                 .scalar_subquery()
             )
             overdue_tasks_q = (
@@ -216,7 +231,10 @@ class DashboardService:
             )
             pending_vacations_q = (
                 select(func.count(Vacation.id))
-                .where(Vacation.status == "Pending", Vacation.requested_by.in_(dept_member_ids))
+                .where(
+                    Vacation.status == "Pending",
+                    Vacation.requested_by.in_(dept_member_ids),
+                )
                 .scalar_subquery()
             )
 
@@ -227,8 +245,8 @@ class DashboardService:
             inactive_employees_q = select(literal(0)).scalar_subquery()
             total_departments_q = select(literal(0)).scalar_subquery()
 
-            my_project_ids = (
-                select(ProjectMember.project_id).where(ProjectMember.employee_id == user_id)
+            my_project_ids = select(ProjectMember.project_id).where(
+                ProjectMember.employee_id == user_id
             )
             total_projects_q = (
                 select(func.count(Project.id))
@@ -250,7 +268,9 @@ class DashboardService:
 
             my_task_scope = or_(
                 Task.id.in_(
-                    select(TaskAssignment.task_id).where(TaskAssignment.employee_id == user_id)
+                    select(TaskAssignment.task_id).where(
+                        TaskAssignment.employee_id == user_id
+                    )
                 ),
                 Task.created_by == user_id,
             )
@@ -262,12 +282,16 @@ class DashboardService:
             )
             completed_tasks_q = (
                 select(func.count(Task.id))
-                .where(Task.is_deleted == False, Task.status == "Done", my_task_scope)  # noqa: E712
+                .where(
+                    Task.is_deleted == False, Task.status == "Done", my_task_scope
+                )  # noqa: E712
                 .scalar_subquery()
             )
             pending_tasks_q = (
                 select(func.count(Task.id))
-                .where(Task.is_deleted == False, Task.status != "Done", my_task_scope)  # noqa: E712
+                .where(
+                    Task.is_deleted == False, Task.status != "Done", my_task_scope
+                )  # noqa: E712
                 .scalar_subquery()
             )
             overdue_tasks_q = (
@@ -326,7 +350,9 @@ class DashboardService:
 
         return dict(row._mapping)
 
-    def get_detailed_analytics(self, db: Session, current_user: Employee | None = None) -> dict:
+    def get_detailed_analytics(
+        self, db: Session, current_user: Employee | None = None
+    ) -> dict:
         """
         Retrieves full widget overview counts along with breakdowns scoped by current user.
         Uses CacheManager read-through caching.
@@ -334,7 +360,9 @@ class DashboardService:
         if current_user is None:
             key = get_dashboard_analytics_key()
         else:
-            key = get_dashboard_analytics_key(user_id=current_user.id, role_id=current_user.role_id)
+            key = get_dashboard_analytics_key(
+                user_id=current_user.id, role_id=current_user.role_id
+            )
 
         return cache_manager.get_or_set(
             key=key,
@@ -342,7 +370,9 @@ class DashboardService:
             ttl=settings.CACHE_TTL_DASHBOARD,
         )
 
-    def _get_detailed_analytics_db(self, db: Session, current_user: Employee | None = None) -> dict:
+    def _get_detailed_analytics_db(
+        self, db: Session, current_user: Employee | None = None
+    ) -> dict:
         """Retrieves breakdown metrics directly from database based on RBAC."""
         overview = self.get_overview(db, current_user)
 
@@ -356,24 +386,20 @@ class DashboardService:
             now_value = datetime.now(timezone.utc)
 
         if role_id == ROLE_ADMIN:
-            task_filter = (Task.is_deleted == False)  # noqa: E712
-            proj_filter = (Project.is_deleted == False)  # noqa: E712
+            task_filter = Task.is_deleted == False  # noqa: E712
+            proj_filter = Project.is_deleted == False  # noqa: E712
         elif role_id == ROLE_MANAGER:
             dept_member_ids = (
                 select(Employee.id).where(Employee.department_id == dept_id)
                 if dept_id
                 else select(Employee.id).where(Employee.id == user_id)
             )
-            proj_clause = (
-                or_(
-                    Project.department_id == dept_id if dept_id else False,
-                    Project.created_by == user_id,
-                )
+            proj_clause = or_(
+                Project.department_id == dept_id if dept_id else False,
+                Project.created_by == user_id,
             )
             dept_proj_ids = select(Project.id).where(proj_clause)
-            task_filter = (
-                Task.is_deleted == False  # noqa: E712
-            ) & (
+            task_filter = (Task.is_deleted == False) & (  # noqa: E712
                 or_(
                     Task.project_id.in_(dept_proj_ids),
                     Task.id.in_(
@@ -385,12 +411,14 @@ class DashboardService:
             )
             proj_filter = (Project.is_deleted == False) & proj_clause  # noqa: E712
         else:
-            my_project_ids = (
-                select(ProjectMember.project_id).where(ProjectMember.employee_id == user_id)
+            my_project_ids = select(ProjectMember.project_id).where(
+                ProjectMember.employee_id == user_id
             )
             my_task_scope = or_(
                 Task.id.in_(
-                    select(TaskAssignment.task_id).where(TaskAssignment.employee_id == user_id)
+                    select(TaskAssignment.task_id).where(
+                        TaskAssignment.employee_id == user_id
+                    )
                 ),
                 Task.created_by == user_id,
             )
@@ -422,7 +450,9 @@ class DashboardService:
             employees_by_department = []
             workload_by_department = []
         else:
-            dept_filter = (Employee.is_deleted == False) & (Department.is_active == True)  # noqa: E712
+            dept_filter = (Employee.is_deleted == False) & (
+                Department.is_active == True
+            )  # noqa: E712
             if role_id == ROLE_MANAGER and dept_id:
                 dept_filter = dept_filter & (Department.id == dept_id)
 
@@ -437,7 +467,10 @@ class DashboardService:
             )
             dept_rows = db.execute(dept_stmt).all()
             employees_by_department = [
-                {"department_name": r.department_name, "employee_count": r.employee_count}
+                {
+                    "department_name": r.department_name,
+                    "employee_count": r.employee_count,
+                }
                 for r in dept_rows
             ]
 
@@ -445,7 +478,9 @@ class DashboardService:
                 select(
                     Department.name.label("department_name"),
                     func.count(func.distinct(Task.id)).label("total_tasks"),
-                    func.sum(case((Task.status != "Done", 1), else_=0)).label("pending_tasks"),
+                    func.sum(case((Task.status != "Done", 1), else_=0)).label(
+                        "pending_tasks"
+                    ),
                     func.sum(
                         case(
                             (
@@ -465,7 +500,11 @@ class DashboardService:
                     Employee.is_deleted == False,  # noqa: E712
                     Department.is_active == True,  # noqa: E712
                     Task.is_deleted == False,  # noqa: E712
-                    (Department.id == dept_id) if (role_id == ROLE_MANAGER and dept_id) else true(),
+                    (
+                        (Department.id == dept_id)
+                        if (role_id == ROLE_MANAGER and dept_id)
+                        else true()
+                    ),
                 )
                 .group_by(Department.name)
                 .order_by(Department.name)
@@ -482,21 +521,41 @@ class DashboardService:
 
         # 4. Leave counts grouped by Status
         if role_id == ROLE_ADMIN:
-            vac_stmt = select(Vacation.status, func.count(Vacation.id).label("count")).group_by(Vacation.status)
+            vac_stmt = select(
+                Vacation.status, func.count(Vacation.id).label("count")
+            ).group_by(Vacation.status)
         elif role_id == ROLE_MANAGER:
-            dept_members = select(Employee.id).where(Employee.department_id == dept_id) if dept_id else select(Employee.id).where(Employee.id == user_id)
-            vac_stmt = select(Vacation.status, func.count(Vacation.id).label("count")).where(Vacation.requested_by.in_(dept_members)).group_by(Vacation.status)
+            dept_members = (
+                select(Employee.id).where(Employee.department_id == dept_id)
+                if dept_id
+                else select(Employee.id).where(Employee.id == user_id)
+            )
+            vac_stmt = (
+                select(Vacation.status, func.count(Vacation.id).label("count"))
+                .where(Vacation.requested_by.in_(dept_members))
+                .group_by(Vacation.status)
+            )
         else:
-            vac_stmt = select(Vacation.status, func.count(Vacation.id).label("count")).where(Vacation.requested_by == user_id).group_by(Vacation.status)
+            vac_stmt = (
+                select(Vacation.status, func.count(Vacation.id).label("count"))
+                .where(Vacation.requested_by == user_id)
+                .group_by(Vacation.status)
+            )
 
         vac_rows = db.execute(vac_stmt).all()
         leave_by_status = [{"status": r.status, "count": r.count} for r in vac_rows]
 
         # 5. Notification Volume
         if role_id == ROLE_ADMIN:
-            notif_stmt = select(Notification.type, func.count(Notification.id).label("count")).group_by(Notification.type)
+            notif_stmt = select(
+                Notification.type, func.count(Notification.id).label("count")
+            ).group_by(Notification.type)
         else:
-            notif_stmt = select(Notification.type, func.count(Notification.id).label("count")).where(Notification.employee_id == user_id).group_by(Notification.type)
+            notif_stmt = (
+                select(Notification.type, func.count(Notification.id).label("count"))
+                .where(Notification.employee_id == user_id)
+                .group_by(Notification.type)
+            )
 
         notif_rows = db.execute(notif_stmt).all()
         notification_volume = [
@@ -504,7 +563,9 @@ class DashboardService:
         ]
 
         # 6. Upcoming Deadlines (top 5)
-        deadline_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=14)
+        deadline_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
+            days=14
+        )
         deadline_stmt = (
             select(Task.id, Task.title, Task.deadline, Task.priority, Task.status)
             .where(
@@ -578,7 +639,9 @@ class DashboardService:
                     Department.name.label("department_name"),
                 )
                 .outerjoin(Department, Employee.department_id == Department.id)
-                .where(Employee.is_deleted == False, Employee.date_of_birth.is_not(None))  # noqa: E712
+                .where(
+                    Employee.is_deleted == False, Employee.date_of_birth.is_not(None)
+                )  # noqa: E712
             )
             if role_id == ROLE_MANAGER and dept_id:
                 bday_stmt = bday_stmt.where(Employee.department_id == dept_id)
@@ -628,9 +691,13 @@ class DashboardService:
             ]
 
         # 10. Monthly Activity
-        six_months_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=183)
+        six_months_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
+            days=183
+        )
         created_rows = db.execute(
-            select(Task.created_at).where(task_filter, Task.created_at >= six_months_ago)
+            select(Task.created_at).where(
+                task_filter, Task.created_at >= six_months_ago
+            )
         ).all()
         month_counts: dict[str, int] = {}
         for row in created_rows:
@@ -659,4 +726,3 @@ class DashboardService:
 
 
 dashboard_service = DashboardService()
-

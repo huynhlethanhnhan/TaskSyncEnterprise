@@ -21,7 +21,9 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingSessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, expire_on_commit=False, bind=engine, future=True
+)
 
 
 @pytest.fixture(scope="function")
@@ -50,9 +52,11 @@ def db():
     # Schema is deliberately mutated for the SQLite test harness. SQLAlchemy's
     # engine-level compilation cache can otherwise reuse SQL compiled before
     # normalization (for example, ``dbo.employees`` from an earlier test).
-    engine.clear_compiled_cache()
     Base.metadata.create_all(bind=engine, checkfirst=True)
     db = TestingSessionLocal()
+    from app.seeds.seed_roles import seed_roles
+
+    seed_roles(db)
     try:
         yield db
     finally:

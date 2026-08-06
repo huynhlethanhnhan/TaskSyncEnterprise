@@ -491,6 +491,7 @@ def test_23_24_25_rbac_task_update_permissions(client, db):
 
     db.add(TaskAssignment(task_id=task.id, employee_id=emp_assigned.id))
     db.commit()
+    db.refresh(task)
 
     headers_assigned = _get_auth_headers(client, emp_assigned)
     headers_unassigned = _get_auth_headers(client, emp_unassigned)

@@ -44,18 +44,30 @@ def rbac_fixture(db):
     uid = uuid.uuid4().hex[:6]
 
     # Departments
-    dept_it = Department(name=f"IT Dept {uid}", department_code=f"IT-{uid}", is_active=True)
-    dept_hr = Department(name=f"HR Dept {uid}", department_code=f"HR-{uid}", is_active=True)
+    dept_it = Department(
+        name=f"IT Dept {uid}", department_code=f"IT-{uid}", is_active=True
+    )
+    dept_hr = Department(
+        name=f"HR Dept {uid}", department_code=f"HR-{uid}", is_active=True
+    )
     db.add_all([dept_it, dept_hr])
     db.commit()
     db.refresh(dept_it)
     db.refresh(dept_hr)
 
     # Users
-    admin_usr = _create_employee(db, f"adm_{uid}@test.com", ROLE_ADMIN, dept_it.id, "Stab Admin")
-    mgr_it = _create_employee(db, f"mgrit_{uid}@test.com", ROLE_MANAGER, dept_it.id, "IT Manager")
-    emp_it = _create_employee(db, f"empit_{uid}@test.com", ROLE_EMPLOYEE, dept_it.id, "IT Employee")
-    emp_hr = _create_employee(db, f"emphr_{uid}@test.com", ROLE_EMPLOYEE, dept_hr.id, "HR Employee")
+    admin_usr = _create_employee(
+        db, f"adm_{uid}@test.com", ROLE_ADMIN, dept_it.id, "Stab Admin"
+    )
+    mgr_it = _create_employee(
+        db, f"mgrit_{uid}@test.com", ROLE_MANAGER, dept_it.id, "IT Manager"
+    )
+    emp_it = _create_employee(
+        db, f"empit_{uid}@test.com", ROLE_EMPLOYEE, dept_it.id, "IT Employee"
+    )
+    emp_hr = _create_employee(
+        db, f"emphr_{uid}@test.com", ROLE_EMPLOYEE, dept_hr.id, "HR Employee"
+    )
 
     # Projects
     proj_it = Project(
@@ -118,13 +130,17 @@ def rbac_fixture(db):
 
 def test_dashboard_overview_scoped_by_role(client, rbac_fixture):
     # Admin Dashboard Overview
-    r_admin = client.get("/api/v1/dashboard/overview", headers=_auth_header(rbac_fixture["admin_id"]))
+    r_admin = client.get(
+        "/api/v1/dashboard/overview", headers=_auth_header(rbac_fixture["admin_id"])
+    )
     assert r_admin.status_code == 200
     res_admin = r_admin.json()["data"]
     assert res_admin["total_employees"] >= 4
 
     # Employee Dashboard Overview: system counts should be zeroed
-    r_emp = client.get("/api/v1/dashboard/overview", headers=_auth_header(rbac_fixture["emp_it_id"]))
+    r_emp = client.get(
+        "/api/v1/dashboard/overview", headers=_auth_header(rbac_fixture["emp_it_id"])
+    )
     assert r_emp.status_code == 200
     res_emp = r_emp.json()["data"]
     assert res_emp["total_employees"] == 0
@@ -138,8 +154,14 @@ def test_dashboard_overview_scoped_by_role(client, rbac_fixture):
 
 def test_topic_creation_requires_project_id(client, rbac_fixture):
     # Creating topic without project_id should return 400 Bad Request
-    payload = {"title": "Missing Project Topic", "content": "Test content", "project_id": None}
-    r = client.post("/api/v1/topics", json=payload, headers=_auth_header(rbac_fixture["admin_id"]))
+    payload = {
+        "title": "Missing Project Topic",
+        "content": "Test content",
+        "project_id": None,
+    }
+    r = client.post(
+        "/api/v1/topics", json=payload, headers=_auth_header(rbac_fixture["admin_id"])
+    )
     assert r.status_code == 400
     res_json = r.json()
     msg = res_json.get("detail") or res_json.get("message") or str(res_json)
@@ -148,15 +170,27 @@ def test_topic_creation_requires_project_id(client, rbac_fixture):
 
 def test_topic_creation_forbidden_for_other_department_project(client, rbac_fixture):
     # IT Manager attempting to create topic in HR Project should return 403 Forbidden
-    payload = {"title": "Cross Department Topic", "content": "Test content", "project_id": rbac_fixture["proj_hr_id"]}
-    r = client.post("/api/v1/topics", json=payload, headers=_auth_header(rbac_fixture["mgr_it_id"]))
+    payload = {
+        "title": "Cross Department Topic",
+        "content": "Test content",
+        "project_id": rbac_fixture["proj_hr_id"],
+    }
+    r = client.post(
+        "/api/v1/topics", json=payload, headers=_auth_header(rbac_fixture["mgr_it_id"])
+    )
     assert r.status_code == 403
 
 
 def test_topic_creation_success_for_authorized_user(client, rbac_fixture):
     # IT Employee in IT Project creates topic -> 201 Created
-    payload = {"title": "Valid Member Topic", "content": "Discussion details", "project_id": rbac_fixture["proj_it_id"]}
-    r = client.post("/api/v1/topics", json=payload, headers=_auth_header(rbac_fixture["emp_it_id"]))
+    payload = {
+        "title": "Valid Member Topic",
+        "content": "Discussion details",
+        "project_id": rbac_fixture["proj_it_id"],
+    }
+    r = client.post(
+        "/api/v1/topics", json=payload, headers=_auth_header(rbac_fixture["emp_it_id"])
+    )
     assert r.status_code == 201
     assert r.json()["project_id"] == rbac_fixture["proj_it_id"]
 
@@ -170,7 +204,9 @@ def test_employee_cannot_list_employees(client, rbac_fixture):
 
 
 def test_employee_cannot_list_departments(client, rbac_fixture):
-    r = client.get("/api/v1/departments", headers=_auth_header(rbac_fixture["emp_it_id"]))
+    r = client.get(
+        "/api/v1/departments", headers=_auth_header(rbac_fixture["emp_it_id"])
+    )
     assert r.status_code == 403
 
 

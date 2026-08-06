@@ -27,7 +27,9 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=list[DepartmentResponse], dependencies=[Depends(RequireManager)])
+@router.get(
+    "", response_model=list[DepartmentResponse], dependencies=[Depends(RequireManager)]
+)
 def get_departments(
     skip: int = Query(0, ge=0, description="Số bản ghi bỏ qua (Offset)"),
     limit: int = Query(20, ge=1, le=100, description="Số bản ghi lấy tối đa (Limit)"),
