@@ -35,6 +35,7 @@ def test_dashboard_endpoints(client, db):
         status="Active",
         priority="Medium",
         progress_percent=0.0,
+        created_by=emp_user.id,
         is_deleted=False,
     )
     project2 = Project(
@@ -43,6 +44,7 @@ def test_dashboard_endpoints(client, db):
         status="Planning",
         priority="High",
         progress_percent=0.0,
+        created_by=emp_user.id,
         is_deleted=False,
     )
     db.add(project1)
@@ -55,6 +57,7 @@ def test_dashboard_endpoints(client, db):
         title="Dashboard Task 1",
         status="To Do",
         priority="Medium",
+        created_by=emp_user.id,
         is_deleted=False,
     )
     task2 = Task(
@@ -62,6 +65,7 @@ def test_dashboard_endpoints(client, db):
         title="Dashboard Task 2",
         status="Done",
         priority="High",
+        created_by=emp_user.id,
         is_deleted=False,
     )
     db.add(task1)

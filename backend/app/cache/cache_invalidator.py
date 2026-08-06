@@ -408,22 +408,15 @@ class CacheInvalidator:
 
         try:
             service = cls._get_service()
-            summary_key = cache_keys.get_dashboard_summary_key()
-            if service.delete(summary_key):
-                logger.info(
-                    "Cache Invalidated",
-                    extra={"operation": "INVALIDATE", "key": summary_key},
-                )
-
-            analytics_key = cache_keys.get_dashboard_analytics_key()
-            if service.delete(analytics_key):
-                logger.info(
-                    "Cache Invalidated",
-                    extra={"operation": "INVALIDATE", "key": analytics_key},
-                )
+            service.clear_pattern("dashboard:*")
+            logger.info(
+                "Pattern Deleted",
+                extra={"operation": "PATTERN_DELETE", "pattern": "dashboard:*"},
+            )
         except Exception as e:
             logger.error(
                 "Invalidation Failed",
                 extra={"operation": "INVALIDATE_FAILED", "error": str(e)},
                 exc_info=True,
             )
+

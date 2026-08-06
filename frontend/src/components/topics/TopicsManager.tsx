@@ -38,12 +38,16 @@ export const TopicsManager: React.FC<TopicsManagerProps> = ({ projectId }) => {
 
   const handleCreateTopic = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    const targetProjId = projectId ? String(projectId) : topicProjectId;
+    if (!title.trim() || !content.trim() || !targetProjId) {
+      toast.error('Lỗi', 'Vui lòng chọn dự án liên kết cho chủ đề thảo luận.');
+      return;
+    }
     try {
       await createTopicMutation.mutateAsync({
         title: title.trim(),
         content: content.trim(),
-        project_id: topicProjectId ? Number(topicProjectId) : null,
+        project_id: Number(targetProjId),
       });
       setTitle('');
       setContent('');
@@ -183,13 +187,14 @@ export const TopicsManager: React.FC<TopicsManagerProps> = ({ projectId }) => {
           />
           {!projectId && (
             <Select
-              label="Liên kết Dự án (Tùy chọn)"
+              label="Liên kết Dự án *"
               value={topicProjectId}
               onChange={(e) => setTopicProjectId(e.target.value)}
               options={[
-                { value: '', label: '-- Thảo luận chung toàn công ty --' },
+                { value: '', label: '-- Chọn Dự án liên kết --' },
                 ...projects.map((p) => ({ value: String(p.id), label: p.name })),
               ]}
+              required
             />
           )}
           <Textarea

@@ -58,12 +58,13 @@ def test_pattern_deletion(mock_redis):
 
 
 def test_dashboard_invalidation(mock_redis):
-    """Verify dashboard invalidation clears the correct overview and analytics keys."""
+    """Verify dashboard invalidation clears pattern dashboard:* via SCAN."""
     CacheInvalidator.invalidate_dashboard()
 
-    # Should delete the specific dashboard keys
-    mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
-    mock_redis.delete.assert_any_call(cache_keys.get_dashboard_analytics_key())
+    # Should delete keys matching pattern dashboard:*
+    mock_redis.scan.assert_any_call(
+        cursor=0, match="dashboard:*", count=100
+    )
 
 
 def test_employee_update_invalidation(mock_redis):

@@ -198,18 +198,20 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
           icon: <Users className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/employees'); setMobileDrawerOpen(false); },
         }] : []),
-        {
-          key: '/departments',
-          label: 'Departments',
-          icon: <Building2 className="h-4.5 w-4.5" />,
-          onClick: () => { navigate('/departments'); setMobileDrawerOpen(false); },
-        },
-        {
-          key: '/teams',
-          label: 'Teams',
-          icon: <Network className="h-4.5 w-4.5" />,
-          onClick: () => { navigate('/teams'); setMobileDrawerOpen(false); },
-        },
+        ...(isAdminOrManager ? [
+          {
+            key: '/departments',
+            label: 'Departments',
+            icon: <Building2 className="h-4.5 w-4.5" />,
+            onClick: () => { navigate('/departments'); setMobileDrawerOpen(false); },
+          },
+          {
+            key: '/teams',
+            label: 'Teams',
+            icon: <Network className="h-4.5 w-4.5" />,
+            onClick: () => { navigate('/teams'); setMobileDrawerOpen(false); },
+          },
+        ] : []),
         {
           key: '/settings',
           label: isAdmin ? 'System Settings' : 'My Settings',
