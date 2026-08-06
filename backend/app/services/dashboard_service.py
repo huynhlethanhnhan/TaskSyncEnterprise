@@ -1,7 +1,7 @@
 # 📂 FILE: app/services/dashboard_service.py
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, func, case, or_
+from sqlalchemy import select, func, case, or_, false, true, literal
 from sqlalchemy.orm import Session
 
 from app.models.employee import Employee
@@ -120,7 +120,7 @@ class DashboardService:
                 select(func.count(Employee.id))
                 .where(
                     Employee.is_deleted == False,  # noqa: E712
-                    Employee.department_id == dept_id if dept_id else False,
+                    (Employee.department_id == dept_id) if dept_id else false(),
                 )
                 .scalar_subquery()
             )
@@ -129,7 +129,7 @@ class DashboardService:
                 .where(
                     Employee.is_deleted == False,  # noqa: E712
                     Employee.is_active == True,  # noqa: E712
-                    Employee.department_id == dept_id if dept_id else False,
+                    (Employee.department_id == dept_id) if dept_id else false(),
                 )
                 .scalar_subquery()
             )
@@ -138,19 +138,19 @@ class DashboardService:
                 .where(
                     Employee.is_deleted == False,  # noqa: E712
                     Employee.is_active == False,  # noqa: E712
-                    Employee.department_id == dept_id if dept_id else False,
+                    (Employee.department_id == dept_id) if dept_id else false(),
                 )
                 .scalar_subquery()
             )
             total_departments_q = (
                 select(func.count(Department.id))
-                .where(Department.is_active == True, Department.id == dept_id if dept_id else False)  # noqa: E712
+                .where(Department.is_active == True, (Department.id == dept_id) if dept_id else false())  # noqa: E712
                 .scalar_subquery()
             )
 
             proj_clause = (
                 or_(
-                    Project.department_id == dept_id if dept_id else False,
+                    (Project.department_id == dept_id) if dept_id else false(),
                     Project.created_by == user_id,
                 )
             )
@@ -222,10 +222,10 @@ class DashboardService:
 
         else:
             # 3. EMPLOYEE SCOPE: Personal assigned tasks, member projects, own leaves
-            total_employees_q = select(func.cast(0, func.count().type)).scalar_subquery()
-            active_employees_q = select(func.cast(0, func.count().type)).scalar_subquery()
-            inactive_employees_q = select(func.cast(0, func.count().type)).scalar_subquery()
-            total_departments_q = select(func.cast(0, func.count().type)).scalar_subquery()
+            total_employees_q = select(literal(0)).scalar_subquery()
+            active_employees_q = select(literal(0)).scalar_subquery()
+            inactive_employees_q = select(literal(0)).scalar_subquery()
+            total_departments_q = select(literal(0)).scalar_subquery()
 
             my_project_ids = (
                 select(ProjectMember.project_id).where(ProjectMember.employee_id == user_id)
@@ -465,7 +465,7 @@ class DashboardService:
                     Employee.is_deleted == False,  # noqa: E712
                     Department.is_active == True,  # noqa: E712
                     Task.is_deleted == False,  # noqa: E712
-                    (Department.id == dept_id) if (role_id == ROLE_MANAGER and dept_id) else True,
+                    (Department.id == dept_id) if (role_id == ROLE_MANAGER and dept_id) else true(),
                 )
                 .group_by(Department.name)
                 .order_by(Department.name)
@@ -496,7 +496,7 @@ class DashboardService:
         if role_id == ROLE_ADMIN:
             notif_stmt = select(Notification.type, func.count(Notification.id).label("count")).group_by(Notification.type)
         else:
-            notif_stmt = select(Notification.type, func.count(Notification.id).label("count")).where(Notification.user_id == user_id).group_by(Notification.type)
+            notif_stmt = select(Notification.type, func.count(Notification.id).label("count")).where(Notification.employee_id == user_id).group_by(Notification.type)
 
         notif_rows = db.execute(notif_stmt).all()
         notification_volume = [

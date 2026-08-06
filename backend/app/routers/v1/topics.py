@@ -129,7 +129,7 @@ def get_topics(
 
         resp = DiscussionTopicResponse.model_validate(t)
         resp.reply_count = reply_count
-        resp.replies = replies
+        resp.replies = [DiscussionReplyResponse.model_validate(r) for r in replies]
         res.append(resp)
 
     return res
@@ -195,7 +195,7 @@ def get_topic(
 
     resp = DiscussionTopicResponse.model_validate(topic)
     resp.reply_count = reply_count
-    resp.replies = replies
+    resp.replies = [DiscussionReplyResponse.model_validate(r) for r in replies]
     return resp
 
 

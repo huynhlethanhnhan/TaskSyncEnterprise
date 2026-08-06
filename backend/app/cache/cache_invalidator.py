@@ -1,8 +1,8 @@
 # 📂 FILE: app/cache/cache_invalidator.py
-import logging
+from logging import getLogger
 from app.cache import cache_keys
 
-logger = logging.getLogger("cache")
+logger = getLogger("cache")
 
 
 class CacheInvalidator:
