@@ -567,6 +567,8 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
                 priority=record["priority"],
                 budget=250_000_000 + index * 25_000_000,
                 progress_percent=record["progress_percent"],
+                department_id=manager.department_id,
+                team_id=None,
                 created_by=manager.id,
             )
             db.add(project)

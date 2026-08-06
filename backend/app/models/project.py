@@ -43,9 +43,15 @@ class Project(Base):
     )
 
     department_id: Mapped[int | None] = mapped_column(
-        ForeignKey("departments.id"), nullable=True
+        ForeignKey("departments.id", name="fk_projects_department_id_departments"),
+        nullable=True,
+        index=True,
     )
-    team_id: Mapped[int | None] = mapped_column(ForeignKey("teams.id"), nullable=True)
+    team_id: Mapped[int | None] = mapped_column(
+        ForeignKey("teams.id", name="fk_projects_team_id_teams"),
+        nullable=True,
+        index=True,
+    )
 
     created_by: Mapped[int | None] = mapped_column(ForeignKey("employees.id"))
 

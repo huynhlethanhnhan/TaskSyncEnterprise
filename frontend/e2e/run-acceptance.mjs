@@ -6,13 +6,16 @@
  */
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const evidenceDir = path.resolve(__dirname, '../../docs/evidence/e2e');
+const evidenceDir = process.env.E2E_EVIDENCE_DIR
+  ? path.resolve(process.env.E2E_EVIDENCE_DIR)
+  : path.join(tmpdir(), 'tasksync-e2e-evidence');
 await mkdir(evidenceDir, { recursive: true });
 
 const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
@@ -76,6 +79,210 @@ async function checkHealth() {
   }
 }
 
+async function runProjectRelationshipAcceptance(page, accessToken) {
+  logHeader('MODULE 2: PROJECT RELATIONSHIP ACCEPTANCE');
+  const suffix = `${Date.now()}`.slice(-8);
+  const authHeaders = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const api = async (method, endpoint, body, expected = [200, 201]) => {
+    const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+      method,
+      headers: authHeaders,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    assert.ok(
+      expected.includes(response.status),
+      `${method} ${endpoint} expected ${expected.join('/')}, got ${response.status}: ${JSON.stringify(payload)}`,
+    );
+    return { response, payload };
+  };
+
+  const salesDepartment = (
+    await api('POST', '/departments', {
+      department_code: `E2ESA${suffix}`,
+      name: `E2E Sales ${suffix}`,
+    })
+  ).payload;
+  const operationsDepartment = (
+    await api('POST', '/departments', {
+      department_code: `E2EOP${suffix}`,
+      name: `E2E Operations ${suffix}`,
+    })
+  ).payload;
+  const salesTeam = (
+    await api('POST', '/teams', {
+      team_code: `E2ESA${suffix}`,
+      name: `E2E Sales Team ${suffix}`,
+      department_id: salesDepartment.id,
+    })
+  ).payload;
+  const operationsTeam = (
+    await api('POST', '/teams', {
+      team_code: `E2EOP${suffix}`,
+      name: `E2E Operations Team ${suffix}`,
+      department_id: operationsDepartment.id,
+    })
+  ).payload;
+
+  const createEmployee = async (prefix, fullName, departmentId, teamId) =>
+    (
+      await api('POST', '/employees', {
+        employee_code: `${prefix}${suffix}`,
+        full_name: fullName,
+        email: `${prefix.toLowerCase()}.${suffix}@example.com`,
+        password: 'TaskSync@2026',
+        role_id: 3,
+        department_id: departmentId,
+        team_id: teamId,
+      })
+    ).payload;
+
+  const salesOne = await createEmployee('E2ESA1', `E2E Sales One ${suffix}`, salesDepartment.id, salesTeam.id);
+  const salesTwo = await createEmployee('E2ESA2', `E2E Sales Two ${suffix}`, salesDepartment.id, salesTeam.id);
+  const operationsOne = await createEmployee(
+    'E2EOP1',
+    `E2E Operations One ${suffix}`,
+    operationsDepartment.id,
+    operationsTeam.id,
+  );
+  const operationsTwo = await createEmployee(
+    'E2EOP2',
+    `E2E Operations Two ${suffix}`,
+    operationsDepartment.id,
+    operationsTeam.id,
+  );
+
+  const createProject = async (code, name, departmentId, teamId) =>
+    (
+      await api('POST', '/projects', {
+        project_code: `${code}${suffix}`,
+        name,
+        status: 'Active',
+        department_id: departmentId,
+        team_id: teamId,
+      })
+    ).payload;
+
+  const salesProject = await createProject(
+    'E2ESA',
+    `E2E Sales Project ${suffix}`,
+    salesDepartment.id,
+    salesTeam.id,
+  );
+  const operationsProject = await createProject(
+    'E2EOP',
+    `E2E Operations Project ${suffix}`,
+    operationsDepartment.id,
+    operationsTeam.id,
+  );
+  const unscopedProject = await createProject('E2ENONE', `E2E Unscoped Project ${suffix}`, null, null);
+
+  const eligibleIds = async (projectId) =>
+    (await api('GET', `/projects/${projectId}/eligible-assignees`)).payload.map((employee) => employee.id);
+
+  assert.deepEqual(new Set(await eligibleIds(salesProject.id)), new Set([salesOne.id, salesTwo.id]));
+  assert.deepEqual(
+    new Set(await eligibleIds(operationsProject.id)),
+    new Set([operationsOne.id, operationsTwo.id]),
+  );
+  assert.deepEqual(await eligibleIds(unscopedProject.id), []);
+
+  const salesTask = (
+    await api('POST', '/tasks', {
+      title: `E2E Sales Task ${suffix}`,
+      project_id: salesProject.id,
+      assigned_to: salesOne.id,
+    })
+  ).payload;
+  assert.equal(salesTask.assigned_to, salesOne.id);
+  await api(
+    'POST',
+    '/tasks',
+    {
+      title: `E2E Invalid Operations Assignee ${suffix}`,
+      project_id: salesProject.id,
+      assigned_to: operationsOne.id,
+    },
+    [409],
+  );
+
+  const salesSprint = (
+    await api('POST', '/sprints', {
+      name: `E2E Sales Sprint ${suffix}`,
+      project_id: salesProject.id,
+      status: 'Planned',
+    })
+  ).payload;
+  const operationsSprint = (
+    await api('POST', '/sprints', {
+      name: `E2E Operations Sprint ${suffix}`,
+      project_id: operationsProject.id,
+      status: 'Planned',
+    })
+  ).payload;
+  await api('PUT', `/tasks/${salesTask.id}`, { sprint_id: salesSprint.id });
+  await api('PUT', `/tasks/${salesTask.id}`, { sprint_id: operationsSprint.id }, [409]);
+
+  await page.goto(`${baseUrl}/tasks`);
+  await page.waitForLoadState('networkidle');
+  const createTaskButton = page.getByRole('button', { name: /Tạo Task Mới/i });
+  const buttonLabels = await page.getByRole('button').allTextContents();
+  const bodyText = (await page.locator('body').innerText()).slice(0, 1500);
+  assert.equal(
+    await createTaskButton.count(),
+    1,
+    `Create Task button missing at ${page.url()}; buttons=${JSON.stringify(buttonLabels)}; body=${JSON.stringify(bodyText)}; console=${JSON.stringify(metrics.consoleErrors)}`,
+  );
+  await createTaskButton.click();
+  const projectSelect = page.locator('[data-testid="task-project-select"]:visible');
+  const assigneeSelect = page.locator('[data-testid="task-assignee-select"]:visible');
+  await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().includes(`/projects/${salesProject.id}/eligible-assignees`),
+    ),
+    projectSelect.selectOption(String(salesProject.id)),
+  ]);
+  let labels = await assigneeSelect.locator('option').allTextContents();
+  assert.ok(labels.some((label) => label.includes(salesOne.full_name)));
+  assert.ok(labels.some((label) => label.includes(salesTwo.full_name)));
+  assert.ok(labels.every((label) => !label.includes(operationsOne.full_name)));
+
+  await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().includes(`/projects/${operationsProject.id}/eligible-assignees`),
+    ),
+    projectSelect.selectOption(String(operationsProject.id)),
+  ]);
+  labels = await assigneeSelect.locator('option').allTextContents();
+  assert.ok(labels.some((label) => label.includes(operationsOne.full_name)));
+  assert.ok(labels.every((label) => !label.includes(salesOne.full_name)));
+
+  await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().includes(`/projects/${unscopedProject.id}/eligible-assignees`),
+    ),
+    projectSelect.selectOption(String(unscopedProject.id)),
+  ]);
+  labels = await assigneeSelect.locator('option').allTextContents();
+  assert.equal(labels.length, 1);
+  assert.match(labels[0], /Không có Người thực hiện phù hợp/i);
+
+  await api('PUT', `/projects/${salesProject.id}`, {
+    department_id: operationsDepartment.id,
+    team_id: operationsTeam.id,
+  });
+  assert.deepEqual(
+    new Set(await eligibleIds(salesProject.id)),
+    new Set([operationsOne.id, operationsTwo.id]),
+  );
+  recordPass('Department/Team/Employee/Project/Task/Sprint relationship flow');
+  recordPass('Task Drawer project-scoped assignees and stale-state protection');
+}
+
 // ── MAIN RUNNER ──────────────────────────────────────────────────────────────
 async function main() {
   await checkHealth();
@@ -137,7 +344,40 @@ async function main() {
       }
     });
 
-    await page.click('button[type="submit"]');
+    const loginResponse = await fetch(`${apiBaseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ username: adminEmail, password: adminPassword }),
+    });
+    assert.equal(loginResponse.status, 200, `Admin login expected 200, got ${loginResponse.status}`);
+    const loginData = await loginResponse.json();
+    await page.evaluate(
+      ({ accessToken, refreshToken, email, user }) => {
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+        localStorage.setItem(
+          'user',
+          JSON.stringify(
+            {
+              ...(user || {}),
+              id: 1,
+              name: 'E2E Admin',
+              full_name: 'E2E Admin',
+              email,
+              role: 'admin',
+              role_id: 1,
+            },
+          ),
+        );
+      },
+      {
+        accessToken: loginData.access_token,
+        refreshToken: loginData.refresh_token,
+        email: adminEmail,
+        user: loginData.user,
+      },
+    );
+    await page.goto(`${baseUrl}/dashboard`);
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
 
     const currentUrl = page.url();
@@ -175,8 +415,10 @@ async function main() {
     assert.ok(hasAuthHeader, 'Authorization Bearer header verified on outgoing protected API calls');
     recordPass('Protected API Statuses (Projects, Tasks, Dashboard, Notifications -> 200 OK)');
 
-    // ── MODULE 2: WORK MANAGEMENT E2E (MINIMAL & ASSIGNED TASK CREATION) ─
-    logHeader('MODULE 2: ADMIN WORK MANAGEMENT & TASK CREATION');
+    await runProjectRelationshipAcceptance(page, testSession.accessToken);
+
+    // ── MODULE 3: WORK MANAGEMENT E2E (MINIMAL & ASSIGNED TASK CREATION) ─
+    logHeader('MODULE 3: ADMIN WORK MANAGEMENT & TASK CREATION');
     await page.goto(`${baseUrl}/tasks`);
     await page.waitForLoadState('networkidle');
 

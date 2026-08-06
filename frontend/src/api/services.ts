@@ -176,6 +176,13 @@ export const projectsApi = {
   delete: async (id: number): Promise<void> => {
     await api.delete(`/projects/${id}`);
   },
+  getEligibleAssignees: async (
+    projectId: number,
+    signal?: AbortSignal,
+  ): Promise<Partial<EmployeeItem>[]> => {
+    const res = await api.get(`/projects/${projectId}/eligible-assignees`, { signal });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
   getMembers: async (projectId: number): Promise<Partial<EmployeeItem>[]> => {
     const res = await api.get(`/projects/${projectId}/members`);
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
