@@ -114,7 +114,7 @@ export default function AppRouter(): React.ReactElement {
         <Route
           path="/departments"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'manager', 1, 2]}>
               <ApplicationShell>
                 <DepartmentPage />
               </ApplicationShell>
@@ -124,7 +124,7 @@ export default function AppRouter(): React.ReactElement {
         <Route
           path="/departments/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'manager', 1, 2]}>
               <ApplicationShell>
                 <DepartmentDetailPage />
               </ApplicationShell>
@@ -221,7 +221,7 @@ export default function AppRouter(): React.ReactElement {
         <Route
           path="/teams"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin', 'manager', 1, 2]}>
               <ApplicationShell>
                 <TeamPage />
               </ApplicationShell>

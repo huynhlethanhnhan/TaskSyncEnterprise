@@ -6,11 +6,11 @@ from app.models.project import Project
 from app.models.task import Task
 from app.models.vacation import Vacation
 from app.core.security import get_password_hash
-from app.core.constants import ROLE_EMPLOYEE
+from app.core.constants import ROLE_ADMIN, ROLE_EMPLOYEE
 
 
 def test_dashboard_endpoints(client, db):
-    # 1. SETUP: Create an Employee user and dashboard mock data
+    # 1. SETUP: Create an Admin user and dashboard mock data
     emp_email = "dash_worker@example.com"
 
     emp_user = Employee(
@@ -18,7 +18,7 @@ def test_dashboard_endpoints(client, db):
         full_name="Dashboard Worker",
         email=emp_email,
         password_hash=get_password_hash("dashpass"),
-        role_id=ROLE_EMPLOYEE,
+        role_id=ROLE_ADMIN,
         is_active=True,
         is_deleted=False,
         is_first_login=False,
@@ -35,6 +35,7 @@ def test_dashboard_endpoints(client, db):
         status="Active",
         priority="Medium",
         progress_percent=0.0,
+        created_by=emp_user.id,
         is_deleted=False,
     )
     project2 = Project(
@@ -43,6 +44,7 @@ def test_dashboard_endpoints(client, db):
         status="Planning",
         priority="High",
         progress_percent=0.0,
+        created_by=emp_user.id,
         is_deleted=False,
     )
     db.add(project1)
@@ -55,6 +57,7 @@ def test_dashboard_endpoints(client, db):
         title="Dashboard Task 1",
         status="To Do",
         priority="Medium",
+        created_by=emp_user.id,
         is_deleted=False,
     )
     task2 = Task(
@@ -62,6 +65,7 @@ def test_dashboard_endpoints(client, db):
         title="Dashboard Task 2",
         status="Done",
         priority="High",
+        created_by=emp_user.id,
         is_deleted=False,
     )
     db.add(task1)

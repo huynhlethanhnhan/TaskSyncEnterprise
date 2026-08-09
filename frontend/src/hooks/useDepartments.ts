@@ -2,10 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { departmentsApi, type DepartmentItem, type DepartmentDetailItem } from '../api/services';
 import { isValidEntityId } from '../utils/entityId';
 
-export const useDepartments = () => {
+export const useDepartments = (enabled = true) => {
   return useQuery<DepartmentItem[], Error>({
     queryKey: ['departments'],
     queryFn: departmentsApi.getAll,
+    enabled,
   });
 };
 

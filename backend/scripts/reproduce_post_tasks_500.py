@@ -4,6 +4,7 @@ Reproduction script for POST /api/v1/tasks 500 Internal Server Error.
 Attempts POST /api/v1/tasks with the exact minimal payload sent by E2E test,
 using the active development database session and admin user credentials.
 """
+
 import sys
 import os
 import traceback
@@ -19,6 +20,7 @@ from app.services.project_access import require_project_management
 from app.crud import task as crud_task
 from app.routers.v1.tasks import create_task
 
+
 def test_reproduce():
     print("=" * 60)
     print("      REPRODUCING POST /tasks 500 EXCEPTION")
@@ -27,14 +29,18 @@ def test_reproduce():
     db = SessionLocal()
     try:
         # 1. Fetch admin user
-        admin = db.scalars(select(Employee).where(Employee.email == "admin@tasksync.example.com")).first()
+        admin = db.scalars(
+            select(Employee).where(Employee.email == "admin@tasksync.example.com")
+        ).first()
         if not admin:
             admin = db.scalars(select(Employee).where(Employee.role_id == 1)).first()
         if not admin:
             print("ERROR: No admin user found in database.")
             return
 
-        print(f"Admin user: id={admin.id}, email='{admin.email}', role_id={admin.role_id}")
+        print(
+            f"Admin user: id={admin.id}, email='{admin.email}', role_id={admin.role_id}"
+        )
 
         # 2. Fetch target project
         project = db.scalars(select(Project).where(Project.is_deleted == False)).first()
@@ -42,7 +48,9 @@ def test_reproduce():
             print("ERROR: No active project found in database.")
             return
 
-        print(f"Target project: id={project.id}, name='{project.name}', created_by={project.created_by}")
+        print(
+            f"Target project: id={project.id}, name='{project.name}', created_by={project.created_by}"
+        )
 
         # 3. Create TaskCreate schema payload (matching E2E minimal payload)
         minimal_payload_dict = {
@@ -77,6 +85,7 @@ def test_reproduce():
 
         print("\nTesting TaskResponse schema serialization...")
         from app.schemas.task import TaskResponse
+
         serialized = TaskResponse.model_validate(task_obj)
         print("TaskResponse serialization PASSED!")
         print(serialized.model_dump_json())
@@ -96,6 +105,7 @@ def test_reproduce():
         print("!" * 60)
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     test_reproduce()

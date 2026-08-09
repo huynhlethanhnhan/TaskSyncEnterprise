@@ -26,22 +26,56 @@ from app.schemas.topic import (
 router = APIRouter(prefix="/topics", tags=["Discussion Topics"])
 
 
+from app.models.project import Project
+
+
 def check_project_membership(
     db: Session, project_id: int | None, current_user: Employee
 ):
     if not project_id:
         return
-    if current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER):
+    project = db.scalar(
+        select(Project).where(
+            Project.id == project_id, Project.is_deleted == False
+        )  # noqa: E712
+    )
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    if current_user.role_id == ROLE_ADMIN:
         return
+
+    if current_user.role_id == ROLE_MANAGER:
+        is_dept_owner = (
+            project.department_id is not None
+            and project.department_id == current_user.department_id
+        )
+        is_creator = project.created_by == current_user.id
+        is_member = db.scalar(
+            select(ProjectMember.id).where(
+                ProjectMember.project_id == project_id,
+                ProjectMember.employee_id == current_user.id,
+            )
+        )
+        if not (is_dept_owner or is_creator or is_member):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to access discussions for this project",
+            )
+        return
+
     is_member = db.scalar(
-        select(ProjectMember).where(
+        select(ProjectMember.id).where(
             ProjectMember.project_id == project_id,
             ProjectMember.employee_id == current_user.id,
         )
     )
-    if not is_member:
+    if not is_member and project.created_by != current_user.id:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have access to this project's discussions",
         )
 
@@ -58,7 +92,6 @@ def get_topics(
     if project_id:
         stmt = stmt.where(DiscussionTopic.project_id == project_id)
     else:
-        # If no project filter, let employees only see topics for projects they belong to, plus public topics (where project_id is null)
         if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
             member_projects = db.scalars(
                 select(ProjectMember.project_id).where(
@@ -75,7 +108,6 @@ def get_topics(
     stmt = stmt.order_by(DiscussionTopic.id.desc())
     topics = db.scalars(stmt).all()
 
-    # Map reply count manually
     res = []
     for t in topics:
         reply_count = (
@@ -88,7 +120,6 @@ def get_topics(
             or 0
         )
 
-        # Load replies
         replies_stmt = (
             select(DiscussionReply)
             .where(
@@ -100,7 +131,7 @@ def get_topics(
 
         resp = DiscussionTopicResponse.model_validate(t)
         resp.reply_count = reply_count
-        resp.replies = replies
+        resp.replies = [DiscussionReplyResponse.model_validate(r) for r in replies]
         res.append(resp)
 
     return res
@@ -112,6 +143,12 @@ def create_topic(
     current_user: Employee = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if not data.project_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target project is required for topic creation",
+        )
+
     check_project_membership(db, data.project_id, current_user)
 
     topic = DiscussionTopic(**data.model_dump(), created_by_id=current_user.id)
@@ -159,7 +196,7 @@ def get_topic(
 
     resp = DiscussionTopicResponse.model_validate(topic)
     resp.reply_count = reply_count
-    resp.replies = replies
+    resp.replies = [DiscussionReplyResponse.model_validate(r) for r in replies]
     return resp
 
 

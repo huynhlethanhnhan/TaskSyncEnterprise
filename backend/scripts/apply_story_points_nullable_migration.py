@@ -4,6 +4,7 @@ MSSQL Database Schema Migration Script
 Alters dbo.tasks.story_points column from INT NOT NULL to INT NULL on the active development database.
 Inspects INFORMATION_SCHEMA.COLUMNS before and after execution without resetting or deleting data.
 """
+
 import sys
 import os
 
@@ -12,6 +13,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from sqlalchemy import text
 from app.database import engine
 
+
 def query_column_metadata(conn):
     result = conn.execute(text("""
         SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
@@ -19,6 +21,7 @@ def query_column_metadata(conn):
         WHERE TABLE_NAME = 'tasks' AND COLUMN_NAME = 'story_points'
     """)).first()
     return result
+
 
 def run_migration():
     print("=" * 60)
@@ -29,7 +32,9 @@ def run_migration():
         # 1. Inspect metadata before migration
         before = query_column_metadata(conn)
         if before:
-            print(f"BEFORE MIGRATION: Column={before.COLUMN_NAME}, Type={before.DATA_TYPE}, IsNullable={before.IS_NULLABLE}")
+            print(
+                f"BEFORE MIGRATION: Column={before.COLUMN_NAME}, Type={before.DATA_TYPE}, IsNullable={before.IS_NULLABLE}"
+            )
         else:
             print("BEFORE MIGRATION: Cột story_points chưa tồn tại trong metadata.")
 
@@ -50,11 +55,15 @@ def run_migration():
         # 3. Alter column to INT NULL
         alter_column_sql = "ALTER TABLE dbo.tasks ALTER COLUMN story_points INT NULL;"
         conn.execute(text(alter_column_sql))
-        print("  -> Executed: ALTER TABLE dbo.tasks ALTER COLUMN story_points INT NULL;")
+        print(
+            "  -> Executed: ALTER TABLE dbo.tasks ALTER COLUMN story_points INT NULL;"
+        )
 
         # 4. Stamp alembic_version if table exists
         try:
-            conn.execute(text("UPDATE alembic_version SET version_num = 'c7f4a2b8d901';"))
+            conn.execute(
+                text("UPDATE alembic_version SET version_num = 'c7f4a2b8d901';")
+            )
             print("  -> Updated alembic_version to c7f4a2b8d901.")
         except Exception as e:
             print(f"  -> Notice: Could not update alembic_version table: {e}")
@@ -62,13 +71,16 @@ def run_migration():
         # 5. Inspect metadata after migration
         after = query_column_metadata(conn)
         if after:
-            print(f"AFTER MIGRATION:  Column={after.COLUMN_NAME}, Type={after.DATA_TYPE}, IsNullable={after.IS_NULLABLE}")
+            print(
+                f"AFTER MIGRATION:  Column={after.COLUMN_NAME}, Type={after.DATA_TYPE}, IsNullable={after.IS_NULLABLE}"
+            )
         else:
             print("AFTER MIGRATION: Không thể đọc metadata sau migration.")
 
         print("=" * 60)
         print("MIGRATION COMPLETED SUCCESSFULLY! No data was deleted.")
         print("=" * 60)
+
 
 if __name__ == "__main__":
     run_migration()

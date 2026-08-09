@@ -162,6 +162,19 @@ test('task administration is limited while assignees can update status', async (
   assert.match(drawer, /disabled=\{!canEdit\}/);
 });
 
+test('task assignees are project-scoped and never fall back to global employees', async () => {
+  const drawer = await read('./src/components/drawers/TaskDrawer.tsx');
+  const hooks = await read('./src/hooks/useProjects.ts');
+  const services = await read('./src/api/services.ts');
+
+  assert.match(hooks, /queryKey:\s*\['project-eligible-assignees', projectId\]/);
+  assert.match(hooks, /getEligibleAssignees\(projectId!, signal\)/);
+  assert.match(services, /\/eligible-assignees`/);
+  assert.doesNotMatch(drawer, /projectMembers\.length > 0 \? projectMembers : _employees/);
+  assert.match(drawer, /setAssignedTo\(''\)/);
+  assert.match(drawer, /Không có Người thực hiện phù hợp/);
+});
+
 test('organization project metrics navigate to a scoped project list', async () => {
   const departmentPage = await read('./src/pages/departments/DepartmentPage.tsx');
   const departmentDetail = await read('./src/pages/departments/DepartmentDetailPage.tsx');
@@ -182,4 +195,54 @@ test('organization project metrics navigate to a scoped project list', async () 
     projectDetail,
     /isAdminOrManager\s*\? \[\{ id: 'settings'/,
   );
+});
+
+test('delegated team leaders receive a direct scoped team route', async () => {
+  const shell = await read('./src/layouts/ApplicationShell.tsx');
+  const router = await read('./src/router/AppRouter.tsx');
+  const auth = await read('./src/providers/AuthProvider.tsx');
+
+  assert.match(auth, /is_team_leader\?: boolean/);
+  assert.match(shell, /user\?\.is_team_leader/);
+  assert.match(shell, /label: 'My Team'/);
+  assert.match(shell, /navigate\(`\/teams\/\$\{user\?\.team_id\}`\)/);
+  assert.match(
+    router,
+    /path="\/teams\/:id"[\s\S]*?<ProtectedRoute>[\s\S]*?<TeamDetailPage/,
+  );
+});
+
+test('browser acceptance health check follows the configured API origin', async () => {
+  const acceptanceRunner = await read('./e2e/run-acceptance.mjs');
+
+  assert.match(
+    acceptanceRunner,
+    /const backendHealthUrl = new URL\('\/health', apiBaseUrl\)\.toString\(\)/,
+  );
+  assert.match(acceptanceRunner, /fetch\(backendHealthUrl\)/);
+  assert.doesNotMatch(
+    acceptanceRunner,
+    /fetch\(['"]http:\/\/127\.0\.0\.1:8000\/health['"]\)/,
+  );
+});
+
+test('browser acceptance retains four-role dashboard evidence without role skips', async () => {
+  const acceptanceRunner = await read('./e2e/run-acceptance.mjs');
+
+  assert.match(acceptanceRunner, /manager_dashboard\.png/);
+  assert.match(acceptanceRunner, /team-leader_dashboard\.png/);
+  assert.match(acceptanceRunner, /employee_dashboard\.png/);
+  assert.doesNotMatch(acceptanceRunner, /SKIPPED \(Account unseeded\)/);
+  assert.match(acceptanceRunner, /Employee login failed for \$\{employeeEmail\}/);
+  assert.match(acceptanceRunner, /assert\.deepEqual\(metrics\.consoleErrors, \[\]/);
+  assert.match(acceptanceRunner, /assert\.deepEqual\(metrics\.networkErrors, \[\]/);
+});
+
+test('non-manager dashboards do not request the protected Department directory', async () => {
+  const dashboard = await read('./src/pages/dashboard/DashboardPage.tsx');
+  const departmentHooks = await read('./src/hooks/useDepartments.ts');
+
+  assert.match(departmentHooks, /useDepartments = \(enabled = true\)/);
+  assert.match(departmentHooks, /queryFn: departmentsApi\.getAll,[\s\S]*?enabled,/);
+  assert.match(dashboard, /useDepartments\(permissions\.canManageDepartment\)/);
 });

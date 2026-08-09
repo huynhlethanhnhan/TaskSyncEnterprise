@@ -15,7 +15,7 @@ from app.schemas.organization_membership import (
     MembershipTargetResponse,
 )
 from app.crud import department as crud_department
-from app.core.deps import get_current_user, RequireAdmin
+from app.core.deps import get_current_user, RequireAdmin, RequireManager
 from app.core.constants import ROLE_ADMIN
 from app.models.employee import Employee
 from app.services import organization_membership
@@ -27,7 +27,9 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=list[DepartmentResponse])
+@router.get(
+    "", response_model=list[DepartmentResponse], dependencies=[Depends(RequireManager)]
+)
 def get_departments(
     skip: int = Query(0, ge=0, description="Số bản ghi bỏ qua (Offset)"),
     limit: int = Query(20, ge=1, le=100, description="Số bản ghi lấy tối đa (Limit)"),

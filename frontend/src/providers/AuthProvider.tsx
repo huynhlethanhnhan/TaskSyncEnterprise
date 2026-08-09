@@ -12,6 +12,9 @@ interface UserProfile {
   avatar_url?: string | null;
   full_name?: string;
   job_title?: string | null;
+  team_id?: number | null;
+  department_id?: number | null;
+  is_team_leader?: boolean;
 }
 
 

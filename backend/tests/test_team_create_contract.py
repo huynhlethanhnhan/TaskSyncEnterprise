@@ -179,12 +179,16 @@ def test_blank_required_team_text_returns_422(
     assert response.status_code == 422, response.json()
     assert response.json()["details"][0]["loc"] == ["body", expected_field]
 
+    manager_role = db.query(Role).filter(Role.role_name == "Manager").first()
+    if not manager_role:
+        manager_role = Role(role_name="Manager")
+        db.add(manager_role)
 
-def test_manager_can_change_team_leader_but_not_other_team_fields(client, db):
-    dept, _ = _ensure_setup(db)
-    manager_role = Role(role_name="Manager")
-    employee_role = Role(role_name="Employee")
-    db.add_all([manager_role, employee_role])
+    employee_role = db.query(Role).filter(Role.role_name == "Employee").first()
+    if not employee_role:
+        employee_role = Role(role_name="Employee")
+        db.add(employee_role)
+
     db.flush()
     manager = Employee(
         employee_code="EMP-TEAM-MGR",
@@ -236,9 +240,16 @@ def test_manager_can_change_team_leader_but_not_other_team_fields(client, db):
 
 def test_employee_cannot_change_team_leader(client, db):
     dept, _ = _ensure_setup(db)
-    manager_role = Role(role_name="Manager")
-    employee_role = Role(role_name="Employee")
-    db.add_all([manager_role, employee_role])
+    manager_role = db.query(Role).filter(Role.role_name == "Manager").first()
+    if not manager_role:
+        manager_role = Role(role_name="Manager")
+        db.add(manager_role)
+
+    employee_role = db.query(Role).filter(Role.role_name == "Employee").first()
+    if not employee_role:
+        employee_role = Role(role_name="Employee")
+        db.add(employee_role)
+
     db.flush()
     employee = Employee(
         employee_code="EMP-TEAM-RBAC",

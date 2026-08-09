@@ -42,11 +42,17 @@ def get_employees(
     skip: int = 0,
     limit: int = settings.DEFAULT_PAGE_SIZE,
     db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
 ):
-    key = get_employee_list_key(skip, limit)
+    scope = (
+        "admin"
+        if current_user.role_id == ROLE_ADMIN
+        else f"department_{current_user.department_id or 'none'}"
+    )
+    key = get_employee_list_key(skip, limit, scope)
     return cache_manager.cache_collection(
         key=key,
-        creator_fn=lambda: crud_employee.get_all(db, skip, limit),
+        creator_fn=lambda: crud_employee.get_all(db, current_user, skip, limit),
         ttl=settings.CACHE_TTL_EMPLOYEE,
         response_model=list[EmployeeResponse],
     )

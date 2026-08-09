@@ -47,6 +47,10 @@ def test_cache_keys():
     assert get_department_list_key(0, 20, "HR") == "department:list:0:20:s_HR"
     assert get_employee_key(10) == "employee:10"
     assert get_employee_list_key(5, 10) == "employee:list:5:10"
+    assert (
+        get_employee_list_key(5, 10, "department_7")
+        == "employee:list:5:10:scope_department_7"
+    )
     assert get_employee_search_key("John") == "employee:search:John"
     assert get_project_key(7) == "project:7"
     assert get_project_list_key(0, 10) == "project:list:0:10"

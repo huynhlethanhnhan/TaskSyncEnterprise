@@ -2,15 +2,21 @@ import random
 from sqlalchemy.orm import Session
 from app.models.employee import Employee
 from app.models.department import Department
+from app.models.team import Team
 from app.core.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE
 from app.core.security import get_password_hash
 
 DEFAULT_PASSWORD_HASH = get_password_hash("TaskSync@2026")
 
 
-def seed_employees(db: Session, departments: list[Department]) -> list[Employee]:
+def seed_employees(
+    db: Session,
+    departments: list[Department],
+    teams: list[Team] | None = None,
+) -> list[Employee]:
     random.seed(2026)
     dep_ids = [d.id for d in departments] if departments else [1]
+    team_by_department = {team.department_id: team.id for team in teams or []}
 
     employees_specs = []
 
@@ -161,6 +167,7 @@ def seed_employees(db: Session, departments: list[Department]) -> list[Employee]
                 password_hash=DEFAULT_PASSWORD_HASH,
                 role_id=spec["role_id"],
                 department_id=spec["department_id"],
+                team_id=team_by_department.get(spec["department_id"]),
                 is_active=True,
                 is_deleted=False,
             )

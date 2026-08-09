@@ -22,9 +22,12 @@ def get_employee_key(employee_id: int) -> str:
     return f"employee:{employee_id}"
 
 
-def get_employee_list_key(skip: int = 0, limit: int = 20) -> str:
+def get_employee_list_key(
+    skip: int = 0, limit: int = 20, scope: str | None = None
+) -> str:
     """Generates cache key for employee list with pagination parameters."""
-    return f"employee:list:{skip}:{limit}"
+    key = f"employee:list:{skip}:{limit}"
+    return f"{key}:scope_{scope}" if scope else key
 
 
 def get_employee_search_key(keyword: str) -> str:
@@ -66,14 +69,22 @@ def get_role_list_key() -> str:
     return "role:list"
 
 
-def get_dashboard_summary_key() -> str:
-    """Generates the static cache key for the dashboard summary."""
-    return "dashboard:summary"
+def get_dashboard_summary_key(
+    user_id: int | None = None, role_id: int | None = None
+) -> str:
+    """Generates the role/user-scoped cache key for the dashboard summary."""
+    if user_id is None or role_id is None:
+        return "dashboard:summary"
+    return f"dashboard:summary:u_{user_id}:r_{role_id}"
 
 
-def get_dashboard_analytics_key() -> str:
-    """Generates the static cache key for dashboard analytics."""
-    return "dashboard:analytics"
+def get_dashboard_analytics_key(
+    user_id: int | None = None, role_id: int | None = None
+) -> str:
+    """Generates the role/user-scoped cache key for dashboard analytics."""
+    if user_id is None or role_id is None:
+        return "dashboard:analytics"
+    return f"dashboard:analytics:u_{user_id}:r_{role_id}"
 
 
 def get_task_list_key(

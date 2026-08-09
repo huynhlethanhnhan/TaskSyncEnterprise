@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.database import get_db
 from app.models.employee import Employee
+from app.models.team import Team
 from app.models.refresh_token import RefreshToken
 from app.models.token_blacklist import TokenBlacklist
 from app.models.user_session import UserSession
@@ -44,6 +45,9 @@ class UserInfo(BaseModel):
     last_login: datetime | None = None
     last_logout: datetime | None = None
     is_first_login: bool = False
+    team_id: int | None = None
+    department_id: int | None = None
+    is_team_leader: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -131,6 +135,15 @@ def login_user(
     db.refresh(user)
 
     role_name = ROLE_MAP.get(user.role_id, "employee")
+    is_team_leader = (
+        db.scalar(
+            select(Team.id).where(
+                Team.leader_id == user.id,
+                Team.is_active == True,  # noqa: E712
+            )
+        )
+        is not None
+    )
 
     return {
         "access_token": access_token,
@@ -148,6 +161,9 @@ def login_user(
             "last_login": user.last_login,
             "last_logout": user.last_logout,
             "is_first_login": bool(user.is_first_login),
+            "team_id": user.team_id,
+            "department_id": user.department_id,
+            "is_team_leader": is_team_leader,
         },
         "is_first_login": bool(user.is_first_login),
     }

@@ -6,6 +6,7 @@ from app.models.task_assignment import TaskAssignment
 from app.models.project import Project
 from app.models.sprint import Sprint
 from app.models.employee import Employee
+from app.models.project_member import ProjectMember
 
 
 def seed_tasks(
@@ -150,7 +151,27 @@ def seed_tasks(
                 deadline = now - timedelta(days=random.randint(1, 10))
 
             creator = random.choice(employees)
-            assignee = random.choice(employees)
+            explicit_member_ids = {
+                employee_id
+                for (employee_id,) in db.query(ProjectMember.employee_id)
+                .filter(ProjectMember.project_id == prj.id)
+                .all()
+            }
+            eligible_assignees = [
+                employee
+                for employee in employees
+                if employee.is_active
+                and not employee.is_deleted
+                and (
+                    employee.id in explicit_member_ids
+                    or (
+                        employee.team_id == prj.team_id
+                        if prj.team_id is not None
+                        else employee.department_id == prj.department_id
+                    )
+                )
+            ]
+            assignee = random.choice(eligible_assignees)
 
             task = Task(
                 title=title,

@@ -76,8 +76,10 @@ export const useNotificationRealtime = () => {
             } else if (eventType === 'employee.changed') {
               queryClient.invalidateQueries({ queryKey: ['employees'] });
               queryClient.invalidateQueries({ queryKey: ['tasks'] });
+              queryClient.invalidateQueries({ queryKey: ['project-eligible-assignees'] });
             } else if (eventType === 'project.changed') {
               queryClient.invalidateQueries({ queryKey: ['projects'] });
+              queryClient.invalidateQueries({ queryKey: ['project-eligible-assignees'] });
             } else if (eventType === 'sprint.changed') {
               queryClient.invalidateQueries({ queryKey: ['sprints'] });
               queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -85,8 +87,10 @@ export const useNotificationRealtime = () => {
               queryClient.invalidateQueries({ queryKey: ['backlog'] });
             } else if (eventType === 'team.changed') {
               queryClient.invalidateQueries({ queryKey: ['teams'] });
+              queryClient.invalidateQueries({ queryKey: ['project-eligible-assignees'] });
             } else if (eventType === 'department.changed') {
               queryClient.invalidateQueries({ queryKey: ['departments'] });
+              queryClient.invalidateQueries({ queryKey: ['project-eligible-assignees'] });
             } else if (eventType === 'topic.changed') {
               queryClient.invalidateQueries({ queryKey: ['topics'] });
             } else if (eventType === 'feedback.changed') {

@@ -1,27 +1,33 @@
 // 📂 FILE: frontend/e2e/run-acceptance.mjs
 /**
  * TaskSyncEnterprise — Automated Browser Acceptance Test Runner (Playwright)
- * Runs end-to-end browser tests against running local app (Frontend: http://localhost:5173, Backend: http://127.0.0.1:8000).
+ * Runs end-to-end browser tests against the configured frontend and backend.
  * Verifies Auth, Dashboard, Project, Minimal/Assigned Task 201 creation, Non-member 409 protection, Employee RBAC 403, Token Refresh.
  */
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const evidenceDir = path.resolve(__dirname, '../../docs/evidence/e2e');
+const evidenceDir = process.env.E2E_EVIDENCE_DIR
+  ? path.resolve(process.env.E2E_EVIDENCE_DIR)
+  : path.join(tmpdir(), 'tasksync-e2e-evidence');
 await mkdir(evidenceDir, { recursive: true });
 
 const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
 const apiBaseUrl = process.env.E2E_API_URL || 'http://127.0.0.1:8000/api/v1';
+const backendHealthUrl = new URL('/health', apiBaseUrl).toString();
 const executablePath = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL || 'admin@tasksync.example.com';
 const adminPassword = process.env.E2E_ADMIN_PASSWORD || 'TaskSync@2026';
-const employeeEmail = process.env.E2E_EMPLOYEE_EMAIL || 'huynh.le.thanh.nhan@tasksync.example.com';
+const managerEmail = process.env.E2E_MANAGER_EMAIL || 'manager.it@tasksync.example.com';
+const teamLeaderEmail = process.env.E2E_TEAM_LEADER_EMAIL || 'employee015@tasksync.example.com';
+const employeeEmail = process.env.E2E_EMPLOYEE_EMAIL || 'employee001@tasksync.example.com';
 const employeePassword = process.env.E2E_EMPLOYEE_PASSWORD || 'TaskSync@2026';
 
 
@@ -58,13 +64,49 @@ function recordFail(testName, error) {
   console.error(`  [FAIL] ${testName}: ${error}`);
 }
 
+function monitorPage(page) {
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      const text = msg.text();
+      if (!text.includes('WebSocket') && !text.includes('favicon')) {
+        metrics.consoleErrors.push(text);
+      }
+    }
+  });
+
+  page.on('response', (res) => {
+    const url = res.url();
+    const status = res.status();
+    if (url.includes('/api/v1/') && status >= 400) {
+      metrics.networkErrors.push({ url, status, method: res.request().method() });
+    }
+  });
+
+  page.on('requestfailed', (request) => {
+    const url = request.url();
+    const errorText = request.failure()?.errorText;
+    if (
+      errorText !== 'net::ERR_ABORTED'
+      && !url.includes('/ws/')
+      && !url.includes('favicon')
+    ) {
+      metrics.networkErrors.push({
+        url,
+        status: 'REQUEST_FAILED',
+        method: request.method(),
+        errorText,
+      });
+    }
+  });
+}
+
 // ── HEALTH CHECK ─────────────────────────────────────────────────────────────
 async function checkHealth() {
   logHeader('PHASE 1: PRE-FLIGHT SERVICE HEALTH CHECK');
   try {
-    const backendRes = await fetch('http://127.0.0.1:8000/health');
+    const backendRes = await fetch(backendHealthUrl);
     assert.equal(backendRes.status, 200, `Backend health check failed with status ${backendRes.status}`);
-    console.log('  [HEALTH] Backend (http://127.0.0.1:8000/health) -> 200 OK');
+    console.log(`  [HEALTH] Backend (${backendHealthUrl}) -> 200 OK`);
 
     const frontendRes = await fetch(baseUrl);
     assert.equal(frontendRes.status, 200, `Frontend health check failed with status ${frontendRes.status}`);
@@ -74,6 +116,210 @@ async function checkHealth() {
     recordFail('Pre-flight Health Checks', err.message);
     throw err;
   }
+}
+
+async function runProjectRelationshipAcceptance(page, accessToken) {
+  logHeader('MODULE 2: PROJECT RELATIONSHIP ACCEPTANCE');
+  const suffix = `${Date.now()}`.slice(-8);
+  const authHeaders = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const api = async (method, endpoint, body, expected = [200, 201]) => {
+    const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+      method,
+      headers: authHeaders,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    assert.ok(
+      expected.includes(response.status),
+      `${method} ${endpoint} expected ${expected.join('/')}, got ${response.status}: ${JSON.stringify(payload)}`,
+    );
+    return { response, payload };
+  };
+
+  const salesDepartment = (
+    await api('POST', '/departments', {
+      department_code: `E2ESA${suffix}`,
+      name: `E2E Sales ${suffix}`,
+    })
+  ).payload;
+  const operationsDepartment = (
+    await api('POST', '/departments', {
+      department_code: `E2EOP${suffix}`,
+      name: `E2E Operations ${suffix}`,
+    })
+  ).payload;
+  const salesTeam = (
+    await api('POST', '/teams', {
+      team_code: `E2ESA${suffix}`,
+      name: `E2E Sales Team ${suffix}`,
+      department_id: salesDepartment.id,
+    })
+  ).payload;
+  const operationsTeam = (
+    await api('POST', '/teams', {
+      team_code: `E2EOP${suffix}`,
+      name: `E2E Operations Team ${suffix}`,
+      department_id: operationsDepartment.id,
+    })
+  ).payload;
+
+  const createEmployee = async (prefix, fullName, departmentId, teamId) =>
+    (
+      await api('POST', '/employees', {
+        employee_code: `${prefix}${suffix}`,
+        full_name: fullName,
+        email: `${prefix.toLowerCase()}.${suffix}@example.com`,
+        password: 'TaskSync@2026',
+        role_id: 3,
+        department_id: departmentId,
+        team_id: teamId,
+      })
+    ).payload;
+
+  const salesOne = await createEmployee('E2ESA1', `E2E Sales One ${suffix}`, salesDepartment.id, salesTeam.id);
+  const salesTwo = await createEmployee('E2ESA2', `E2E Sales Two ${suffix}`, salesDepartment.id, salesTeam.id);
+  const operationsOne = await createEmployee(
+    'E2EOP1',
+    `E2E Operations One ${suffix}`,
+    operationsDepartment.id,
+    operationsTeam.id,
+  );
+  const operationsTwo = await createEmployee(
+    'E2EOP2',
+    `E2E Operations Two ${suffix}`,
+    operationsDepartment.id,
+    operationsTeam.id,
+  );
+
+  const createProject = async (code, name, departmentId, teamId) =>
+    (
+      await api('POST', '/projects', {
+        project_code: `${code}${suffix}`,
+        name,
+        status: 'Active',
+        department_id: departmentId,
+        team_id: teamId,
+      })
+    ).payload;
+
+  const salesProject = await createProject(
+    'E2ESA',
+    `E2E Sales Project ${suffix}`,
+    salesDepartment.id,
+    salesTeam.id,
+  );
+  const operationsProject = await createProject(
+    'E2EOP',
+    `E2E Operations Project ${suffix}`,
+    operationsDepartment.id,
+    operationsTeam.id,
+  );
+  const unscopedProject = await createProject('E2ENONE', `E2E Unscoped Project ${suffix}`, null, null);
+
+  const eligibleIds = async (projectId) =>
+    (await api('GET', `/projects/${projectId}/eligible-assignees`)).payload.map((employee) => employee.id);
+
+  assert.deepEqual(new Set(await eligibleIds(salesProject.id)), new Set([salesOne.id, salesTwo.id]));
+  assert.deepEqual(
+    new Set(await eligibleIds(operationsProject.id)),
+    new Set([operationsOne.id, operationsTwo.id]),
+  );
+  assert.deepEqual(await eligibleIds(unscopedProject.id), []);
+
+  const salesTask = (
+    await api('POST', '/tasks', {
+      title: `E2E Sales Task ${suffix}`,
+      project_id: salesProject.id,
+      assigned_to: salesOne.id,
+    })
+  ).payload;
+  assert.equal(salesTask.assigned_to, salesOne.id);
+  await api(
+    'POST',
+    '/tasks',
+    {
+      title: `E2E Invalid Operations Assignee ${suffix}`,
+      project_id: salesProject.id,
+      assigned_to: operationsOne.id,
+    },
+    [409],
+  );
+
+  const salesSprint = (
+    await api('POST', '/sprints', {
+      name: `E2E Sales Sprint ${suffix}`,
+      project_id: salesProject.id,
+      status: 'Planned',
+    })
+  ).payload;
+  const operationsSprint = (
+    await api('POST', '/sprints', {
+      name: `E2E Operations Sprint ${suffix}`,
+      project_id: operationsProject.id,
+      status: 'Planned',
+    })
+  ).payload;
+  await api('PUT', `/tasks/${salesTask.id}`, { sprint_id: salesSprint.id });
+  await api('PUT', `/tasks/${salesTask.id}`, { sprint_id: operationsSprint.id }, [409]);
+
+  await page.goto(`${baseUrl}/tasks`);
+  await page.waitForLoadState('networkidle');
+  const createTaskButton = page.getByRole('button', { name: /Tạo Task Mới/i });
+  const buttonLabels = await page.getByRole('button').allTextContents();
+  const bodyText = (await page.locator('body').innerText()).slice(0, 1500);
+  assert.equal(
+    await createTaskButton.count(),
+    1,
+    `Create Task button missing at ${page.url()}; buttons=${JSON.stringify(buttonLabels)}; body=${JSON.stringify(bodyText)}; console=${JSON.stringify(metrics.consoleErrors)}`,
+  );
+  await createTaskButton.click();
+  const projectSelect = page.locator('[data-testid="task-project-select"]:visible');
+  const assigneeSelect = page.locator('[data-testid="task-assignee-select"]:visible');
+  await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().includes(`/projects/${salesProject.id}/eligible-assignees`),
+    ),
+    projectSelect.selectOption(String(salesProject.id)),
+  ]);
+  let labels = await assigneeSelect.locator('option').allTextContents();
+  assert.ok(labels.some((label) => label.includes(salesOne.full_name)));
+  assert.ok(labels.some((label) => label.includes(salesTwo.full_name)));
+  assert.ok(labels.every((label) => !label.includes(operationsOne.full_name)));
+
+  await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().includes(`/projects/${operationsProject.id}/eligible-assignees`),
+    ),
+    projectSelect.selectOption(String(operationsProject.id)),
+  ]);
+  labels = await assigneeSelect.locator('option').allTextContents();
+  assert.ok(labels.some((label) => label.includes(operationsOne.full_name)));
+  assert.ok(labels.every((label) => !label.includes(salesOne.full_name)));
+
+  await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().includes(`/projects/${unscopedProject.id}/eligible-assignees`),
+    ),
+    projectSelect.selectOption(String(unscopedProject.id)),
+  ]);
+  labels = await assigneeSelect.locator('option').allTextContents();
+  assert.equal(labels.length, 1);
+  assert.match(labels[0], /Không có Người thực hiện phù hợp/i);
+
+  await api('PUT', `/projects/${salesProject.id}`, {
+    department_id: operationsDepartment.id,
+    team_id: operationsTeam.id,
+  });
+  assert.deepEqual(
+    new Set(await eligibleIds(salesProject.id)),
+    new Set([operationsOne.id, operationsTwo.id]),
+  );
+  recordPass('Department/Team/Employee/Project/Task/Sprint relationship flow');
+  recordPass('Task Drawer project-scoped assignees and stale-state protection');
 }
 
 // ── MAIN RUNNER ──────────────────────────────────────────────────────────────
@@ -98,25 +344,7 @@ async function main() {
     viewport: { width: 1280, height: 800 },
   });
   const page = await context.newPage();
-
-  // Listen to network requests & console errors
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') {
-      const text = msg.text();
-      // Ignore known harmless dev noise or websocket disconnect warnings during logout
-      if (!text.includes('WebSocket') && !text.includes('favicon')) {
-        metrics.consoleErrors.push(text);
-      }
-    }
-  });
-
-  page.on('response', (res) => {
-    const url = res.url();
-    const status = res.status();
-    if (url.includes('/api/v1/') && status >= 400) {
-      metrics.networkErrors.push({ url, status, method: res.request().method() });
-    }
-  });
+  monitorPage(page);
 
   try {
     // ── MODULE 1: ADMIN LOGIN & AUTHORIZATION HEADER CHECK ────────────────
@@ -137,7 +365,40 @@ async function main() {
       }
     });
 
-    await page.click('button[type="submit"]');
+    const loginResponse = await fetch(`${apiBaseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ username: adminEmail, password: adminPassword }),
+    });
+    assert.equal(loginResponse.status, 200, `Admin login expected 200, got ${loginResponse.status}`);
+    const loginData = await loginResponse.json();
+    await page.evaluate(
+      ({ accessToken, refreshToken, email, user }) => {
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+        localStorage.setItem(
+          'user',
+          JSON.stringify(
+            {
+              ...(user || {}),
+              id: 1,
+              name: 'E2E Admin',
+              full_name: 'E2E Admin',
+              email,
+              role: 'admin',
+              role_id: 1,
+            },
+          ),
+        );
+      },
+      {
+        accessToken: loginData.access_token,
+        refreshToken: loginData.refresh_token,
+        email: adminEmail,
+        user: loginData.user,
+      },
+    );
+    await page.goto(`${baseUrl}/dashboard`);
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
 
     const currentUrl = page.url();
@@ -175,8 +436,10 @@ async function main() {
     assert.ok(hasAuthHeader, 'Authorization Bearer header verified on outgoing protected API calls');
     recordPass('Protected API Statuses (Projects, Tasks, Dashboard, Notifications -> 200 OK)');
 
-    // ── MODULE 2: WORK MANAGEMENT E2E (MINIMAL & ASSIGNED TASK CREATION) ─
-    logHeader('MODULE 2: ADMIN WORK MANAGEMENT & TASK CREATION');
+    await runProjectRelationshipAcceptance(page, testSession.accessToken);
+
+    // ── MODULE 3: WORK MANAGEMENT E2E (MINIMAL & ASSIGNED TASK CREATION) ─
+    logHeader('MODULE 3: ADMIN WORK MANAGEMENT & TASK CREATION');
     await page.goto(`${baseUrl}/tasks`);
     await page.waitForLoadState('networkidle');
 
@@ -310,8 +573,92 @@ async function main() {
     await page.screenshot({ path: screenshot3 });
     metrics.screenshots.push(screenshot3);
 
-    // ── MODULE 3: EMPLOYEE RBAC VERIFICATION ─────────────────────────────────
-    logHeader('MODULE 3: EMPLOYEE RBAC VERIFICATION');
+    // ── MODULE 4: MANAGER & TEAM LEADER SCOPED RBAC ────────────────────────
+    logHeader('MODULE 4: MANAGER & TEAM LEADER SCOPED RBAC');
+
+    const loginRole = async (email) => {
+      const response = await fetch(`${apiBaseUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ username: email, password: employeePassword }),
+      });
+      assert.equal(response.status, 200, `Role login failed for ${email}: ${response.status}`);
+      return response.json();
+    };
+
+    const roleRequest = (token, endpoint) =>
+      fetch(`${apiBaseUrl}${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+    const managerData = await loginRole(managerEmail);
+    assert.equal(managerData.user.role, 'manager');
+    assert.equal((await roleRequest(managerData.access_token, '/dashboard/analytics')).status, 200);
+    assert.equal((await roleRequest(managerData.access_token, '/audit-logs')).status, 403);
+    const managerEmployeesResponse = await roleRequest(managerData.access_token, '/employees?limit=100');
+    assert.equal(managerEmployeesResponse.status, 200);
+    const managerEmployees = await managerEmployeesResponse.json();
+    assert.ok(managerEmployees.length > 0, 'Manager employee scope unexpectedly empty');
+    assert.ok(
+      managerEmployees.every((employee) => employee.department_id === managerData.user.department_id),
+      'Manager received employees outside their Department',
+    );
+    recordPass('Manager Department scope and Admin-only API protection');
+
+    const leaderData = await loginRole(teamLeaderEmail);
+    assert.equal(leaderData.user.role, 'employee');
+    assert.equal(leaderData.user.is_team_leader, true);
+    assert.ok(leaderData.user.team_id, 'Delegated Team Leader is missing team_id');
+    assert.equal((await roleRequest(leaderData.access_token, '/dashboard/analytics')).status, 200);
+    assert.equal((await roleRequest(leaderData.access_token, '/audit-logs')).status, 403);
+    assert.equal((await roleRequest(leaderData.access_token, '/employees')).status, 403);
+    assert.equal(
+      (await roleRequest(leaderData.access_token, `/teams/${leaderData.user.team_id}`)).status,
+      200,
+    );
+    recordPass('Team Leader own-Team access and privileged API protection');
+
+    for (const { name, loginData, allowedPath, evidenceName } of [
+      {
+        name: 'Manager',
+        loginData: managerData,
+        allowedPath: '/employees',
+        evidenceName: 'manager_dashboard.png',
+      },
+      {
+        name: 'Team Leader',
+        loginData: leaderData,
+        allowedPath: `/teams/${leaderData.user.team_id}`,
+        evidenceName: 'team-leader_dashboard.png',
+      },
+    ]) {
+      const roleContext = await browser.newContext();
+      const rolePage = await roleContext.newPage();
+      monitorPage(rolePage);
+      await rolePage.goto(`${baseUrl}/login`);
+      await rolePage.evaluate(({ loginData: data }) => {
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }, { loginData });
+      await rolePage.goto(`${baseUrl}/dashboard`);
+      await rolePage.waitForURL((url) => !url.pathname.includes('/login'));
+      assert.ok(!rolePage.url().includes('/unauthorized'), `${name} dashboard was denied`);
+      await rolePage.waitForLoadState('networkidle');
+      const dashboardScreenshot = path.join(evidenceDir, evidenceName);
+      await rolePage.screenshot({ path: dashboardScreenshot });
+      metrics.screenshots.push(dashboardScreenshot);
+      await rolePage.goto(`${baseUrl}${allowedPath}`);
+      await rolePage.waitForLoadState('domcontentloaded');
+      assert.ok(!rolePage.url().includes('/unauthorized'), `${name} scoped page was denied`);
+      await rolePage.goto(`${baseUrl}/audit`);
+      await rolePage.waitForURL((url) => url.pathname.includes('/unauthorized'));
+      await roleContext.close();
+    }
+    recordPass('Manager and Team Leader frontend route enforcement');
+
+    // ── MODULE 5: EMPLOYEE RBAC VERIFICATION ────────────────────────────────
+    logHeader('MODULE 5: EMPLOYEE RBAC VERIFICATION');
     // Login as Employee
     const empLoginRes = await fetch(`${apiBaseUrl}/auth/login`, {
       method: 'POST',
@@ -322,6 +669,26 @@ async function main() {
     if (empLoginRes.status === 200) {
       const empData = await empLoginRes.json();
       const empToken = empData.access_token;
+
+      const employeeContext = await browser.newContext();
+      const employeePage = await employeeContext.newPage();
+      monitorPage(employeePage);
+      await employeePage.goto(`${baseUrl}/login`);
+      await employeePage.evaluate(({ loginData: data }) => {
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }, { loginData: empData });
+      await employeePage.goto(`${baseUrl}/dashboard`);
+      await employeePage.waitForURL((url) => !url.pathname.includes('/login'));
+      assert.ok(!employeePage.url().includes('/unauthorized'), 'Employee dashboard was denied');
+      await employeePage.waitForLoadState('networkidle');
+      const employeeDashboardScreenshot = path.join(evidenceDir, 'employee_dashboard.png');
+      await employeePage.screenshot({ path: employeeDashboardScreenshot });
+      metrics.screenshots.push(employeeDashboardScreenshot);
+      await employeePage.goto(`${baseUrl}/employees`);
+      await employeePage.waitForURL((url) => url.pathname.includes('/unauthorized'));
+      await employeeContext.close();
 
       // Employee attempts allowed status update on assigned task
       const myTasksRes = await fetch(`${apiBaseUrl}/tasks/my-tasks`, {
@@ -360,12 +727,15 @@ async function main() {
       metrics.employeeRbacResult = 'PASS (403 Forbidden on restricted fields)';
       recordPass('Employee Restricted Field Protection (403 Forbidden)');
     } else {
-      console.log('  [NOTICE] Employee login fallback check skipped (account not seeded or deactivated).');
-      metrics.employeeRbacResult = 'SKIPPED (Account unseeded)';
+      assert.equal(
+        empLoginRes.status,
+        200,
+        `Employee login failed for ${employeeEmail}: ${empLoginRes.status}`,
+      );
     }
 
     // ── MODULE 4: TOKEN REFRESH & SESSION EXPIRATION VERIFICATION ───────────
-    logHeader('MODULE 4: TOKEN REFRESH & SINGLE-PROMISE RETRY VERIFICATION');
+    logHeader('MODULE 6: TOKEN REFRESH & SINGLE-PROMISE RETRY VERIFICATION');
     // Test Token Refresh API directly
     const refreshLoginRes = await fetch(`${apiBaseUrl}/auth/login`, {
       method: 'POST',
@@ -401,8 +771,16 @@ async function main() {
     console.log(`  Console Errors: ${metrics.consoleErrors.length}`);
     console.log(`  Network Error Responses (Unexpected): ${metrics.networkErrors.length}`);
     console.log(`  Screenshots Captured: ${metrics.screenshots.length}`);
+    if (metrics.consoleErrors.length > 0) {
+      console.error(`  Console Error Details: ${JSON.stringify(metrics.consoleErrors, null, 2)}`);
+    }
+    if (metrics.networkErrors.length > 0) {
+      console.error(`  Network Error Details: ${JSON.stringify(metrics.networkErrors, null, 2)}`);
+    }
 
     assert.equal(metrics.failed, 0, `E2E Acceptance failed with ${metrics.failed} errors`);
+    assert.deepEqual(metrics.consoleErrors, [], 'Unexpected browser console errors were detected');
+    assert.deepEqual(metrics.networkErrors, [], 'Unexpected browser network errors were detected');
     console.log(`\n✅ RESULT: PASS — Automated browser acceptance verified; ready for Git commit\n`);
   } catch (err) {
     console.error(`\n❌ RESULT: FAIL — Browser acceptance has blocking findings: ${err.stack}\n`);

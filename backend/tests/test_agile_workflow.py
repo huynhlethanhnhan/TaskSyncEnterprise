@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from sqlalchemy.dialects import mssql
 
 from app.models.backlog_item import BacklogItem
+from app.models.department import Department
 from app.models.employee import Employee
 from app.models.project import Project
 from app.models.project_member import ProjectMember
@@ -253,7 +254,15 @@ def test_task_cannot_reference_sprint_from_another_project(db):
 
 
 def test_task_assignee_must_be_an_active_project_member(db):
+    department = Department(
+        department_code="AGILE-ASSIGNEE",
+        name="Agile Assignee Department",
+        is_active=True,
+    )
+    db.add(department)
+    db.flush()
     project = _project("PRJ-1", "Project 1")
+    project.department_id = department.id
     db.add(project)
     db.flush()
     employee = Employee(
@@ -262,11 +271,23 @@ def test_task_assignee_must_be_an_active_project_member(db):
         email="employee@example.com",
         password_hash="test",
         role_id=3,
+        department_id=department.id,
         is_active=True,
         is_deleted=False,
         created_at=datetime(2026, 1, 1),
     )
     db.add(employee)
+    db.commit()
+
+    validate_task_relationships(
+        db,
+        project_id=project.id,
+        sprint_id=None,
+        assigned_to=employee.id,
+        topic_id=None,
+    )
+
+    employee.is_active = False
     db.commit()
 
     with pytest.raises((HTTPException, BusinessRuleException)) as exc_info:
@@ -279,17 +300,6 @@ def test_task_assignee_must_be_an_active_project_member(db):
         )
 
     assert exc_info.value.status_code == 409
-
-    db.add(ProjectMember(project_id=project.id, employee_id=employee.id))
-    db.commit()
-
-    validate_task_relationships(
-        db,
-        project_id=project.id,
-        sprint_id=None,
-        assigned_to=employee.id,
-        topic_id=None,
-    )
 
 
 def test_project_list_is_scoped_for_manager_and_employee(db):

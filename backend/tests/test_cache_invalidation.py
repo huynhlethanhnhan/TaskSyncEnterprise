@@ -58,12 +58,11 @@ def test_pattern_deletion(mock_redis):
 
 
 def test_dashboard_invalidation(mock_redis):
-    """Verify dashboard invalidation clears the correct overview and analytics keys."""
+    """Verify dashboard invalidation clears pattern dashboard:* via SCAN."""
     CacheInvalidator.invalidate_dashboard()
 
-    # Should delete the specific dashboard keys
-    mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
-    mock_redis.delete.assert_any_call(cache_keys.get_dashboard_analytics_key())
+    # Should delete keys matching pattern dashboard:*
+    mock_redis.scan.assert_any_call(cursor=0, match="dashboard:*", count=100)
 
 
 def test_employee_update_invalidation(mock_redis):
@@ -85,8 +84,7 @@ def test_employee_update_invalidation(mock_redis):
     )
 
     # 3. Invalidate dashboard
-    mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
-    mock_redis.delete.assert_any_call(cache_keys.get_dashboard_analytics_key())
+    mock_redis.scan.assert_any_call(cursor=0, match="dashboard:*", count=100)
 
 
 def test_department_delete_invalidation(mock_redis):
@@ -102,7 +100,7 @@ def test_department_delete_invalidation(mock_redis):
     )
 
     # Invalidate dashboard
-    mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
+    mock_redis.scan.assert_any_call(cursor=0, match="dashboard:*", count=100)
 
 
 def test_project_create_invalidation(mock_redis):
@@ -115,7 +113,7 @@ def test_project_create_invalidation(mock_redis):
     )
 
     # Invalidate dashboard
-    mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
+    mock_redis.scan.assert_any_call(cursor=0, match="dashboard:*", count=100)
 
 
 def test_task_update_invalidation(mock_redis):
@@ -143,7 +141,7 @@ def test_task_update_invalidation(mock_redis):
     )
 
     # Invalidate dashboard
-    mock_redis.delete.assert_any_call(cache_keys.get_dashboard_summary_key())
+    mock_redis.scan.assert_any_call(cursor=0, match="dashboard:*", count=100)
 
 
 def test_invalidation_with_integer_delete_result_does_not_log_exception(

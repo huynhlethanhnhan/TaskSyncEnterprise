@@ -50,7 +50,6 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   onClose,
   task,
   projects = [],
-  employees: _employees = [],
   onSave,
   isLoading = false,
   canEdit = true,
@@ -156,7 +155,11 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   const [storyPoints, setStoryPoints] = React.useState(0);
   const [isUploading, setIsUploading] = React.useState(false);
 
-  const { data: projectMembers = [], refetch: refetchProjectMembers } = useProjectMembers(projectId ? Number(projectId) : null);
+  const {
+    data: projectMembers = [],
+    isFetching: isLoadingAssignees,
+    refetch: refetchProjectMembers,
+  } = useProjectMembers(projectId ? Number(projectId) : null);
   const { data: projectSprints = [] } = useSprints(projectId ? Number(projectId) : undefined);
   const { data: projectTopics = [] } = useTopics(projectId ? Number(projectId) : undefined);
 
@@ -168,8 +171,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   };
 
   const assigneeOptions = React.useMemo(() => {
-    const availableList = projectMembers.length > 0 ? projectMembers : _employees;
-    return availableList.map((emp) => {
+    return projectMembers.map((emp) => {
       const codeStr = emp.employee_code ? ` (${emp.employee_code})` : '';
       const pos = (emp as any).position || emp.job_title;
       const posStr = pos ? ` - ${pos}` : '';
@@ -178,11 +180,17 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
         label: `${emp.full_name}${codeStr}${posStr}`,
       };
     });
-  }, [projectMembers, _employees]);
+  }, [projectMembers]);
 
-  const assigneePlaceholder = '-- Chọn Người thực hiện --';
+  const assigneePlaceholder = !projectId
+    ? '-- Chọn Dự án trước --'
+    : isLoadingAssignees
+      ? '-- Đang tải Người thực hiện --'
+      : projectMembers.length === 0
+        ? '-- Không có Người thực hiện phù hợp --'
+        : '-- Chọn Người thực hiện --';
 
-  const isAssigneeDisabled = !canEdit;
+  const isAssigneeDisabled = !canEdit || !projectId || isLoadingAssignees;
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -581,6 +589,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 />
 
                 <Select
+                  data-testid="task-project-select"
                   label="Thuộc Dự án"
                   value={String(projectId)}
                   disabled={!canEdit}
@@ -592,6 +601,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 />
 
                 <Select
+                  data-testid="task-assignee-select"
                   label="Người Thực hiện"
                   value={String(assignedTo)}
                   disabled={isAssigneeDisabled}
@@ -603,6 +613,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 />
 
                 <Select
+                  data-testid="task-sprint-select"
                   label="Gán vào Sprint"
                   value={String(sprintId)}
                   disabled={!canEdit}
@@ -717,6 +728,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
             </div>
 
             <Select
+              data-testid="task-project-select"
               label="Thuộc Dự án"
               value={String(projectId)}
               onChange={(e) => handleProjectChange(e.target.value ? Number(e.target.value) : '')}
@@ -727,6 +739,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
             />
 
             <Select
+              data-testid="task-assignee-select"
               label="Người Thực hiện"
               value={String(assignedTo)}
               disabled={isAssigneeDisabled}
@@ -738,8 +751,9 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
             />
 
             <div className="grid grid-cols-2 gap-4">
-              <Select
-                label="Gán vào Sprint"
+            <Select
+              data-testid="task-sprint-select"
+              label="Gán vào Sprint"
                 value={String(sprintId)}
                 onChange={(e) => setSprintId(e.target.value ? Number(e.target.value) : '')}
                 options={[

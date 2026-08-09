@@ -18,7 +18,7 @@ class MssqlEmptySession:
 def test_detailed_analytics_uses_module_datetime_on_mssql(monkeypatch):
     """Regression: the SQL Server branch must not shadow ``datetime``."""
     service = DashboardService()
-    monkeypatch.setattr(service, "get_overview", lambda _db: {})
+    monkeypatch.setattr(service, "get_overview", lambda _db, _user=None: {})
 
     result = service._get_detailed_analytics_db(MssqlEmptySession())
 

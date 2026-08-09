@@ -21,10 +21,16 @@ def count_table(db, table_name: str) -> int:
 
 
 def reset_demo_data():
-    allow_reset = os.getenv("ALLOW_DESTRUCTIVE_RESET", "").lower() in ("true", "1", "yes")
+    allow_reset = os.getenv("ALLOW_DESTRUCTIVE_RESET", "").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
     if not allow_reset:
         print("[ERROR] Destructive reset denied!")
-        print("You must set ALLOW_DESTRUCTIVE_RESET=true environment variable to run this script.")
+        print(
+            "You must set ALLOW_DESTRUCTIVE_RESET=true environment variable to run this script."
+        )
         sys.exit(1)
 
     env = os.getenv("ENVIRONMENT", os.getenv("APP_ENV", "development")).lower()
@@ -33,14 +39,19 @@ def reset_demo_data():
         sys.exit(1)
 
     from app.config import settings
+
     db_uri = settings.SQLALCHEMY_DATABASE_URI.lower()
     if "tasksyncenterprise" not in db_uri:
-        print(f"[ERROR] Destructive reset target must be 'TaskSyncEnterprise', found URI: {db_uri}")
+        print(
+            f"[ERROR] Destructive reset target must be 'TaskSyncEnterprise', found URI: {db_uri}"
+        )
         sys.exit(1)
 
     allowed_hosts = ("127.0.0.1", "localhost", "sqlserver")
     if not any(host in db_uri for host in allowed_hosts):
-        print(f"[ERROR] Database host in URI is not an allowed local host for reset: {db_uri}")
+        print(
+            f"[ERROR] Database host in URI is not an allowed local host for reset: {db_uri}"
+        )
         sys.exit(1)
 
     print("==================================================")
@@ -77,12 +88,16 @@ def reset_demo_data():
         # Clear FK references pointing to employees
         db.execute(text("UPDATE dbo.teams SET leader_id = NULL"))
         db.execute(text("UPDATE dbo.departments SET manager_id = NULL"))
-        db.execute(text("UPDATE dbo.employees SET manager_id = NULL, team_id = NULL, department_id = NULL"))
+        db.execute(
+            text(
+                "UPDATE dbo.employees SET manager_id = NULL, team_id = NULL, department_id = NULL"
+            )
+        )
         try:
             db.execute(text("UPDATE dbo.projects SET created_by = NULL"))
         except Exception:
             pass
-        
+
         for statement in [
             "UPDATE dbo.system_settings SET updated_by = NULL",
             "UPDATE dbo.system_settings SET created_by = NULL",
@@ -116,7 +131,9 @@ def reset_demo_data():
         # Keep or recreate Admin
         admin_email = "admin@tasksync.com"
         admin_exists = db.execute(
-            text("SELECT id FROM dbo.employees WHERE (email = :email OR email = 'admin@tasksync.local') AND is_deleted = 0"),
+            text(
+                "SELECT id FROM dbo.employees WHERE (email = :email OR email = 'admin@tasksync.local') AND is_deleted = 0"
+            ),
             {"email": admin_email},
         ).scalar()
 
@@ -128,8 +145,7 @@ def reset_demo_data():
             )
             # Ensure admin properties
             db.execute(
-                text(
-                    """
+                text("""
                     UPDATE dbo.employees
                     SET email = :email,
                         role_id = :role_admin,
@@ -139,9 +155,12 @@ def reset_demo_data():
                         is_active = 1,
                         is_deleted = 0
                     WHERE id = :admin_id
-                    """
-                ),
-                {"email": admin_email, "role_admin": ROLE_ADMIN, "admin_id": admin_exists},
+                    """),
+                {
+                    "email": admin_email,
+                    "role_admin": ROLE_ADMIN,
+                    "admin_id": admin_exists,
+                },
             )
         else:
             # Delete all employees
@@ -149,8 +168,7 @@ def reset_demo_data():
             # Insert single Admin user
             hashed_pwd = get_password_hash("TaskSync@2026")
             db.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO dbo.employees (
                         employee_code, full_name, email, password_hash,
                         role_id, is_active, is_deleted, created_at
@@ -158,8 +176,7 @@ def reset_demo_data():
                         'EMP-ADMIN001', N'System Admin', :email, :pwd,
                         :role_admin, 1, 0, SYSUTCDATETIME()
                     )
-                    """
-                ),
+                    """),
                 {
                     "email": admin_email,
                     "pwd": hashed_pwd,

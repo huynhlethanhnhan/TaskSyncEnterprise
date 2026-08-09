@@ -107,12 +107,14 @@ def test_01_create_task_without_assignee(client, db):
 
 # Case 2: Task creation with valid Project Member assignee -> 201 Created
 def test_02_create_task_with_project_member(client, db):
-    _init_roles_and_dept(db)
+    _, _, dept = _init_roles_and_dept(db)
     admin = _create_user(db, f"adm2_{uuid.uuid4().hex[:4]}@stab.com", ROLE_ADMIN)
     emp = _create_user(
         db, f"emp2_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Project Member"
     )
     proj = _create_project(db)
+    emp.department_id = dept.id
+    proj.department_id = dept.id
     db.add(ProjectMember(project_id=proj.id, employee_id=emp.id))
     db.commit()
 
@@ -204,12 +206,14 @@ def test_05_project_change_reset_assignee_contract(client, db):
 
 # Case 6 & 7: Assignee dropdown list and option value contract
 def test_06_07_get_project_members_contract(client, db):
-    _init_roles_and_dept(db)
+    _, _, dept = _init_roles_and_dept(db)
     admin = _create_user(db, f"adm6_{uuid.uuid4().hex[:4]}@stab.com", ROLE_ADMIN)
     emp = _create_user(
         db, f"emp6_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE, "Dev One"
     )
     proj = _create_project(db)
+    emp.department_id = dept.id
+    proj.department_id = dept.id
     db.add(ProjectMember(project_id=proj.id, employee_id=emp.id))
     db.commit()
 
@@ -225,10 +229,12 @@ def test_06_07_get_project_members_contract(client, db):
 
 # Case 8: User ID contract (assigned_to stores Employee.id)
 def test_08_assigned_to_stores_employee_id(client, db):
-    _init_roles_and_dept(db)
+    _, _, dept = _init_roles_and_dept(db)
     admin = _create_user(db, f"adm8_{uuid.uuid4().hex[:4]}@stab.com", ROLE_ADMIN)
     emp = _create_user(db, f"emp8_{uuid.uuid4().hex[:4]}@stab.com", ROLE_EMPLOYEE)
     proj = _create_project(db)
+    emp.department_id = dept.id
+    proj.department_id = dept.id
     db.add(ProjectMember(project_id=proj.id, employee_id=emp.id))
     db.commit()
 
@@ -485,6 +491,7 @@ def test_23_24_25_rbac_task_update_permissions(client, db):
 
     db.add(TaskAssignment(task_id=task.id, employee_id=emp_assigned.id))
     db.commit()
+    db.refresh(task)
 
     headers_assigned = _get_auth_headers(client, emp_assigned)
     headers_unassigned = _get_auth_headers(client, emp_unassigned)

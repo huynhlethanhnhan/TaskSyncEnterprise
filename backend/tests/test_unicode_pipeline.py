@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from pathlib import Path
 
 from fastapi.responses import JSONResponse
 from sqlalchemy.dialects import mssql
@@ -53,3 +54,13 @@ def test_notification_naive_database_datetime_serializes_as_utc() -> None:
     )
 
     assert notification.model_dump(mode="json")["created_at"] == "2026-07-22T08:30:00Z"
+
+
+def test_database_audit_forces_utf8_console_output_on_windows() -> None:
+    audit_script = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "audit_development_database.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'sys.stdout.reconfigure(encoding="utf-8")' in audit_script

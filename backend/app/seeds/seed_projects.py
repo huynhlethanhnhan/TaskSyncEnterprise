@@ -85,6 +85,8 @@ def seed_projects(db: Session, employees: list[Employee]) -> list[Project]:
                 status=pdata["status"],
                 priority=pdata["priority"],
                 created_by=creator.id,
+                department_id=creator.department_id,
+                team_id=creator.team_id,
                 is_deleted=False,
             )
             db.add(project)
@@ -93,12 +95,23 @@ def seed_projects(db: Session, employees: list[Employee]) -> list[Project]:
         created_projects.append(project)
 
         # Ensure project members (4 to 10 members)
+        eligible_pool = [
+            employee
+            for employee in employees
+            if employee.is_active
+            and not employee.is_deleted
+            and (
+                employee.team_id == project.team_id
+                if project.team_id is not None
+                else employee.department_id == project.department_id
+            )
+        ]
         member_sample = random.sample(
-            employees, k=min(len(employees), random.randint(5, 9))
+            eligible_pool, k=min(len(eligible_pool), random.randint(5, 9))
         )
         # Always ensure employee001 is member of PRJ-SPRINT-TEST and PRJ-ENTERPRISE-CORE
         emp001 = next((e for e in employees if e.employee_code == "employee001"), None)
-        if emp001 and emp001 not in member_sample:
+        if emp001 and emp001 in eligible_pool and emp001 not in member_sample:
             member_sample.append(emp001)
 
         for emp in member_sample:

@@ -10,6 +10,7 @@ from app.config import settings
 # Import seed modules
 from app.seeds.seed_roles import seed_roles
 from app.seeds.seed_departments import seed_departments
+from app.seeds.seed_teams import seed_teams
 from app.seeds.seed_employees import seed_employees
 from app.seeds.seed_projects import seed_projects
 from app.seeds.seed_sprints import seed_sprints
@@ -108,8 +109,12 @@ def run_seed_pipeline(db: Session) -> dict[str, int]:
     departments = seed_departments(db)
     print(f"  [OK] Seeded Departments: {len(departments)}")
 
-    # 3. Seed Employees
-    employees = seed_employees(db, departments)
+    # 3. Seed Teams
+    teams = seed_teams(db, departments)
+    print(f"  [OK] Seeded Teams: {len(teams)}")
+
+    # 4. Seed Employees
+    employees = seed_employees(db, departments, teams)
     print(
         f"  [OK] Seeded Employees: {len(employees)} (Accounts: admin001, manager001, employee001...)"
     )
@@ -149,6 +154,7 @@ def run_seed_pipeline(db: Session) -> dict[str, int]:
     summary = {
         "Roles": 3,
         "Departments": len(departments),
+        "Teams": len(teams),
         "Employees": len(employees),
         "Projects": len(projects),
         "Topics": len(topics),
