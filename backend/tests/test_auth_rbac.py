@@ -3,10 +3,12 @@ from app.models.employee import Employee
 from app.models.task import Task
 from app.models.task_assignment import TaskAssignment
 from app.core.security import get_password_hash
-from app.core.constants import ROLE_ADMIN, ROLE_EMPLOYEE
+from app.core.constants import ROLE_ADMIN, ROLE_EMPLOYEE, ROLE_MANAGER
+from app.models.department import Department
+from app.models.team import Team
 
 
-def create_mock_user(db, email, role_id, password="password123"):
+def create_mock_user(db, email, role_id, password="password123", department_id=None):
     hashed = get_password_hash(password)
     user = Employee(
         employee_code=f"EMP_{email.split('@')[0]}",
@@ -14,6 +16,7 @@ def create_mock_user(db, email, role_id, password="password123"):
         email=email,
         password_hash=hashed,
         role_id=role_id,
+        department_id=department_id,
         is_active=True,
         is_deleted=False,
         is_first_login=False,
@@ -67,6 +70,77 @@ def test_employee_access_denied(client, db):
     # Standard employee should be blocked from retrieving full list of employees
     response = client.get("/api/v1/employees", headers=headers)
     assert response.status_code == 403
+
+
+def test_manager_employee_list_is_scoped_to_own_department(client, db):
+    own_department = Department(department_code="OWN", name="Own Department")
+    foreign_department = Department(
+        department_code="FOREIGN", name="Foreign Department"
+    )
+    db.add_all([own_department, foreign_department])
+    db.commit()
+
+    manager = create_mock_user(
+        db,
+        "manager@example.com",
+        ROLE_MANAGER,
+        department_id=own_department.id,
+    )
+    colleague = create_mock_user(
+        db,
+        "colleague@example.com",
+        ROLE_EMPLOYEE,
+        department_id=own_department.id,
+    )
+    outsider = create_mock_user(
+        db,
+        "outsider@example.com",
+        ROLE_EMPLOYEE,
+        department_id=foreign_department.id,
+    )
+    headers = get_auth_headers(client, manager.email)
+
+    response = client.get("/api/v1/employees?limit=100", headers=headers)
+
+    assert response.status_code == 200
+    employee_ids = {employee["id"] for employee in response.json()}
+    assert manager.id in employee_ids
+    assert colleague.id in employee_ids
+    assert outsider.id not in employee_ids
+
+
+def test_login_identifies_delegated_team_leader(client, db):
+    department = Department(department_code="LEAD", name="Leadership Department")
+    db.add(department)
+    db.commit()
+    leader = create_mock_user(
+        db,
+        "leader@example.com",
+        ROLE_EMPLOYEE,
+        department_id=department.id,
+    )
+    team = Team(
+        department_id=department.id,
+        team_code="LEAD-T1",
+        name="Leadership Team",
+        leader_id=leader.id,
+        is_active=True,
+    )
+    db.add(team)
+    db.commit()
+    leader.team_id = team.id
+    db.commit()
+
+    response = client.post(
+        "/api/v1/auth/login",
+        data={"username": leader.email, "password": "password123"},
+    )
+
+    assert response.status_code == 200
+    user = response.json()["user"]
+    assert user["role"] == "employee"
+    assert user["team_id"] == team.id
+    assert user["is_team_leader"] is True
 
 
 # 🧪 TEST CASE 4: Assigned employees can update status and progress

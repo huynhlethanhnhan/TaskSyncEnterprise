@@ -84,6 +84,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
   const isAdmin = roleStr === 'admin' || roleId === 1;
   const isManager = roleStr === 'manager' || roleId === 2;
   const isAdminOrManager = isAdmin || isManager;
+  const isTeamLeader = Boolean(user?.is_team_leader && user?.team_id);
 
   const sidebarSections: SidebarSection[] = [
     {
@@ -205,13 +206,19 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
             icon: <Building2 className="h-4.5 w-4.5" />,
             onClick: () => { navigate('/departments'); setMobileDrawerOpen(false); },
           },
-          {
-            key: '/teams',
-            label: 'Teams',
-            icon: <Network className="h-4.5 w-4.5" />,
-            onClick: () => { navigate('/teams'); setMobileDrawerOpen(false); },
-          },
         ] : []),
+        ...(isTeamLeader ? [{
+          key: `/teams/${user?.team_id}`,
+          label: 'My Team',
+          icon: <Network className="h-4.5 w-4.5" />,
+          onClick: () => { navigate(`/teams/${user?.team_id}`); setMobileDrawerOpen(false); },
+        }] : []),
+        ...(isAdminOrManager ? [{
+          key: '/teams',
+          label: 'Teams',
+          icon: <Network className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/teams'); setMobileDrawerOpen(false); },
+        }] : []),
         {
           key: '/settings',
           label: isAdmin ? 'System Settings' : 'My Settings',

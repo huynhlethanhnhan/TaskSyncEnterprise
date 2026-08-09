@@ -7,10 +7,13 @@ Prints a summary report without modifying any data.
 import sys
 import os
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # Ensure backend root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 from app.database import SessionLocal
 from app.models.role import Role
 from app.models.department import Department
@@ -146,6 +149,51 @@ def run_audit():
         ).all()
         print(f"Orphan Tasks (missing Project): {len(orphan_task_project)}")
 
+        task_sprint_mismatches = db.scalar(
+            text(
+                "SELECT COUNT(*) FROM dbo.tasks t "
+                "JOIN dbo.sprints s ON s.id = t.sprint_id "
+                "WHERE t.project_id <> s.project_id"
+            )
+        )
+        employee_team_mismatches = db.scalar(
+            text(
+                "SELECT COUNT(*) FROM dbo.employees e "
+                "JOIN dbo.teams tm ON tm.id = e.team_id "
+                "WHERE e.department_id <> tm.department_id"
+            )
+        )
+        project_team_mismatches = db.scalar(
+            text(
+                "SELECT COUNT(*) FROM dbo.projects p "
+                "JOIN dbo.teams tm ON tm.id = p.team_id "
+                "WHERE p.department_id <> tm.department_id"
+            )
+        )
+        ineligible_assignments = db.scalar(
+            text(
+                "SELECT COUNT(*) FROM dbo.task_assignments ta "
+                "JOIN dbo.tasks t ON t.id = ta.task_id "
+                "LEFT JOIN dbo.project_members pm "
+                "ON pm.project_id = t.project_id "
+                "AND pm.employee_id = ta.employee_id "
+                "WHERE pm.id IS NULL"
+            )
+        )
+        duplicate_project_members = db.scalar(
+            text(
+                "SELECT COUNT(*) FROM ("
+                "SELECT project_id, employee_id FROM dbo.project_members "
+                "GROUP BY project_id, employee_id HAVING COUNT(*) > 1"
+                ") duplicates"
+            )
+        )
+        print(f"Task/Sprint project mismatches: {task_sprint_mismatches or 0}")
+        print(f"Employee/Team department mismatches: {employee_team_mismatches or 0}")
+        print(f"Project/Team department mismatches: {project_team_mismatches or 0}")
+        print(f"Assignments outside Project membership: {ineligible_assignments or 0}")
+        print(f"Duplicate ProjectMember pairs: {duplicate_project_members or 0}")
+
         # 4. Recent Tasks Sample
         print("\n--- RECENT TASKS SAMPLE (LAST 5) ---")
         recent_tasks = db.scalars(select(Task).order_by(Task.id.desc()).limit(5)).all()
@@ -157,7 +205,7 @@ def run_audit():
                 f"ID={t.id} | Title='{t.title}' | ProjectID={t.project_id} | Status='{t.status}' | {assignee_str} | CreatedAt={t.created_at}"
             )
 
-        print("\n=" * 60)
+        print("\n" + "=" * 60)
         print("                 AUDIT COMPLETE")
         print("=" * 60)
     finally:

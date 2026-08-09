@@ -22,9 +22,12 @@ def get_employee_key(employee_id: int) -> str:
     return f"employee:{employee_id}"
 
 
-def get_employee_list_key(skip: int = 0, limit: int = 20) -> str:
+def get_employee_list_key(
+    skip: int = 0, limit: int = 20, scope: str | None = None
+) -> str:
     """Generates cache key for employee list with pagination parameters."""
-    return f"employee:list:{skip}:{limit}"
+    key = f"employee:list:{skip}:{limit}"
+    return f"{key}:scope_{scope}" if scope else key
 
 
 def get_employee_search_key(keyword: str) -> str:

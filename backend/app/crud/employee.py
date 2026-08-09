@@ -8,9 +8,10 @@ from app.models.team import Team
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
 
 from app.core.security import get_password_hash
+from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
 
 
-def get_all(db: Session, skip=0, limit=20):
+def get_all(db: Session, current_user: Employee, skip=0, limit=20):
 
     stmt = (
         select(Employee)
@@ -20,6 +21,13 @@ def get_all(db: Session, skip=0, limit=20):
         .offset(skip)
         .limit(limit)
     )
+
+    if current_user.role_id == ROLE_MANAGER:
+        if current_user.department_id is None:
+            return []
+        stmt = stmt.where(Employee.department_id == current_user.department_id)
+    elif current_user.role_id != ROLE_ADMIN:
+        return []
 
     return db.scalars(stmt).all()
 

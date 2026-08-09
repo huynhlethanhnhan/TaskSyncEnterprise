@@ -60,7 +60,7 @@ const DashboardPage: React.FC = () => {
   // Queries
   const { data: analytics, isLoading: isAnalyticsLoading, isError: isAnalyticsError, refetch: refetchAnalytics } = useDashboardAnalytics();
   const { data: tasks = [] } = useTasks();
-  const { data: departments = [] } = useDepartments();
+  const { data: departments = [] } = useDepartments(permissions.canManageDepartment);
 
   // Mutations & Drawers
   const createProject = useCreateProject();

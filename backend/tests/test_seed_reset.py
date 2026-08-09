@@ -2,7 +2,11 @@ from datetime import datetime
 
 from sqlalchemy import func, select
 
-from Seed_Example import _clear_application_cache, _reset_demo_data
+from Seed_Example import (
+    _clear_application_cache,
+    _reset_demo_data,
+    _validate_destructive_reset,
+)
 from app.models.department import Department
 from app.models.employee import Employee
 from app.models.role import Role
@@ -117,3 +121,34 @@ def test_seed_cache_clear_removes_stale_entity_ids(monkeypatch):
     _clear_application_cache()
 
     assert cleared_patterns == ["*"]
+
+
+def test_seed_reset_requires_explicit_non_production_local_target():
+    approved_url = "mssql+pymssql://localhost/TaskSyncEnterprise"
+
+    for environment, allow_reset, database_url in (
+        ("production", "true", approved_url),
+        ("development", "false", approved_url),
+        (
+            "development",
+            "true",
+            "mssql+pymssql://database.example.com/TaskSyncEnterprise",
+        ),
+        ("development", "true", "mssql+pymssql://localhost/CustomerData"),
+    ):
+        try:
+            _validate_destructive_reset(
+                environment=environment,
+                database_url=database_url,
+                allow_reset=allow_reset,
+            )
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("unsafe seed reset target was accepted")
+
+    _validate_destructive_reset(
+        environment="development",
+        database_url=approved_url,
+        allow_reset="true",
+    )

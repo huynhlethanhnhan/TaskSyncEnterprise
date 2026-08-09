@@ -232,7 +232,7 @@ export default function AppRouter(): React.ReactElement {
         <Route
           path="/teams/:id"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'manager', 1, 2]}>
+            <ProtectedRoute>
               <ApplicationShell>
                 <TeamDetailPage />
               </ApplicationShell>

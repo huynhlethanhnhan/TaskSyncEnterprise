@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import func, select, update
+from sqlalchemy.engine import make_url
 
 import app.models  # noqa: F401 - register every mapped table before reset
 from app.core.security import get_password_hash
@@ -38,6 +40,28 @@ from app.models.team import Team
 from app.models.vacation import Vacation
 
 DEMO_PASSWORD = "TaskSync@2026"
+
+
+def _validate_destructive_reset(
+    *, environment: str, database_url: str, allow_reset: str
+) -> None:
+    """Reject seed resets unless they target an explicitly approved demo database."""
+    if environment.strip().lower() in {"production", "prod"}:
+        raise RuntimeError("Seed reset is disabled in production environments.")
+
+    if allow_reset.strip().lower() not in {"true", "1", "yes"}:
+        raise RuntimeError("Seed reset requires ALLOW_DESTRUCTIVE_RESET=true.")
+
+    url = make_url(database_url)
+    host = (url.host or "").lower()
+    database = (url.database or "").lower()
+    if host not in {"127.0.0.1", "localhost", "sqlserver"}:
+        raise RuntimeError("Seed reset is limited to approved local database hosts.")
+    if not (
+        database == "tasksyncenterprise" or database.startswith("tasksyncenterprise_")
+    ):
+        raise RuntimeError("Seed reset target is not an approved demo database.")
+
 
 DEPARTMENTS = [
     ("IT", "Công nghệ thông tin", "Phát triển sản phẩm và vận hành nền tảng số"),
@@ -171,12 +195,14 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
     }
     for department_code, names in STAFF_BY_DEPARTMENT.items():
         for index, full_name in enumerate(names, start=1):
+            is_team_leader = department_code == "OPS" and full_name == "Phan Hoàng Long"
             employees.append(
                 {
                     "employee_code": f"EMP{staff_number:03d}",
                     "full_name": full_name,
                     "email": f"employee{staff_number:03d}@tasksync.example.com",
                     "role": "employee",
+                    "is_team_leader": is_team_leader,
                     "department_code": department_code,
                     "manager_code": manager_by_department[department_code],
                     "job_title": f"Chuyên viên {DEPARTMENTS[[d[0] for d in DEPARTMENTS].index(department_code)][1]}",
@@ -402,6 +428,7 @@ def build_seed_plan(now: datetime | None = None) -> dict[str, list[dict]]:
 EXPECTED_COUNTS = {
     "admins": 2,
     "managers": len(MANAGERS),
+    "team_leaders": 1,
     "employees": 2
     + len(MANAGERS)
     + sum(len(names) for names in STAFF_BY_DEPARTMENT.values()),
@@ -437,6 +464,15 @@ def _reset_demo_data(db) -> None:
 
 
 def seed(reset_existing: bool = False) -> dict[str, int]:
+    if reset_existing:
+        from app.config import settings
+
+        _validate_destructive_reset(
+            environment=settings.ENVIRONMENT,
+            database_url=settings.SQLALCHEMY_DATABASE_URI,
+            allow_reset=os.getenv("ALLOW_DESTRUCTIVE_RESET", ""),
+        )
+
     plan = build_seed_plan()
     db = SessionLocal()
     try:
@@ -541,7 +577,7 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
         hoang_long_code = next(
             record["employee_code"]
             for record in plan["employees"]
-            if record["full_name"] == "Phan Hoàng Long"
+            if record.get("is_team_leader")
         )
         for department_code, department in departments.items():
             manager = employees[manager_code_by_department[department_code]]

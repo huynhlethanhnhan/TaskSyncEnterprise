@@ -137,7 +137,7 @@ jobs:
           failure-threshold: error
 
       - name: Validate docker-compose.yml
-        run: docker compose -f docker-compose.yml config --quiet
+        run: docker compose --env-file .env.example -f docker-compose.yml config --quiet
 
       - name: Validate docker-compose.production.yml
         run: docker compose --env-file .env.production.example -f docker-compose.production.yml config --quiet

@@ -13,6 +13,7 @@ class SeedExampleContractTest(unittest.TestCase):
 
         self.assertEqual(EXPECTED_COUNTS["admins"], 2)
         self.assertEqual(EXPECTED_COUNTS["managers"], 5)
+        self.assertEqual(EXPECTED_COUNTS["team_leaders"], 1)
         self.assertGreaterEqual(EXPECTED_COUNTS["employees"], 20)
         self.assertLessEqual(EXPECTED_COUNTS["employees"], 25)
         self.assertEqual(EXPECTED_COUNTS["departments"], 5)
@@ -37,9 +38,16 @@ class SeedExampleContractTest(unittest.TestCase):
             for employee in plan["employees"]
             if employee["role"] == "manager"
         }
+        team_leaders = [
+            employee for employee in plan["employees"] if employee.get("is_team_leader")
+        ]
 
         self.assertIn("Huỳnh Lê Thành Nhân", names)
         self.assertEqual(len(manager_codes), EXPECTED_COUNTS["managers"])
+        self.assertEqual(len(team_leaders), EXPECTED_COUNTS["team_leaders"])
+        self.assertEqual(team_leaders[0]["email"], "employee015@tasksync.example.com")
+        self.assertEqual(team_leaders[0]["department_code"], "OPS")
+        self.assertEqual(team_leaders[0]["role"], "employee")
         self.assertTrue(
             all(
                 employee.get("manager_code")

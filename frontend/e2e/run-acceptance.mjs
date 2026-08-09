@@ -1,7 +1,7 @@
 // 📂 FILE: frontend/e2e/run-acceptance.mjs
 /**
  * TaskSyncEnterprise — Automated Browser Acceptance Test Runner (Playwright)
- * Runs end-to-end browser tests against running local app (Frontend: http://localhost:5173, Backend: http://127.0.0.1:8000).
+ * Runs end-to-end browser tests against the configured frontend and backend.
  * Verifies Auth, Dashboard, Project, Minimal/Assigned Task 201 creation, Non-member 409 protection, Employee RBAC 403, Token Refresh.
  */
 import assert from 'node:assert/strict';
@@ -20,11 +20,14 @@ await mkdir(evidenceDir, { recursive: true });
 
 const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
 const apiBaseUrl = process.env.E2E_API_URL || 'http://127.0.0.1:8000/api/v1';
+const backendHealthUrl = new URL('/health', apiBaseUrl).toString();
 const executablePath = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL || 'admin@tasksync.example.com';
 const adminPassword = process.env.E2E_ADMIN_PASSWORD || 'TaskSync@2026';
-const employeeEmail = process.env.E2E_EMPLOYEE_EMAIL || 'huynh.le.thanh.nhan@tasksync.example.com';
+const managerEmail = process.env.E2E_MANAGER_EMAIL || 'manager.it@tasksync.example.com';
+const teamLeaderEmail = process.env.E2E_TEAM_LEADER_EMAIL || 'employee015@tasksync.example.com';
+const employeeEmail = process.env.E2E_EMPLOYEE_EMAIL || 'employee001@tasksync.example.com';
 const employeePassword = process.env.E2E_EMPLOYEE_PASSWORD || 'TaskSync@2026';
 
 
@@ -61,13 +64,49 @@ function recordFail(testName, error) {
   console.error(`  [FAIL] ${testName}: ${error}`);
 }
 
+function monitorPage(page) {
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      const text = msg.text();
+      if (!text.includes('WebSocket') && !text.includes('favicon')) {
+        metrics.consoleErrors.push(text);
+      }
+    }
+  });
+
+  page.on('response', (res) => {
+    const url = res.url();
+    const status = res.status();
+    if (url.includes('/api/v1/') && status >= 400) {
+      metrics.networkErrors.push({ url, status, method: res.request().method() });
+    }
+  });
+
+  page.on('requestfailed', (request) => {
+    const url = request.url();
+    const errorText = request.failure()?.errorText;
+    if (
+      errorText !== 'net::ERR_ABORTED'
+      && !url.includes('/ws/')
+      && !url.includes('favicon')
+    ) {
+      metrics.networkErrors.push({
+        url,
+        status: 'REQUEST_FAILED',
+        method: request.method(),
+        errorText,
+      });
+    }
+  });
+}
+
 // ── HEALTH CHECK ─────────────────────────────────────────────────────────────
 async function checkHealth() {
   logHeader('PHASE 1: PRE-FLIGHT SERVICE HEALTH CHECK');
   try {
-    const backendRes = await fetch('http://127.0.0.1:8000/health');
+    const backendRes = await fetch(backendHealthUrl);
     assert.equal(backendRes.status, 200, `Backend health check failed with status ${backendRes.status}`);
-    console.log('  [HEALTH] Backend (http://127.0.0.1:8000/health) -> 200 OK');
+    console.log(`  [HEALTH] Backend (${backendHealthUrl}) -> 200 OK`);
 
     const frontendRes = await fetch(baseUrl);
     assert.equal(frontendRes.status, 200, `Frontend health check failed with status ${frontendRes.status}`);
@@ -305,25 +344,7 @@ async function main() {
     viewport: { width: 1280, height: 800 },
   });
   const page = await context.newPage();
-
-  // Listen to network requests & console errors
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') {
-      const text = msg.text();
-      // Ignore known harmless dev noise or websocket disconnect warnings during logout
-      if (!text.includes('WebSocket') && !text.includes('favicon')) {
-        metrics.consoleErrors.push(text);
-      }
-    }
-  });
-
-  page.on('response', (res) => {
-    const url = res.url();
-    const status = res.status();
-    if (url.includes('/api/v1/') && status >= 400) {
-      metrics.networkErrors.push({ url, status, method: res.request().method() });
-    }
-  });
+  monitorPage(page);
 
   try {
     // ── MODULE 1: ADMIN LOGIN & AUTHORIZATION HEADER CHECK ────────────────
@@ -552,8 +573,92 @@ async function main() {
     await page.screenshot({ path: screenshot3 });
     metrics.screenshots.push(screenshot3);
 
-    // ── MODULE 3: EMPLOYEE RBAC VERIFICATION ─────────────────────────────────
-    logHeader('MODULE 3: EMPLOYEE RBAC VERIFICATION');
+    // ── MODULE 4: MANAGER & TEAM LEADER SCOPED RBAC ────────────────────────
+    logHeader('MODULE 4: MANAGER & TEAM LEADER SCOPED RBAC');
+
+    const loginRole = async (email) => {
+      const response = await fetch(`${apiBaseUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ username: email, password: employeePassword }),
+      });
+      assert.equal(response.status, 200, `Role login failed for ${email}: ${response.status}`);
+      return response.json();
+    };
+
+    const roleRequest = (token, endpoint) =>
+      fetch(`${apiBaseUrl}${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+    const managerData = await loginRole(managerEmail);
+    assert.equal(managerData.user.role, 'manager');
+    assert.equal((await roleRequest(managerData.access_token, '/dashboard/analytics')).status, 200);
+    assert.equal((await roleRequest(managerData.access_token, '/audit-logs')).status, 403);
+    const managerEmployeesResponse = await roleRequest(managerData.access_token, '/employees?limit=100');
+    assert.equal(managerEmployeesResponse.status, 200);
+    const managerEmployees = await managerEmployeesResponse.json();
+    assert.ok(managerEmployees.length > 0, 'Manager employee scope unexpectedly empty');
+    assert.ok(
+      managerEmployees.every((employee) => employee.department_id === managerData.user.department_id),
+      'Manager received employees outside their Department',
+    );
+    recordPass('Manager Department scope and Admin-only API protection');
+
+    const leaderData = await loginRole(teamLeaderEmail);
+    assert.equal(leaderData.user.role, 'employee');
+    assert.equal(leaderData.user.is_team_leader, true);
+    assert.ok(leaderData.user.team_id, 'Delegated Team Leader is missing team_id');
+    assert.equal((await roleRequest(leaderData.access_token, '/dashboard/analytics')).status, 200);
+    assert.equal((await roleRequest(leaderData.access_token, '/audit-logs')).status, 403);
+    assert.equal((await roleRequest(leaderData.access_token, '/employees')).status, 403);
+    assert.equal(
+      (await roleRequest(leaderData.access_token, `/teams/${leaderData.user.team_id}`)).status,
+      200,
+    );
+    recordPass('Team Leader own-Team access and privileged API protection');
+
+    for (const { name, loginData, allowedPath, evidenceName } of [
+      {
+        name: 'Manager',
+        loginData: managerData,
+        allowedPath: '/employees',
+        evidenceName: 'manager_dashboard.png',
+      },
+      {
+        name: 'Team Leader',
+        loginData: leaderData,
+        allowedPath: `/teams/${leaderData.user.team_id}`,
+        evidenceName: 'team-leader_dashboard.png',
+      },
+    ]) {
+      const roleContext = await browser.newContext();
+      const rolePage = await roleContext.newPage();
+      monitorPage(rolePage);
+      await rolePage.goto(`${baseUrl}/login`);
+      await rolePage.evaluate(({ loginData: data }) => {
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }, { loginData });
+      await rolePage.goto(`${baseUrl}/dashboard`);
+      await rolePage.waitForURL((url) => !url.pathname.includes('/login'));
+      assert.ok(!rolePage.url().includes('/unauthorized'), `${name} dashboard was denied`);
+      await rolePage.waitForLoadState('networkidle');
+      const dashboardScreenshot = path.join(evidenceDir, evidenceName);
+      await rolePage.screenshot({ path: dashboardScreenshot });
+      metrics.screenshots.push(dashboardScreenshot);
+      await rolePage.goto(`${baseUrl}${allowedPath}`);
+      await rolePage.waitForLoadState('domcontentloaded');
+      assert.ok(!rolePage.url().includes('/unauthorized'), `${name} scoped page was denied`);
+      await rolePage.goto(`${baseUrl}/audit`);
+      await rolePage.waitForURL((url) => url.pathname.includes('/unauthorized'));
+      await roleContext.close();
+    }
+    recordPass('Manager and Team Leader frontend route enforcement');
+
+    // ── MODULE 5: EMPLOYEE RBAC VERIFICATION ────────────────────────────────
+    logHeader('MODULE 5: EMPLOYEE RBAC VERIFICATION');
     // Login as Employee
     const empLoginRes = await fetch(`${apiBaseUrl}/auth/login`, {
       method: 'POST',
@@ -564,6 +669,26 @@ async function main() {
     if (empLoginRes.status === 200) {
       const empData = await empLoginRes.json();
       const empToken = empData.access_token;
+
+      const employeeContext = await browser.newContext();
+      const employeePage = await employeeContext.newPage();
+      monitorPage(employeePage);
+      await employeePage.goto(`${baseUrl}/login`);
+      await employeePage.evaluate(({ loginData: data }) => {
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }, { loginData: empData });
+      await employeePage.goto(`${baseUrl}/dashboard`);
+      await employeePage.waitForURL((url) => !url.pathname.includes('/login'));
+      assert.ok(!employeePage.url().includes('/unauthorized'), 'Employee dashboard was denied');
+      await employeePage.waitForLoadState('networkidle');
+      const employeeDashboardScreenshot = path.join(evidenceDir, 'employee_dashboard.png');
+      await employeePage.screenshot({ path: employeeDashboardScreenshot });
+      metrics.screenshots.push(employeeDashboardScreenshot);
+      await employeePage.goto(`${baseUrl}/employees`);
+      await employeePage.waitForURL((url) => url.pathname.includes('/unauthorized'));
+      await employeeContext.close();
 
       // Employee attempts allowed status update on assigned task
       const myTasksRes = await fetch(`${apiBaseUrl}/tasks/my-tasks`, {
@@ -602,12 +727,15 @@ async function main() {
       metrics.employeeRbacResult = 'PASS (403 Forbidden on restricted fields)';
       recordPass('Employee Restricted Field Protection (403 Forbidden)');
     } else {
-      console.log('  [NOTICE] Employee login fallback check skipped (account not seeded or deactivated).');
-      metrics.employeeRbacResult = 'SKIPPED (Account unseeded)';
+      assert.equal(
+        empLoginRes.status,
+        200,
+        `Employee login failed for ${employeeEmail}: ${empLoginRes.status}`,
+      );
     }
 
     // ── MODULE 4: TOKEN REFRESH & SESSION EXPIRATION VERIFICATION ───────────
-    logHeader('MODULE 4: TOKEN REFRESH & SINGLE-PROMISE RETRY VERIFICATION');
+    logHeader('MODULE 6: TOKEN REFRESH & SINGLE-PROMISE RETRY VERIFICATION');
     // Test Token Refresh API directly
     const refreshLoginRes = await fetch(`${apiBaseUrl}/auth/login`, {
       method: 'POST',
@@ -643,8 +771,16 @@ async function main() {
     console.log(`  Console Errors: ${metrics.consoleErrors.length}`);
     console.log(`  Network Error Responses (Unexpected): ${metrics.networkErrors.length}`);
     console.log(`  Screenshots Captured: ${metrics.screenshots.length}`);
+    if (metrics.consoleErrors.length > 0) {
+      console.error(`  Console Error Details: ${JSON.stringify(metrics.consoleErrors, null, 2)}`);
+    }
+    if (metrics.networkErrors.length > 0) {
+      console.error(`  Network Error Details: ${JSON.stringify(metrics.networkErrors, null, 2)}`);
+    }
 
     assert.equal(metrics.failed, 0, `E2E Acceptance failed with ${metrics.failed} errors`);
+    assert.deepEqual(metrics.consoleErrors, [], 'Unexpected browser console errors were detected');
+    assert.deepEqual(metrics.networkErrors, [], 'Unexpected browser network errors were detected');
     console.log(`\n✅ RESULT: PASS — Automated browser acceptance verified; ready for Git commit\n`);
   } catch (err) {
     console.error(`\n❌ RESULT: FAIL — Browser acceptance has blocking findings: ${err.stack}\n`);

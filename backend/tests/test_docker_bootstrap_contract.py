@@ -33,3 +33,24 @@ def test_compose_and_smoke_test_use_isolated_host_ports():
     assert '"tasksync-smoke"' in smoke
     assert "exec -T backend alembic current" in smoke
     assert "down --volumes --remove-orphans" in smoke
+
+
+def test_ci_compose_validation_supplies_documented_environment_templates():
+    ci_workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+    release_workflow = (REPO_ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+
+    development_validation = (
+        "docker compose --env-file .env.example -f docker-compose.yml config --quiet"
+    )
+    production_validation = (
+        "docker compose --env-file .env.production.example "
+        "-f docker-compose.production.yml config --quiet"
+    )
+
+    for workflow in (ci_workflow, release_workflow):
+        assert development_validation in workflow
+        assert production_validation in workflow
