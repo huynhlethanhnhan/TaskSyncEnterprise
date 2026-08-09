@@ -3,7 +3,7 @@
 Audit date: 2026-08-09  
 Audited branch: `develop`  
 Starting commit: `7351025`  
-Release decision: **READY FOR RELEASE COMMIT; MASTER PROMOTION PENDING CI**
+Release decision: **READY FOR MASTER — RELEASE COMPLETE**
 
 ## Progress Checklist
 
@@ -24,17 +24,17 @@ Release decision: **READY FOR RELEASE COMMIT; MASTER PROMOTION PENDING CI**
 - [x] Docker smoke — PASS
 - [x] Browser against Docker — PASS (15/15)
 - [x] Final full regression — PASS
-- [ ] develop commit — PENDING
-- [ ] develop push — PENDING
-- [ ] master merge — PENDING
-- [ ] master push — PENDING
-- [ ] GitHub Actions — PENDING
+- [x] develop commit — PASS (`d0681e7`)
+- [x] develop push — PASS
+- [x] master merge — PASS (`9bd22f0`)
+- [x] master push — PASS
+- [x] GitHub Actions — PASS (`CI Foundation` on develop and master)
 
 ## 1. Executive Summary
 
 The application code, MSSQL schema, deterministic demo seed, backend suite, frontend gates, four-role browser acceptance, and clean Docker architecture were audited. The eight defects from the pre-restart audit remain fixed. After restart, three additional browser-audit defects were found and fixed: the E2E health probe ignored the configured Docker backend URL, the runner could report PASS with console/network errors, and Team Leader/Employee dashboards issued an unauthorized Department-directory request.
 
-Docker Desktop recovered after the Windows restart. Clean-volume build/start, SQL Server initialization, Redis, Alembic, health endpoints, smoke testing, and four-role Playwright acceptance through the frontend and backend containers all pass. Commit/push/master promotion and GitHub Actions remain intentionally pending until this report and final diff are committed on `develop`.
+Docker Desktop recovered after the Windows restart. Clean-volume build/start, SQL Server initialization, Redis, Alembic, health endpoints, smoke testing, and four-role Playwright acceptance through the frontend and backend containers all pass. The audited changes were committed and pushed to `develop`, `CI Foundation` passed, develop was merged normally into `master`, master was pushed, and master `CI Foundation` passed.
 
 ## 2. Repository State
 
@@ -45,7 +45,8 @@ Docker Desktop recovered after the Windows restart. Clean-volume build/start, SQ
 - Released Alembic history was preserved; only forward migration execution was used.
 - Recovered tree contained 23 modified files plus this untracked report; no previous work was discarded.
 - Local and remote `develop` both started at `7351025`; local and remote `master` both remained at `68ae0cd`.
-- The final tree contains 25 modified source/test/workflow files plus this report and is ready for the release commit.
+- Release commit: `d0681e7` on `develop`.
+- Master merge commit: `9bd22f0`; the resolved merge tree exactly matched audited `develop`.
 
 ## 3. Architecture Reviewed
 
@@ -286,11 +287,10 @@ Playwright result: 15/15 passed locally and 15/15 passed against the isolated Do
 
 ## 22. Remaining Known Issues
 
-1. Exact-change GitHub Actions has not run yet because the changes are not yet committed/pushed.
-2. The preserved historical development SQL Server volume uses a different SA password from `.env.example`; clean isolated release volumes pass.
-3. A live Redis-stop resilience probe was blocked by the command environment before execution. Normal Redis integration and backend cache failure tests pass.
-4. HTTPX OpenTelemetry instrumentation logs a non-fatal warning because the installed client package is `httpx2`, while the instrumentation expects the `httpx` module. No application HTTPX call path currently depends on it.
-5. Frontend bundle-size warning remains a future optimization item.
+1. The preserved historical development SQL Server volume uses a different SA password from `.env.example`; clean isolated release volumes pass.
+2. A live Redis-stop resilience probe was blocked by the command environment before execution. Normal Redis integration and backend cache failure tests pass.
+3. HTTPX OpenTelemetry instrumentation logs a non-fatal warning because the installed client package is `httpx2`, while the instrumentation expects the `httpx` module. No application HTTPX call path currently depends on it.
+4. Frontend bundle-size warning remains a future optimization item.
 
 ## 23. Final Quality Gate
 
@@ -306,11 +306,11 @@ Playwright result: 15/15 passed locally and 15/15 passed against the isolated Do
 | Four-role Playwright acceptance | PASS — 15/15 local and 15/15 Docker |
 | Compose static config | PASS |
 | Docker runtime / Redis / health / smoke | PASS |
-| Exact-change GitHub Actions | PENDING PUSH |
-| Clean release commit / develop push / master merge | PENDING |
+| Exact-change GitHub Actions | PASS — `CI Foundation` on develop and master |
+| Clean release commit / develop push / master merge / master push | PASS |
 
 ## 24. Release Decision
 
-**READY FOR DEVELOP COMMIT AND CI; MASTER PROMOTION PENDING**
+**READY FOR MASTER — RELEASE COMPLETE**
 
-Browser, Docker, backend, frontend, database, migration, Redis, health, and clean-start release gates are green. The remaining release sequence is: commit/push `develop`, verify exact-change GitHub Actions, merge normally to `master`, push, and verify master CI. Do not report release complete until those steps succeed.
+Browser, Docker, backend, frontend, database, migration, Redis, health, clean-start, develop CI, master promotion, and master CI release gates are green.
