@@ -21,17 +21,21 @@ interface CalendarTask {
     id: number;
     full_name?: string;
     name?: string;
+    avatar_url?: string;
   } | null;
 }
 
 interface CalendarProject {
   id: number;
   name: string;
+  project_code?: string;
+  status?: string;
 }
 
 interface CalendarEmployee {
   id: number;
   full_name: string;
+  avatar_url?: string;
 }
 
 interface CalendarVacation {
@@ -89,23 +93,26 @@ export default function CalendarPage(): React.ReactElement {
   const [displayDate, setDisplayDate] = useState<Date>(new Date(today.getFullYear(), today.getMonth(), 1));
   const [tasks, setTasks] = useState<CalendarTask[]>([]);
   const [projects, setProjects] = useState<CalendarProject[]>([]);
-  const [employees] = useState<CalendarEmployee[]>([]);
+  const [employees, setEmployees] = useState<CalendarEmployee[]>([]);
   const [vacations, setVacations] = useState<CalendarVacation[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const loadData = useCallback(async () => {
     try {
-      const [taskRes, projectRes, vacationRes] = await Promise.all([
+      const [taskRes, projectRes, vacationRes, employeeRes] = await Promise.all([
         api.get("/tasks"),
         api.get("/projects"),
         api.get("/vacations").catch(() => ({ data: [] })),
+        api.get("/employees").catch(() => ({ data: [] })),
       ]);
       const rawTasks: CalendarTask[] = Array.isArray(taskRes.data) ? taskRes.data : taskRes.data?.data || [];
       const rawProjects: CalendarProject[] = Array.isArray(projectRes.data) ? projectRes.data : projectRes.data?.data || [];
       const rawVacations: CalendarVacation[] = Array.isArray(vacationRes.data) ? vacationRes.data : vacationRes.data?.data || [];
+      const rawEmployees: CalendarEmployee[] = Array.isArray(employeeRes.data) ? employeeRes.data : employeeRes.data?.data || [];
 
       setTasks(rawTasks.map((task) => ({ ...task, deadline: task.deadline || task.due_date || null })));
       setProjects(rawProjects);
+      setEmployees(rawEmployees);
       setVacations(
         rawVacations.filter(
           (v) => v.status === "Approved" || v.status === "HR Approved" || v.status === "Manager Approved"
@@ -376,11 +383,26 @@ export default function CalendarPage(): React.ReactElement {
                             </Badge>
                           </div>
                           <div className="mt-3 space-y-1.5 border-t border-border/60 pt-3 text-[11px] text-text-secondary">
-                            <div><strong className="text-text-primary">Dự án:</strong> {project?.name || 'Không xác định'}</div>
+                            <div>
+                              <strong className="text-text-primary">Dự án:</strong>{' '}
+                              {project ? (
+                                <span className="font-semibold text-text-primary">
+                                  {project.name} {project.project_code ? `(${project.project_code})` : ''}
+                                </span>
+                              ) : (
+                                <span className="italic text-text-muted">Không xác định</span>
+                              )}
+                              {project?.status && (
+                                <Badge variant="outline" size="sm" className="ml-1.5">
+                                  {project.status}
+                                </Badge>
+                              )}
+                            </div>
                             {employee && (
-                              <div className="flex items-center gap-1 mt-1">
+                              <div className="flex items-center gap-1.5 mt-1">
                                 <strong className="text-text-primary shrink-0">Người thực hiện:</strong>
-                                <span className="truncate">{employee.full_name}</span>
+                                <Avatar name={employee.full_name} src={employee.avatar_url} size="sm" />
+                                <span className="truncate font-medium">{employee.full_name}</span>
                               </div>
                             )}
                             <div><strong className="text-text-primary">Độ ưu tiên:</strong> {task.priority || 'Medium'}</div>

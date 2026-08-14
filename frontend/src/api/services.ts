@@ -39,14 +39,19 @@ export interface ProjectItem {
   project_code?: string;
   name: string;
   description?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
   status: string;
+  priority?: string;
+  budget?: number | null;
+  progress_percent?: number;
   department_id?: number | null;
   team_id?: number | null;
   department_name?: string | null;
   team_name?: string | null;
-  manager_id?: number | null;
+  created_by?: number | null;
   created_at?: string;
-  updated_at?: string;
+  updated_at?: string | null;
 }
 
 export interface TaskItem {
