@@ -246,9 +246,8 @@ const ProjectPage: React.FC = () => {
               options={[
                 { value: 'all', label: 'Tất cả trạng thái' },
                 { value: 'Active', label: 'Hoạt động (Active)' },
-                { value: 'Planning', label: 'Lập kế hoạch' },
-                { value: 'Completed', label: 'Hoàn thành' },
-                { value: 'Archived', label: 'Lưu trữ' },
+                { value: 'Planning', label: 'Lập kế hoạch (Planning)' },
+                { value: 'Completed', label: 'Hoàn thành (Completed)' },
               ]}
             />
           </div>
@@ -305,7 +304,24 @@ const ProjectPage: React.FC = () => {
                 </CardHeader>
 
                 <CardContent className="pt-0 space-y-4">
-                  <div className="flex items-center justify-between text-xs border-t border-border/60 pt-3">
+                  <div className="space-y-1 border-t border-border/60 pt-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-text-muted">Tiến độ:</span>
+                      <span className="font-bold text-text-primary">
+                        {project.progress_percent ?? 0}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-accent rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{
+                          width: `${Math.min(100, Math.max(0, project.progress_percent ?? 0))}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs border-t border-border/60 pt-2">
                     <span className="text-text-muted">Phòng ban / Team:</span>
                     <span className="font-semibold text-text-primary text-right">
                       {project.department_name ? (
@@ -320,9 +336,24 @@ const ProjectPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between text-xs border-t border-border/60 pt-2">
+                    <span className="text-text-muted">Thời gian thực hiện:</span>
+                    <span className="font-semibold text-text-primary">
+                      {project.start_date
+                        ? new Date(project.start_date).toLocaleDateString('vi-VN')
+                        : '—'}
+                      {' → '}
+                      {project.end_date
+                        ? new Date(project.end_date).toLocaleDateString('vi-VN')
+                        : '—'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs border-t border-border/60 pt-2">
                     <span className="text-text-muted">Ngày khởi tạo:</span>
                     <span className="font-semibold text-text-primary">
-                      {project.created_at ? new Date(project.created_at).toLocaleDateString('vi-VN') : 'Mới cập nhật'}
+                      {project.created_at
+                        ? new Date(project.created_at).toLocaleDateString('vi-VN')
+                        : 'Mới cập nhật'}
                     </span>
                   </div>
 

@@ -61,3 +61,25 @@ export const useProjectMembers = (projectId?: number | null) => {
   });
 };
 
+export const useProjectMembersList = (projectId?: number | null) => {
+  return useQuery({
+    queryKey: ['project-members', projectId],
+    queryFn: () => projectsApi.getMembers(projectId!),
+    enabled: isValidEntityId(projectId),
+  });
+};
+
+export const useAddProjectMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectId, employeeId }: { projectId: number; employeeId: number }) =>
+      projectsApi.addMember(projectId, employeeId),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-eligible-assignees', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] });
+    },
+  });
+};
+
+

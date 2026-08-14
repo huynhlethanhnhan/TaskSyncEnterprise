@@ -12,6 +12,8 @@ import {
   MessageSquare,
   Activity,
   Settings,
+  Users,
+  UserPlus,
 } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
@@ -22,9 +24,16 @@ import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { Select } from '../../components/ui/Select';
 import { Avatar } from '../../components/common/Avatar';
+import { Modal } from '../../components/common/Modal';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { ErrorState } from '../../components/feedback/ErrorState';
-import { useProjectDetail, useUpdateProject } from '../../hooks/useProjects';
+import {
+  useProjectDetail,
+  useUpdateProject,
+  useProjectMembersList,
+  useProjectMembers,
+  useAddProjectMember,
+} from '../../hooks/useProjects';
 import { useTasks, useCreateTask, useUpdateTask, useUpdateTaskStatus } from '../../hooks/useTasks';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useToast } from '../../providers/ToastProvider';
@@ -64,6 +73,29 @@ const ProjectDetailPage: React.FC = () => {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const updateTaskStatus = useUpdateTaskStatus();
+
+  // Member management states & hooks
+  const [isAddMemberOpen, setIsAddMemberOpen] = React.useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = React.useState('');
+  const { data: projectMembers = [], isLoading: isMembersLoading } = useProjectMembersList(projectId);
+  const { data: eligibleAssignees = [] } = useProjectMembers(projectId);
+  const addProjectMember = useAddProjectMember();
+
+  const handleAddMemberSubmit = async () => {
+    if (!selectedEmployeeId) return;
+    try {
+      await addProjectMember.mutateAsync({
+        projectId,
+        employeeId: Number(selectedEmployeeId),
+      });
+      toast.success('Thêm thành viên thành công', 'Nhân sự đã được thêm vào dự án.');
+      setSelectedEmployeeId('');
+      setIsAddMemberOpen(false);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.detail || 'Không thể thêm thành viên';
+      toast.error('Lỗi thêm thành viên', msg);
+    }
+  };
 
   // Task Drawer states
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
@@ -200,6 +232,7 @@ const ProjectDetailPage: React.FC = () => {
   // Define dynamic project level tabs
   const tabs = [
     { id: 'overview', label: 'Overview', icon: <Briefcase className="h-4 w-4" /> },
+    { id: 'members', label: 'Thành viên', icon: <Users className="h-4 w-4" /> },
     { id: 'timeline', label: 'Timeline (Jira)', icon: <CalendarIcon className="h-4 w-4" /> },
     { id: 'tasks', label: 'Công việc (Kanban)', icon: <CheckSquare className="h-4 w-4" /> },
     { id: 'backlog', label: 'Backlog', icon: <Layers className="h-4 w-4" /> },
@@ -273,12 +306,15 @@ const ProjectDetailPage: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>Tiến độ Dự án</span>
-                    <Badge variant="primary">{completionRate}% Hoàn thành</Badge>
+                    <Badge variant="primary">{project.progress_percent ?? 0}% Hoàn thành</Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="h-3 w-full bg-accent rounded-full overflow-hidden">
-                    <div className="h-full bg-primary transition-all duration-500" style={{ width: `${completionRate}%` }} />
+                    <div
+                      className="h-full bg-primary transition-all duration-500"
+                      style={{ width: `${Math.min(100, Math.max(0, project.progress_percent ?? 0))}%` }}
+                    />
                   </div>
 
                   <div className="grid grid-cols-3 gap-4 text-center pt-2">
@@ -355,6 +391,30 @@ const ProjectDetailPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
+                    <span className="text-text-muted">Độ ưu tiên:</span>
+                    {project.priority ? (
+                      <Badge
+                        variant={
+                          project.priority === 'High'
+                            ? 'danger'
+                            : project.priority === 'Medium'
+                              ? 'warning'
+                              : 'primary'
+                        }
+                      >
+                        {project.priority}
+                      </Badge>
+                    ) : (
+                      <span className="text-text-muted italic">—</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-border/60">
+                    <span className="text-text-muted">Tiến độ:</span>
+                    <span className="font-bold text-text-primary">{project.progress_percent ?? 0}%</span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-border/60">
                     <span className="text-text-muted">Phòng ban:</span>
                     <span className="font-semibold text-text-primary">
                       {project.department_name || <span className="text-text-muted italic">Chưa gán</span>}
@@ -368,6 +428,48 @@ const ProjectDetailPage: React.FC = () => {
                     </span>
                   </div>
 
+                  {project.budget != null && (
+                    <div className="flex items-center justify-between py-2 border-b border-border/60">
+                      <span className="text-text-muted">Ngân sách:</span>
+                      <span className="font-semibold text-text-primary">
+                        {project.budget.toLocaleString('vi-VN')} VNĐ
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between py-2 border-b border-border/60">
+                    <span className="text-text-muted">Người tạo:</span>
+                    <span className="font-semibold text-text-primary">
+                      {(() => {
+                        if (!project.created_by) return <span className="text-text-muted italic">—</span>;
+                        const creator = employees.find((e) => Number(e.id) === Number(project.created_by));
+                        if (creator) {
+                          return (
+                            <span className="flex items-center gap-1.5">
+                              <Avatar name={creator.full_name} src={creator.avatar_url} size="sm" />
+                              <span>{creator.full_name}</span>
+                            </span>
+                          );
+                        }
+                        return `Nhân sự #${project.created_by}`;
+                      })()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-border/60">
+                    <span className="text-text-muted">Ngày bắt đầu:</span>
+                    <span className="font-semibold text-text-primary">
+                      {project.start_date ? new Date(project.start_date).toLocaleDateString('vi-VN') : '—'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-border/60">
+                    <span className="text-text-muted">Ngày kết thúc:</span>
+                    <span className="font-semibold text-text-primary">
+                      {project.end_date ? new Date(project.end_date).toLocaleDateString('vi-VN') : '—'}
+                    </span>
+                  </div>
+
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
                     <span className="text-text-muted">Ngày khởi tạo:</span>
                     <span className="font-semibold text-text-primary">
@@ -378,6 +480,65 @@ const ProjectDetailPage: React.FC = () => {
               </Card>
             </div>
           </div>
+        )}
+
+        {/* MEMBERS TAB */}
+        {activeTab === 'members' && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle>Thành viên Dự án ({projectMembers.length})</CardTitle>
+                <CardDescription>
+                  Danh sách nhân sự tham gia trực tiếp và được cấp quyền theo dõi dự án này.
+                </CardDescription>
+              </div>
+              {canManageTasks && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<UserPlus className="h-4 w-4" />}
+                  onClick={() => setIsAddMemberOpen(true)}
+                >
+                  Thêm thành viên
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {isMembersLoading ? (
+                <p className="text-xs text-text-muted text-center py-6">Đang tải danh sách thành viên...</p>
+              ) : projectMembers.length === 0 ? (
+                <div className="text-center py-12 text-xs text-text-muted border border-dashed border-border rounded-xl">
+                  Chưa có thành viên cụ thể nào được gán trực tiếp cho dự án này.
+                </div>
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {projectMembers.map((member: any) => (
+                    <div key={member.id} className="py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={member.full_name} src={member.avatar_url} size="md" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-text-primary">{member.full_name}</span>
+                            {member.employee_code && (
+                              <span className="text-[10px] font-mono text-text-muted">({member.employee_code})</span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-text-muted">
+                            {member.job_title || member.position || member.email || 'Thành viên dự án'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={member.is_active ? 'success' : 'danger'} showDot>
+                          {member.is_active ? 'Hoạt động' : 'Tạm khóa'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* TASKS TAB */}
@@ -656,9 +817,9 @@ const ProjectDetailPage: React.FC = () => {
                   value={projStatus}
                   onChange={(e) => setProjStatus(e.target.value)}
                   options={[
+                    { value: 'Planning', label: 'Planning (Lập kế hoạch)' },
                     { value: 'Active', label: 'Active (Đang hoạt động)' },
                     { value: 'Completed', label: 'Completed (Hoàn thành)' },
-                    { value: 'Suspended', label: 'Suspended (Tạm dừng)' },
                   ]}
                 />
                 <Button variant="primary" size="sm" type="submit" isLoading={isSavingSettings}>
@@ -681,6 +842,43 @@ const ProjectDetailPage: React.FC = () => {
         canEdit={canManageTasks}
         isLoading={createTask.isPending || updateTask.isPending}
       />
+
+      {/* Add Member Modal */}
+      <Modal
+        isOpen={isAddMemberOpen}
+        onClose={() => setIsAddMemberOpen(false)}
+        title="Thêm thành viên vào dự án"
+        description="Chọn nhân sự từ danh sách thuộc Phòng ban / Team để thêm vào dự án."
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button variant="outline" size="sm" onClick={() => setIsAddMemberOpen(false)}>
+              Hủy bỏ
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleAddMemberSubmit}
+              disabled={!selectedEmployeeId}
+              isLoading={addProjectMember.isPending}
+            >
+              Thêm vào dự án
+            </Button>
+          </div>
+        }
+      >
+        <Select
+          label="Chọn nhân viên *"
+          value={selectedEmployeeId}
+          onChange={(e) => setSelectedEmployeeId(e.target.value)}
+          options={[
+            { value: '', label: '-- Chọn nhân viên hợp lệ --' },
+            ...eligibleAssignees.map((emp: any) => ({
+              value: String(emp.id),
+              label: `${emp.full_name}${emp.employee_code ? ` (${emp.employee_code})` : ''}`,
+            })),
+          ]}
+        />
+      </Modal>
     </div>
   );
 };
