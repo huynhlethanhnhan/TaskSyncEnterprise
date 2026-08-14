@@ -137,8 +137,6 @@ const ProjectDetailPage: React.FC = () => {
     );
   }, [projectTasks]);
 
-  const completionRate = projectTasks.length ? Math.round((taskCounts.done / projectTasks.length) * 100) : 0;
-
   // Handle saving task in drawer
   const handleSaveTask = async (data: Partial<TaskItem>) => {
     try {
