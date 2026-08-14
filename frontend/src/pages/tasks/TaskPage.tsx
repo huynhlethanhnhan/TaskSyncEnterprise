@@ -33,7 +33,8 @@ const TaskPage: React.FC = () => {
   const toast = useToast();
   const role = (user?.role || '').toLowerCase();
   const roleId = Number(user?.role_id);
-  const isStaff = role === 'employee' || role === 'staff' || roleId === 3;
+  const isTeamLeaderRole = role === 'team_leader' || roleId === 3;
+  const isStaff = (role === 'employee' || role === 'staff' || roleId === 4) && !isTeamLeaderRole;
   const isAdminOrManager = role === 'admin' || role === 'manager' || roleId === 1 || roleId === 2;
 
   const { data: tasks = [], isLoading, isError, refetch } = useTasks(isStaff);

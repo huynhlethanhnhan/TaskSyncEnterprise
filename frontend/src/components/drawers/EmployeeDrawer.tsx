@@ -56,11 +56,11 @@ export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({
     } else {
       setFullName('');
       setEmail('');
-      setPassword('123456');
+      setPassword('TaskSync@2026');
       setJobTitle('');
       setDepartmentId(departments[0]?.id || '');
       setTeamId('');
-      setRoleId(3);
+      setRoleId(4);
       setIsActive(true);
     }
   }, [employee, isOpen, departments]);
@@ -183,9 +183,10 @@ export const EmployeeDrawer: React.FC<EmployeeDrawerProps> = ({
           value={String(roleId)}
           onChange={(e) => setRoleId(e.target.value ? Number(e.target.value) : '')}
           options={[
-            { value: '1', label: '1 - Administrator' },
-            { value: '2', label: '2 - Manager' },
-            { value: '3', label: '3 - Staff Member' },
+            { value: '1', label: '1 - Administrator (Admin)' },
+            { value: '2', label: '2 - Manager (Quản lý)' },
+            { value: '3', label: '3 - Team Leader (Trưởng nhóm)' },
+            { value: '4', label: '4 - Employee (Nhân viên)' },
           ]}
         />
 

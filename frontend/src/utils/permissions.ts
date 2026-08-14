@@ -36,6 +36,7 @@ export const getPermissionsForUser = (user: { role?: string; role_id?: number } 
 
   const isAdmin = roleStr === 'admin' || roleId === 1;
   const isManager = roleStr === 'manager' || roleId === 2;
+  const isTeamLead = roleStr === 'team_leader' || roleStr === 'team leader' || roleId === 3;
 
   return {
     // Employee & Role management: Only Admin can create, edit, delete employees and read roles (Outcome A)
@@ -52,10 +53,10 @@ export const getPermissionsForUser = (user: { role?: string; role_id?: number } 
     canEditProject: isAdmin || isManager,
     canDeleteProject: isAdmin,
 
-    // Task management: Admin & Manager can create/delete; Staff can update status
-    canCreateTask: isAdmin || isManager,
-    canEditTask: isAdmin || isManager,
-    canDeleteTask: isAdmin || isManager,
+    // Task management: Admin, Manager & Team Leader can create/edit/delete; Staff can update status
+    canCreateTask: isAdmin || isManager || isTeamLead,
+    canEditTask: isAdmin || isManager || isTeamLead,
+    canDeleteTask: isAdmin || isManager || isTeamLead,
 
     // Audit logs: Only Admin
     canViewAuditLogs: isAdmin,

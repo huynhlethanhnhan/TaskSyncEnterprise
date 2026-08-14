@@ -135,7 +135,9 @@ export const useCreateSprint = () => {
   return useMutation({
     mutationFn: (payload: Partial<SprintItem>) => sprintsApi.create(payload),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
       queryClient.invalidateQueries({ queryKey: ['sprints', data.project_id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -146,7 +148,9 @@ export const useUpdateSprint = () => {
     mutationFn: ({ id, payload }: { id: number; payload: Partial<SprintItem> }) =>
       sprintsApi.update(id, payload),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
       queryClient.invalidateQueries({ queryKey: ['sprints', data.project_id] });
+      queryClient.invalidateQueries({ queryKey: ['sprint-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -157,8 +161,11 @@ export const useStartSprint = () => {
   return useMutation({
     mutationFn: (id: number) => sprintsApi.start(id),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
       queryClient.invalidateQueries({ queryKey: ['sprints', data.project_id] });
+      queryClient.invalidateQueries({ queryKey: ['sprint-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['backlog'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -169,8 +176,11 @@ export const useCompleteSprint = () => {
   return useMutation({
     mutationFn: (id: number) => sprintsApi.complete(id),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
       queryClient.invalidateQueries({ queryKey: ['sprints', data.project_id] });
+      queryClient.invalidateQueries({ queryKey: ['sprint-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['backlog'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -181,8 +191,11 @@ export const useCancelSprint = () => {
   return useMutation({
     mutationFn: (id: number) => sprintsApi.cancel(id),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
       queryClient.invalidateQueries({ queryKey: ['sprints', data.project_id] });
+      queryClient.invalidateQueries({ queryKey: ['sprint-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['backlog'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
@@ -193,8 +206,11 @@ export const useReopenSprint = () => {
   return useMutation({
     mutationFn: (id: number) => sprintsApi.reopen(id),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
       queryClient.invalidateQueries({ queryKey: ['sprints', data.project_id] });
+      queryClient.invalidateQueries({ queryKey: ['sprint-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['backlog'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });

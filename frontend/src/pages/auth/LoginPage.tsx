@@ -59,10 +59,10 @@ const LoginPage: React.FC = () => {
       }
 
       const userProfile = tokenData.user || {
-        id: 1,
+        id: 0,
         name: trimmedEmail.split('@')[0] || 'User',
         email: trimmedEmail,
-        role: 'admin',
+        role: 'employee',
       };
 
       // Set auth state only after valid API login

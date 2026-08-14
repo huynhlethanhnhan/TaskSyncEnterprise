@@ -54,6 +54,10 @@ const EmployeePage: React.FC = () => {
   // Confirm Delete Dialog State
   const [deletingEmployee, setDeletingEmployee] = React.useState<EmployeeItem | null>(null);
 
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, departmentFilter, statusFilter]);
+
   const filteredEmployees = React.useMemo(() => {
     return employees.filter((emp) => {
       const matchSearch =

@@ -17,7 +17,8 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module })
   const toast = useToast();
   const { user } = useAuth();
 
-  const isMod = user?.role_id === 1 || user?.role_id === 2;
+  const roleStr = (user?.role || '').toLowerCase();
+  const isMod = user?.role_id === 1 || user?.role_id === 2 || roleStr === 'admin' || roleStr === 'manager';
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = React.useState('');
