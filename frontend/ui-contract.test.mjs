@@ -155,8 +155,8 @@ test('task administration is limited while assignees can update status', async (
   const drawer = await read('./src/components/drawers/TaskDrawer.tsx');
 
   assert.match(taskPage, /team\.leader_id/);
-  assert.match(taskPage, /const canManageTasks = isAdminOrManager \|\| isTeamLeader/);
-  assert.match(taskPage, /canEdit=\{canManageTasks\}/);
+  assert.match(taskPage, /const canEditTask = /);
+  assert.match(taskPage, /canEdit=\{canEditTask\(editingTask\)\}/);
   assert.match(drawer, /if \(!canEdit && !isAssignedToCurrentUser\) return/);
   assert.match(drawer, /const canUpdateStatus = canEdit \|\| isAssignedToCurrentUser/);
   assert.match(drawer, /disabled=\{!canEdit\}/);
