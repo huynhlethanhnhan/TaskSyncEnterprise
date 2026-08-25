@@ -163,10 +163,13 @@ const DashboardPage: React.FC = () => {
   } = analytics;
 
 
-  const isEmployee = user?.role_id === 3 || (user?.role || '').toLowerCase() === 'employee';
-
+  const roleId = Number(user?.role_id);
+  const roleStr = (user?.role || '').toLowerCase();
+  const isBaseEmployee = roleId === 4 || roleStr === 'employee' || roleStr === 'staff';
+  const isManagerOrAdmin = roleId === 1 || roleId === 2 || roleStr === 'admin' || roleStr === 'manager';
+  
   // ROW 2: Primary Executive KPI Cards
-  const kpis = isEmployee
+  const kpis = isBaseEmployee
     ? [
         {
           title: 'Dự án của tôi',
@@ -234,14 +237,14 @@ const DashboardPage: React.FC = () => {
           subtext: 'Đang hoạt động',
           onClick: () => navigate('/departments'),
         },
-        {
+        ...(isManagerOrAdmin ? [{
           title: 'Nghỉ phép Chờ Duyệt',
           value: (overview.pending_vacation_requests || 0).toString(),
           badge: `Tổng ${overview.vacation_requests || 0}`,
           icon: <UserCheck className="h-4 w-4 text-amber-500" />,
           subtext: 'Cần phê duyệt',
           onClick: () => navigate('/vacations'),
-        },
+        }] : []),
         {
           title: 'Task Quá hạn',
           value: overview.overdue_tasks.toString(),
@@ -313,7 +316,7 @@ const DashboardPage: React.FC = () => {
       </Card>
 
       {/* 📊 ROW 2: Executive KPI Cards */}
-      <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${isEmployee ? 'xl:grid-cols-4' : 'xl:grid-cols-6'} gap-3`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${isBaseEmployee ? 'xl:grid-cols-4' : 'xl:grid-cols-6'} gap-3`}>
         {kpis.map((kpi, index) => (
           <Card key={index} data-testid={`dashboard-kpi-${index}`} variant="interactive" className="cursor-pointer" onClick={kpi.onClick}>
             <CardContent className="p-4 flex flex-col justify-between h-full space-y-2">
@@ -336,7 +339,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 📈 ROW 3: Business Intelligence Visualizations */}
-      <div className={`grid grid-cols-1 ${isEmployee ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-6`}>
+      <div className={`grid grid-cols-1 ${isBaseEmployee ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-6`}>
         {/* Chart 1: Task Status Distribution (Donut Chart) */}
         <Card data-testid="dashboard-chart-task-status">
           <CardHeader>
@@ -370,7 +373,7 @@ const DashboardPage: React.FC = () => {
         </Card>
 
         {/* Chart 2: Department Workload (Bar Chart) - Admin & Manager Only */}
-        {!isEmployee && (
+        {!isBaseEmployee && (
           <Card data-testid="dashboard-chart-workload">
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -414,9 +417,9 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 📋 ROW 4: Recent Activities Timeline & Pending Approvals */}
-      <div className={`grid grid-cols-1 ${isEmployee ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-6 items-start`}>
+      <div className={`grid grid-cols-1 ${isManagerOrAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-6 items-start`}>
         {/* Urgent Attention Work Items */}
-        <Card className={isEmployee ? '' : 'lg:col-span-2'}>
+        <Card className={isManagerOrAdmin ? 'lg:col-span-2' : ''}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -451,7 +454,7 @@ const DashboardPage: React.FC = () => {
         </Card>
 
         {/* Pending Approvals - Admin & Manager Only */}
-        {!isEmployee && (
+        {isManagerOrAdmin && (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -484,7 +487,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 🗓️ ROW 5: Upcoming Deadlines, Leaves & Birthdays */}
-      <div className={`grid grid-cols-1 ${isEmployee ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-6`}>
+      <div className={`grid grid-cols-1 ${isManagerOrAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6`}>
         {/* Upcoming Deadlines */}
         <Card>
           <CardHeader>
@@ -535,7 +538,7 @@ const DashboardPage: React.FC = () => {
         </Card>
 
         {/* Birthdays - Admin & Manager Only */}
-        {!isEmployee && (
+        {isManagerOrAdmin && (
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -563,7 +566,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 📊 ROW 6: Workforce & Task Allocation Table - Admin & Manager Only */}
-      {!isEmployee && (
+      {!isBaseEmployee && (
         <Card data-testid="workforce-demo-table">
           <CardHeader>
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
