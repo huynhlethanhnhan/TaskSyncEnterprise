@@ -1,5 +1,5 @@
 from sqlalchemy import or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.exceptions import BusinessRuleException
 from app.models.employee import Employee
@@ -50,6 +50,7 @@ def get_eligible_project_assignees(
 
     statement = (
         select(Employee)
+        .options(selectinload(Employee.vacations))
         .where(
             Employee.is_active == True,  # noqa: E712
             Employee.is_deleted == False,  # noqa: E712

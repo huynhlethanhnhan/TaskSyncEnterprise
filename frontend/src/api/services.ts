@@ -51,6 +51,11 @@ export interface ProjectItem {
   team_name?: string | null;
   created_by?: number | null;
   created_at?: string;
+  upcoming_vacations?: Array<{
+    start_date: string;
+    end_date: string;
+    status: string;
+  }>;
   updated_at?: string | null;
 }
 
@@ -69,6 +74,11 @@ export interface TaskItem {
   created_by?: number | null;
   deadline?: string | null;
   created_at?: string;
+  upcoming_vacations?: Array<{
+    start_date: string;
+    end_date: string;
+    status: string;
+  }>;
   progress_percent?: number;
   story_points?: number;
   attachments?: any[];
@@ -96,6 +106,11 @@ export interface EmployeeItem {
   is_active: boolean;
   avatar_url?: string | null;
   created_at?: string;
+  upcoming_vacations?: Array<{
+    start_date: string;
+    end_date: string;
+    status: string;
+  }>;
 }
 
 export interface DepartmentItem {

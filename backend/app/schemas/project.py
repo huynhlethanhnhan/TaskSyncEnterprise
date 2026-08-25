@@ -53,6 +53,11 @@ class ProjectResponse(ProjectBase):
     team_name: str | None = None
 
 
+class VacationSummary(BaseModel):
+    start_date: date
+    end_date: date
+    status: str
+
 class ProjectMemberSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -64,6 +69,7 @@ class ProjectMemberSummaryResponse(BaseModel):
     position: str | None = None
     email: str | None = None
     is_active: bool = True
+    upcoming_vacations: list[VacationSummary] = []
 
 
 class ProjectMemberAddRequest(BaseModel):
