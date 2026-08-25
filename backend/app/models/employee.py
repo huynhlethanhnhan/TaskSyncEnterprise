@@ -89,15 +89,22 @@ class Employee(Base):
         cascade="all, delete-orphan",
     )
 
-    vacations = relationship("Vacation", foreign_keys="[Vacation.requested_by]", overlaps="requester")
+    vacations = relationship(
+        "Vacation", foreign_keys="[Vacation.requested_by]", overlaps="requester"
+    )
 
     @property
     def upcoming_vacations(self):
         from datetime import date
+
         today = date.today()
         # Be careful not to trigger N+1 if not eager loaded, but it's acceptable for this feature
         try:
-            return [v for v in self.vacations if v.status == 'Approved' and v.end_date >= today]
+            return [
+                v
+                for v in self.vacations
+                if v.status == "Approved" and v.end_date >= today
+            ]
         except Exception:
             return []
 
