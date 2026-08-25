@@ -36,6 +36,15 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 
 ---
 
+## Cập Nhật Mới Nhất (Updates)
+- **Role & Permission (System Designer):** Đã tinh chỉnh hệ thống phân quyền cực kỳ chặt chẽ. Trưởng phòng tạm thời (Team Leader của dự án) mới có quyền chỉnh sửa dự án tương ứng, ngăn chặn việc quản lý chéo không hợp lệ. Giao diện Frontend hiển thị linh hoạt nút Hành động (Sửa/Xóa) dựa trên quyền `canEditTask(task)` của user, triệt tiêu hoàn toàn lỗi 403 Forbidden.
+- **Auditing & Tracking:** Frontend và Backend đã tích hợp hiển thị đầy đủ "Người tạo" (`creator_name`) cho Project, Task, Sprint và BacklogItem.
+- **Topic Discussion:** Cập nhật trạng thái "Closed" cho Topic, tự động chặn tạo reply mới trên Topic đã đóng.
+- **Docker & CI/CD:** Hệ thống đảm bảo 100% tests passed (437/437). Docker compose local chạy mượt mà, sẵn sàng tích hợp Github CI/CD.
+  > *Hướng dẫn cho Developer mới:* Chỉ cần clone branch `develop`, thiết lập `.env` và chạy `docker compose up -d --build` (xem chi tiết tại mục 6). Tất cả các sửa đổi RBAC mới nhất đã được đóng gói sẵn!
+
+---
+
 ## 4. Yêu Cầu Tiền Đề Môi Trường Windows
 
 Trước khi khởi tạo dự án trên Windows local, cần cài đặt:

@@ -29,6 +29,7 @@ import {
   Plus,
   Briefcase,
   Clock,
+  User,
 } from 'lucide-react';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
@@ -699,6 +700,9 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
               <div className="text-[10px] text-text-muted space-y-1 p-3 border border-border/60 rounded-xl bg-accent/20">
                 <div className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> <span>ID Công việc: #{task.id}</span></div>
                 <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> <span>Tạo lúc: {new Date(task.created_at || '').toLocaleString('vi-VN')}</span></div>
+                {task.creator_name && (
+                  <div className="flex items-center gap-1"><User className="h-3 w-3" /> <span>Tạo bởi: {task.creator_name}</span></div>
+                )}
               </div>
             </div>
           </div>
