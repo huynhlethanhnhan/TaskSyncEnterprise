@@ -33,7 +33,8 @@ const TaskPage: React.FC = () => {
   const toast = useToast();
   const role = (user?.role || '').toLowerCase();
   const roleId = Number(user?.role_id);
-  const isStaff = role === 'employee' || role === 'staff' || roleId === 3;
+  const isTeamLeaderRole = role === 'team_leader' || roleId === 3;
+  const isStaff = (role === 'employee' || role === 'staff' || roleId === 4) && !isTeamLeaderRole;
   const isAdminOrManager = role === 'admin' || role === 'manager' || roleId === 1 || roleId === 2;
 
   const { data: tasks = [], isLoading, isError, refetch } = useTasks(isStaff);
@@ -43,8 +44,19 @@ const TaskPage: React.FC = () => {
   const { data: allTopics = [] } = useTopics();
   const { data: departments = [] } = useDepartments();
   const { data: teams = [] } = useTeams();
-  const isTeamLeader = teams.some((team) => Number(team.leader_id) === Number(user?.id));
-  const canManageTasks = isAdminOrManager || isTeamLeader;
+  const checkIsTeamLeaderOfProject = (projectId: number) => {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project || !project.team_id) return false;
+    const team = teams.find((t) => t.id === project.team_id);
+    return team ? Number(team.leader_id) === Number(user?.id) : false;
+  };
+
+  const canEditTask = (task: TaskItem | null) => {
+    if (!task) return isAdminOrManager;
+    if (isAdminOrManager) return true;
+    if (Number(task.created_by) === Number(user?.id)) return true;
+    return checkIsTeamLeaderOfProject(task.project_id);
+  };
 
   const departmentMap = React.useMemo(() => new Map(departments.map((d) => [d.id, d])), [departments]);
 
@@ -215,7 +227,7 @@ const TaskPage: React.FC = () => {
         return (
           <select
             value={row.original.sprint_id || ''}
-            disabled={!canManageTasks}
+            disabled={!canEditTask(null)}
             onChange={async (e) => {
               const val = e.target.value ? Number(e.target.value) : null;
               try {
@@ -248,7 +260,7 @@ const TaskPage: React.FC = () => {
         return (
           <select
             value={row.original.topic_id || ''}
-            disabled={!canManageTasks}
+            disabled={!canEditTask(null)}
             onChange={async (e) => {
               const val = e.target.value ? Number(e.target.value) : null;
               try {
@@ -307,9 +319,9 @@ const TaskPage: React.FC = () => {
       cell: ({ row }: { row: { original: TaskItem } }) => (
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={(e) => handleOpenEdit(row.original, e)}>
-            {canManageTasks ? 'Sửa' : 'Xem'}
+            {canEditTask(row.original) ? 'Sửa' : 'Xem'}
           </Button>
-          {canManageTasks && (
+          {canEditTask(row.original) && (
             <Button variant="danger" size="sm" onClick={(e) => handleDelete(row.original, e)}>
               Xóa
             </Button>
@@ -356,7 +368,7 @@ const TaskPage: React.FC = () => {
               </button>
             </div>
 
-            {canManageTasks && (
+            {canEditTask(null) && (
               <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
                 Tạo Task Mới
               </Button>
@@ -451,7 +463,7 @@ const TaskPage: React.FC = () => {
                               <div className="w-36 shrink-0">
                                 <Select
                                   value={task.status || 'To Do'}
-                                  disabled={!canManageTasks && Number(task.assigned_to) !== Number(user?.id)}
+                                  disabled={!canEditTask(task) && Number(task.assigned_to) !== Number(user?.id)}
                                   onClick={(e) => e.stopPropagation()}
                                   onChange={(e) => handleStatusChange(task.id, e.target.value, e)}
                                   options={[
@@ -513,7 +525,7 @@ const TaskPage: React.FC = () => {
         projects={projects}
         employees={employees}
         onSave={handleSave}
-        canEdit={canManageTasks}
+        canEdit={canEditTask(editingTask)}
         isLoading={createTask.isPending || updateTask.isPending}
       />
     </div>

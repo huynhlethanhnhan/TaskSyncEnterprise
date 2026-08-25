@@ -70,21 +70,28 @@ def require_project_management(
     current_user: Employee,
 ) -> Project:
     project = require_project_access(db, project_id, current_user)
-    is_team_leader = db.scalar(
-        select(Team.id).where(
-            Team.leader_id == current_user.id,
-            Team.is_active == True,  # noqa: E712
+
+    if current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER):
+        return project
+
+    if project.created_by == current_user.id:
+        return project
+
+    if project.team_id:
+        is_this_team_leader = db.scalar(
+            select(Team.id).where(
+                Team.id == project.team_id,
+                Team.leader_id == current_user.id,
+                Team.is_active == True,
+            )
         )
+        if is_this_team_leader:
+            return project
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only an authorized Manager, Creator, or Team Leader of this project can modify it.",
     )
-    if (
-        current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER)
-        and is_team_leader is None
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only an authorized Manager or Team Leader can modify this Project.",
-        )
-    return project
 
 
 def project_scope_predicate(current_user: Employee):

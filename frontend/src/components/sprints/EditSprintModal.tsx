@@ -7,6 +7,8 @@ import { useUpdateSprint } from '../../hooks/useSprintBacklog';
 import { useToast } from '../../providers/ToastProvider';
 import { type SprintItem } from '../../api/services';
 
+import { extractApiError } from '../../utils/errorHelpers';
+
 interface EditSprintModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,14 +46,15 @@ export const EditSprintModal: React.FC<EditSprintModalProps> = ({ isOpen, onClos
           name: name.trim(),
           goal: goal.trim() || null,
           capacity: Number(capacity),
-          start_date: startDate ? new Date(startDate).toISOString() : null,
-          end_date: endDate ? new Date(endDate).toISOString() : null,
+          start_date: startDate ? new Date(`${startDate}T00:00:00`).toISOString() : null,
+          end_date: endDate ? new Date(`${endDate}T23:59:59`).toISOString() : null,
         },
       });
       toast.success('Cập nhật thành công', `Đã cập nhật thông tin Sprint "${name}".`);
       onClose();
     } catch (err: any) {
-      toast.error('Lỗi cập nhật', err.response?.data?.detail || 'Không thể lưu thay đổi Sprint.');
+      const apiError = extractApiError(err, 'Không thể lưu thay đổi Sprint.');
+      toast.error('Lỗi cập nhật', apiError.message);
     }
   };
 

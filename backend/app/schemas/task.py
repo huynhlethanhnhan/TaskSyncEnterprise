@@ -128,5 +128,6 @@ class TaskResponse(TaskCreate):
     id: int
     progress_percent: float
     created_at: datetime
+    creator_name: str | None = None
     attachments: list[TaskAttachmentResponse] = []
     assignee: AssigneeSummaryResponse | None = None

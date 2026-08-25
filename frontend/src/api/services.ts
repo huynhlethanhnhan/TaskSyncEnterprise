@@ -412,6 +412,27 @@ export interface TaskCommentResponse {
   };
 }
 
+export interface TaskItem {
+  id: number;
+  project_id: number;
+  sprint_id?: number | null;
+  topic_id?: number | null;
+  title: string;
+  name?: string;
+  description?: string | null;
+  priority: string;
+  status: string;
+  story_points?: number | null;
+  progress_percent: number;
+  deadline?: string | null;
+  assigned_to?: number | null;
+  created_at: string;
+  created_by?: number | null;
+  creator_name?: string | null;
+  attachments?: TaskAttachmentResponse[];
+  assignee?: AssigneeSummaryResponse | null;
+}
+
 export interface BacklogItem {
   id: number;
   project_id: number;

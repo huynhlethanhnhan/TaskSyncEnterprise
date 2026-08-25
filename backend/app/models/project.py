@@ -69,6 +69,7 @@ class Project(Base):
     members = relationship(
         "ProjectMember", back_populates="project", cascade="all, delete-orphan"
     )
+    creator_obj = relationship("Employee", foreign_keys=[created_by])
 
     @property
     def department_name(self) -> str | None:
@@ -77,3 +78,7 @@ class Project(Base):
     @property
     def team_name(self) -> str | None:
         return self.team.name if self.team else None
+
+    @property
+    def creator_name(self) -> str | None:
+        return self.creator_obj.full_name if self.creator_obj else None

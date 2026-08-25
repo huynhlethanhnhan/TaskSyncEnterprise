@@ -211,7 +211,8 @@ def update_topic(
     if not topic or topic.is_deleted:
         raise HTTPException(status_code=404, detail="Topic not found")
 
-    if topic.created_by_id != current_user.id:
+    is_moderator = current_user.role_id in (ROLE_ADMIN, ROLE_MANAGER)
+    if topic.created_by_id != current_user.id and not is_moderator:
         raise HTTPException(status_code=403, detail="You can only edit your own topics")
 
     values = data.model_dump(exclude_unset=True)
@@ -262,6 +263,9 @@ def create_reply(
     topic = db.get(DiscussionTopic, topic_id)
     if not topic or topic.is_deleted:
         raise HTTPException(status_code=404, detail="Topic not found")
+
+    if topic.status == "Closed":
+        raise HTTPException(status_code=403, detail="Cannot reply to a closed topic")
 
     check_project_membership(db, topic.project_id, current_user)
 

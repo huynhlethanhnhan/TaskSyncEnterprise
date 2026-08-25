@@ -67,8 +67,9 @@ const ProjectDetailPage: React.FC = () => {
   const { data: employees = [] } = useEmployees();
   const { data: teams = [] } = useTeams();
   const { data: departments = [] } = useDepartments();
-  const isTeamLeader = teams.some((team) => Number(team.leader_id) === Number(user?.id));
-  const canManageTasks = isAdminOrManager || isTeamLeader;
+  const isTeamLeader = teams.some((team) => Number(team.leader_id) === Number(user?.id) && Number(team.id) === Number(project?.team_id));
+  const isCreator = project?.created_by === user?.id;
+  const canManageTasks = isAdminOrManager || isTeamLeader || isCreator;
   const updateProject = useUpdateProject();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();

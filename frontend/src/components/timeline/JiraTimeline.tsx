@@ -432,6 +432,8 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         task={selectedTask}
+        projects={projects}
+        employees={employees}
         onSave={handleSaveTask}
       />
     </Card>

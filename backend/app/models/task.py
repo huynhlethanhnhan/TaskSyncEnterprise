@@ -71,6 +71,7 @@ class Task(Base):
 
     sprint = relationship("Sprint", back_populates="tasks", lazy="joined")
     topic = relationship("DiscussionTopic", lazy="joined")
+    creator_obj = relationship("Employee", foreign_keys=[created_by])
 
     attachments = relationship(
         "TaskAttachment",
@@ -78,6 +79,10 @@ class Task(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+
+    @property
+    def creator_name(self) -> str | None:
+        return self.creator_obj.full_name if self.creator_obj else None
 
     @property
     def assigned_to(self) -> int | None:
