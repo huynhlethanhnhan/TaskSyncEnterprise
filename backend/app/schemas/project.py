@@ -58,6 +58,7 @@ class VacationSummary(BaseModel):
     end_date: date
     status: str
 
+
 class ProjectMemberSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
