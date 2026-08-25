@@ -630,6 +630,13 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                     ...assigneeOptions,
                   ]}
                 />
+                {assignedTo && projectMembers.find(m => m.id === Number(assignedTo))?.upcoming_vacations?.length ? (
+                  <div className="text-xs text-rose-600 mt-1 flex flex-col gap-1 font-medium bg-rose-50 p-2 rounded-md border border-rose-100">
+                    {projectMembers.find(m => m.id === Number(assignedTo))?.upcoming_vacations?.map((v, i) => (
+                      <span key={i}>⚠️ Cảnh báo: Nhân viên có đơn nghỉ phép từ {new Date(v.start_date).toLocaleDateString('vi-VN')} đến {new Date(v.end_date).toLocaleDateString('vi-VN')}</span>
+                    ))}
+                  </div>
+                ) : null}
 
                 <Select
                   data-testid="task-sprint-select"
@@ -771,6 +778,13 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 ...assigneeOptions,
               ]}
             />
+                {assignedTo && projectMembers.find(m => m.id === Number(assignedTo))?.upcoming_vacations?.length ? (
+                  <div className="text-xs text-rose-600 mt-1 flex flex-col gap-1 font-medium bg-rose-50 p-2 rounded-md border border-rose-100">
+                    {projectMembers.find(m => m.id === Number(assignedTo))?.upcoming_vacations?.map((v, i) => (
+                      <span key={i}>⚠️ Cảnh báo: Nhân viên có đơn nghỉ phép từ {new Date(v.start_date).toLocaleDateString('vi-VN')} đến {new Date(v.end_date).toLocaleDateString('vi-VN')}</span>
+                    ))}
+                  </div>
+                ) : null}
 
             <div className="grid grid-cols-2 gap-4">
             <Select
