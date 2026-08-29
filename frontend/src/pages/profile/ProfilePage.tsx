@@ -38,6 +38,7 @@ const ProfilePage: React.FC = () => {
   const [fullName, setFullName] = React.useState(user?.name || user?.full_name || '');
   const [email, setEmail] = React.useState(user?.email || '');
   const [phone, setPhone] = React.useState((user as any)?.phone || '');
+  const [dateOfBirth, setDateOfBirth] = React.useState((user as any)?.date_of_birth || '');
   const [jobTitle, setJobTitle] = React.useState(user?.job_title || '');
   const [departmentName, setDepartmentName] = React.useState('');
   const [isSavingProfile, setIsSavingProfile] = React.useState(false);
@@ -76,6 +77,20 @@ const ProfilePage: React.FC = () => {
     setEmail(user.email || '');
     setJobTitle(user.job_title || '');
     setAvatarPreview(user.avatar_url || null);
+    if ((user as any)?.date_of_birth) {
+      setDateOfBirth((user as any).date_of_birth);
+    }
+
+    // Fetch full profile to ensure all fields are fresh
+    api.get('/employees/me')
+      .then((res) => {
+        if (res.data) {
+          if (res.data.date_of_birth) setDateOfBirth(res.data.date_of_birth);
+          if (res.data.phone) setPhone(res.data.phone);
+          if (res.data.department_name) setDepartmentName(res.data.department_name);
+        }
+      })
+      .catch(() => {});
 
     // Fetch department details if available
     if ((user as any)?.department_id) {
@@ -201,9 +216,16 @@ const ProfilePage: React.FC = () => {
           full_name: fullName.trim(),
           email: email.trim(),
           phone: phone.trim() || null,
+          date_of_birth: dateOfBirth || null,
         });
         if (user) {
-          setUser({ ...user, name: fullName.trim(), full_name: fullName.trim(), email: email.trim() });
+          setUser({
+            ...user,
+            name: fullName.trim(),
+            full_name: fullName.trim(),
+            email: email.trim(),
+            date_of_birth: dateOfBirth || null,
+          } as any);
         }
       }
       toast.success('Cập nhật hồ sơ thành công', 'Thông tin cá nhân đã được đồng bộ.');
@@ -487,12 +509,30 @@ const ProfilePage: React.FC = () => {
                       />
 
                       <Input
+                        label="Ngày sinh (Birthday)"
+                        type="date"
+                        value={dateOfBirth}
+                        onChange={(e) => setDateOfBirth(e.target.value)}
+                        helperText="Dùng để hiển thị trong widget sinh nhật doanh nghiệp."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Input
                         label="Chức danh / Vị trí"
                         value={jobTitle}
                         disabled
                         helperText="Managed by an administrator."
                         leftIcon={<Building className="h-4 w-4 text-text-muted" />}
                         placeholder="Senior Solution Architect"
+                      />
+
+                      <Input
+                        label="Phòng ban trực thuộc"
+                        value={departmentName || 'Chưa phân bổ'}
+                        disabled
+                        helperText="Managed by an administrator."
+                        leftIcon={<Building className="h-4 w-4 text-text-muted" />}
                       />
                     </div>
 

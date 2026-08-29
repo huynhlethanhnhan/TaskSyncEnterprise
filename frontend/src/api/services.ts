@@ -103,6 +103,7 @@ export interface EmployeeItem {
   role_id?: number | null;
   manager_id?: number | null;
   job_title?: string | null;
+  employment_status?: string;
   is_active: boolean;
   avatar_url?: string | null;
   created_at?: string;
@@ -261,6 +262,10 @@ export const employeesApi = {
   },
   update: async (id: number, payload: Partial<EmployeeItem>): Promise<EmployeeItem> => {
     const res = await api.put(`/employees/${id}`, payload);
+    return res.data?.data || res.data;
+  },
+  patchStatus: async (id: number, status: string): Promise<EmployeeItem> => {
+    const res = await api.patch(`/employees/${id}/status`, { status });
     return res.data?.data || res.data;
   },
   delete: async (id: number): Promise<void> => {
@@ -685,6 +690,9 @@ export const sprintsApi = {
   cancel: async (id: number): Promise<SprintItem> => {
     const res = await api.patch(`/sprints/${id}/cancel`);
     return res.data?.data || res.data;
+  },
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/sprints/${id}`);
   },
   reopen: async (id: number): Promise<SprintItem> => {
     const res = await api.patch(`/sprints/${id}/reopen`);

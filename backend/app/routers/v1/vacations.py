@@ -71,3 +71,14 @@ def patch_vacation(
     )
     CacheInvalidator.invalidate_vacation(vacation.id)
     return _format_vacation(vacation)
+
+
+@router.delete("/{vacation_id}", status_code=200)
+def delete_vacation(
+    vacation_id: int,
+    current_user: Employee = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    vacation_service.delete_vacation(db, vacation_id, current_user)
+    CacheInvalidator.invalidate_vacation(vacation_id)
+    return {"message": "Đã xóa đơn nghỉ phép thành công", "id": vacation_id}

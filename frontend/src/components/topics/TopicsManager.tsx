@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useTopics, useTopicDetail, useCreateTopic, useDeleteTopic, useCreateReply, useDeleteReply } from '../../hooks/useTopics';
+import { useTopics, useTopicDetail, useCreateTopic, useDeleteTopic, useUpdateTopic, useCreateReply, useDeleteReply } from '../../hooks/useTopics';
 import { useProjects } from '../../hooks/useProjects';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -7,9 +7,10 @@ import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
 import { Badge } from '../common/Badge';
 import { Avatar } from '../common/Avatar';
+import { Dropdown } from '../common/Dropdown';
 import { useToast } from '../../providers/ToastProvider';
 import { useAuth } from '../../providers/AuthProvider';
-import { MessageSquare, Trash2, Plus, MessageCircle, Send } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, MessageCircle, Send, MoreVertical } from 'lucide-react';
 import { Drawer } from '../common/Drawer';
 
 interface TopicsManagerProps {
@@ -25,18 +26,20 @@ export const TopicsManager: React.FC<TopicsManagerProps> = ({ projectId }) => {
   const { data: projects = [] } = useProjects();
 
   const createTopicMutation = useCreateTopic();
+  const updateTopicMutation = useUpdateTopic();
   const deleteTopicMutation = useDeleteTopic();
 
   // Dialog & Detail states
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [selectedTopicId, setSelectedTopicId] = React.useState<number | null>(null);
+  const [editingTopicId, setEditingTopicId] = React.useState<number | null>(null);
 
   // Form states
   const [title, setTitle] = React.useState('');
   const [content, setContent] = React.useState('');
   const [topicProjectId, setTopicProjectId] = React.useState<string>(projectId ? String(projectId) : '');
 
-  const handleCreateTopic = async (e: React.FormEvent) => {
+  const handleCreateOrUpdateTopic = async (e: React.FormEvent) => {
     e.preventDefault();
     const targetProjId = projectId ? String(projectId) : topicProjectId;
     if (!title.trim() || !content.trim() || !targetProjId) {
@@ -44,17 +47,30 @@ export const TopicsManager: React.FC<TopicsManagerProps> = ({ projectId }) => {
       return;
     }
     try {
-      await createTopicMutation.mutateAsync({
-        title: title.trim(),
-        content: content.trim(),
-        project_id: Number(targetProjId),
-      });
+      if (editingTopicId) {
+        await updateTopicMutation.mutateAsync({
+          id: editingTopicId,
+          payload: {
+            title: title.trim(),
+            content: content.trim(),
+            project_id: Number(targetProjId),
+          }
+        });
+        toast.success('Thành công', 'Đã cập nhật chủ đề thảo luận.');
+      } else {
+        await createTopicMutation.mutateAsync({
+          title: title.trim(),
+          content: content.trim(),
+          project_id: Number(targetProjId),
+        });
+        toast.success('Thành công', 'Đã mở một cuộc thảo luận mới.');
+      }
       setTitle('');
       setContent('');
+      setEditingTopicId(null);
       setIsCreateOpen(false);
-      toast.success('Thành công', 'Đã mở một cuộc thảo luận mới.');
     } catch {
-      toast.error('Lỗi', 'Không thể tạo chủ đề thảo luận.');
+      toast.error('Lỗi', 'Thao tác thất bại.');
     }
   };
 
@@ -115,21 +131,59 @@ export const TopicsManager: React.FC<TopicsManagerProps> = ({ projectId }) => {
                     <Badge variant={topic.status === 'Open' ? 'success' : 'primary'}>
                       {topic.status}
                     </Badge>
-                    <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1">
                       {topic.project_id && (
                         <Badge variant="default">
                           Dự án #{topic.project_id}
                         </Badge>
                       )}
                       {(isOwner || isMod) && (
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeleteTopic(topic.id, e)}
-                          className="p-1 rounded text-text-muted hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer"
-                          title="Xóa chủ đề"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <Dropdown
+                          trigger={
+                            <div
+                              className="p-1 rounded text-text-muted hover:bg-secondary hover:text-text-primary transition-colors cursor-pointer"
+                              title="Hành động"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </div>
+                          }
+                          items={[
+                            {
+                              key: 'toggle_status',
+                              label: topic.status === 'Open' ? 'Đóng chủ đề' : 'Mở lại chủ đề',
+                              onClick: async () => {
+                                // Assume updateTopic logic here. For now, just placeholder or use updateTopic hook.
+                                // I will add useUpdateTopic hook and implement it.
+                                if (!window.confirm(`Xác nhận đổi trạng thái?`)) return;
+                                try {
+                                  // I'll call updateTopicMutation here.
+                                  await updateTopicMutation.mutateAsync({ id: topic.id, payload: { status: topic.status === 'Open' ? 'Closed' : 'Open' } });
+                                  toast.success('Đã cập nhật trạng thái');
+                                } catch {
+                                  toast.error('Lỗi', 'Không thể cập nhật trạng thái.');
+                                }
+                              }
+                            },
+                            {
+                              key: 'edit',
+                              label: 'Sửa nội dung',
+                              onClick: () => {
+                                setTitle(topic.title);
+                                setContent(topic.content);
+                                setTopicProjectId(topic.project_id ? String(topic.project_id) : '');
+                                setEditingTopicId(topic.id);
+                                setIsCreateOpen(true);
+                              }
+                            },
+                            'separator',
+                            {
+                              key: 'delete',
+                              label: 'Xóa chủ đề',
+                              destructive: true,
+                              onClick: () => handleDeleteTopic(topic.id, { stopPropagation: () => {} } as any)
+                            }
+                          ]}
+                        />
                       )}
                     </div>
                   </div>
@@ -163,21 +217,31 @@ export const TopicsManager: React.FC<TopicsManagerProps> = ({ projectId }) => {
       {/* Slide-over Create Form Drawer */}
       <Drawer
         isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        title="Khởi tạo chủ đề thảo luận mới"
+        onClose={() => {
+          setIsCreateOpen(false);
+          setEditingTopicId(null);
+          setTitle('');
+          setContent('');
+        }}
+        title={editingTopicId ? "Sửa chủ đề thảo luận" : "Khởi tạo chủ đề thảo luận mới"}
         description="Đăng tin tức, chia sẻ ý tưởng hoặc đặt câu hỏi kỹ thuật cho đồng nghiệp."
         footer={
           <div className="flex items-center justify-end gap-3 w-full border-t border-border pt-3">
-            <Button variant="outline" size="sm" onClick={() => setIsCreateOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => {
+              setIsCreateOpen(false);
+              setEditingTopicId(null);
+              setTitle('');
+              setContent('');
+            }}>
               Hủy bỏ
             </Button>
-            <Button variant="primary" size="sm" onClick={handleCreateTopic}>
-              Đăng thảo luận
+            <Button variant="primary" size="sm" onClick={handleCreateOrUpdateTopic}>
+              {editingTopicId ? "Lưu thay đổi" : "Đăng thảo luận"}
             </Button>
           </div>
         }
       >
-        <form onSubmit={handleCreateTopic} className="space-y-4 text-xs">
+        <form onSubmit={handleCreateOrUpdateTopic} className="space-y-4 text-xs">
           <Input
             label="Tiêu đề thảo luận *"
             placeholder="Nhập tiêu đề ngắn gọn..."

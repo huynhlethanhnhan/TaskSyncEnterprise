@@ -28,6 +28,18 @@ export const useCreateTopic = () => {
   });
 };
 
+export const useUpdateTopic = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: Partial<TopicItem> }) =>
+      topicsApi.update(id, payload),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['topics'] });
+      queryClient.invalidateQueries({ queryKey: ['topics', id] });
+    },
+  });
+};
+
 export const useDeleteTopic = () => {
   const queryClient = useQueryClient();
   return useMutation({

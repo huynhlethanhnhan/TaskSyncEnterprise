@@ -334,6 +334,24 @@ def cancel_sprint(
     return sprint
 
 
+@router.delete("/{sprint_id:int}", status_code=status.HTTP_200_OK)
+def delete_sprint(
+    sprint_id: int,
+    current_user: Employee = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    sprint = db.get(Sprint, sprint_id)
+    if not sprint or sprint.is_deleted:
+        raise HTTPException(status_code=404, detail="Sprint not found")
+
+    require_project_management(db, sprint.project_id, current_user)
+    sprint_service.delete_sprint(db, sprint)
+
+    CacheInvalidator.invalidate_dashboard()
+    CacheInvalidator.invalidate_sprint(sprint.id, project_id=sprint.project_id)
+    return {"message": f"Sprint '{sprint.name}' deleted successfully", "id": sprint_id}
+
+
 @router.patch("/{sprint_id:int}/reopen", response_model=SprintResponse)
 def reopen_sprint(
     sprint_id: int,

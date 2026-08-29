@@ -167,6 +167,47 @@ def update_employee(
     return res
 
 
+from pydantic import BaseModel
+
+
+class EmployeeStatusUpdate(BaseModel):
+    status: str
+
+
+@router.patch("/{employee_id:int}/status", response_model=EmployeeResponse)
+def update_employee_status(
+    employee_id: int,
+    data: EmployeeStatusUpdate,
+    current_user: Employee = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    obj = crud_employee.get_by_id(db, employee_id)
+    if obj is None:
+        raise HTTPException(404, "Employee not found")
+
+    # Manager requests offboarding
+    if current_user.role_id != ROLE_ADMIN:
+        if data.status != "Pending_Offboard":
+            raise HTTPException(403, "Bạn chỉ có thể yêu cầu Offboard nhân sự.")
+    else:
+        # Admin can approve to Terminated or back to Active
+        pass
+
+    obj.employment_status = data.status
+    if data.status == "Terminated":
+        obj.is_active = False
+    elif data.status == "Active":
+        obj.is_active = True
+
+    db.commit()
+    db.refresh(obj)
+
+    from app.cache import CacheInvalidator
+
+    CacheInvalidator.invalidate_employee(obj.id)
+    return obj
+
+
 @router.delete(
     "/{employee_id:int}",
     dependencies=[

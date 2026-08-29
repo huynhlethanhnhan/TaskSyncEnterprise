@@ -50,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       className={cn(
         'sticky top-0 z-sidebar h-screen flex flex-col border-r border-border bg-surface text-text-primary transition-all duration-300 select-none overflow-x-hidden',
-        isCollapsed ? 'w-18' : 'w-52',
+        isCollapsed ? 'w-18' : 'w-64',
         className
       )}
     >
@@ -85,11 +85,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navigation Sections */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+      <div className="flex-1 overflow-y-auto py-4 space-y-5">
         {sections.map((section, idx) => (
           <div key={idx} className="space-y-1">
             {section.title && !isCollapsed && (
-              <h4 className="px-3 text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">
+              <h4 className="px-6 text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2 whitespace-normal break-words">
                 {section.title}
               </h4>
             )}
@@ -103,11 +103,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={item.onClick}
                   title={isCollapsed ? item.label : undefined}
                   className={cn(
-                    'relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer',
+                    'relative flex w-full items-center gap-3 py-2 text-xs font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer',
                     isActive
                       ? 'bg-accent text-accent-foreground font-semibold shadow-xs'
                       : 'text-text-secondary hover:bg-secondary/60 hover:text-text-primary',
-                    isCollapsed && 'justify-center px-0'
+                    isCollapsed ? 'justify-center px-0 mx-3 w-[calc(100%-1.5rem)] rounded-md' : 'px-6'
                   )}
                 >
                   {/* Active Left Indicator Bar */}

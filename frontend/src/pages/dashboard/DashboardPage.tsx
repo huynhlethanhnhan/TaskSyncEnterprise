@@ -165,8 +165,10 @@ const DashboardPage: React.FC = () => {
 
   const roleId = Number(user?.role_id);
   const roleStr = (user?.role || '').toLowerCase();
-  const isBaseEmployee = roleId === 4 || roleStr === 'employee' || roleStr === 'staff';
-  const isManagerOrAdmin = roleId === 1 || roleId === 2 || roleStr === 'admin' || roleStr === 'manager';
+  const isAdmin = roleId === 1 || roleStr === 'admin';
+  const isManager = roleId === 2 || roleStr === 'manager';
+  const isManagerOrAdmin = isAdmin || isManager;
+  const isBaseEmployee = !isManagerOrAdmin;
   
   // ROW 2: Primary Executive KPI Cards
   const kpis = isBaseEmployee
@@ -487,7 +489,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 🗓️ ROW 5: Upcoming Deadlines, Leaves & Birthdays */}
-      <div className={`grid grid-cols-1 ${isManagerOrAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6`}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upcoming Deadlines */}
         <Card>
           <CardHeader>
@@ -537,32 +539,36 @@ const DashboardPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Birthdays - Admin & Manager Only */}
-        {isManagerOrAdmin && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Gift className="h-4 w-4 text-pink-500" />
-                Sinh nhật Nhân sự
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2.5">
-              {upcoming_birthdays.length === 0 ? (
-                <p className="text-xs text-text-muted text-center py-4">Không có sinh nhật trong tháng</p>
-              ) : (
-                upcoming_birthdays.map((b) => (
-                  <div key={b.id} className="p-2.5 rounded-lg border border-border/60 bg-surface flex items-center justify-between text-xs">
-                    <div>
-                      <p className="font-semibold text-text-primary">{b.full_name}</p>
-                      <p className="text-[10px] text-text-muted">{b.department_name || 'Phòng ban'}</p>
-                    </div>
-                    <Badge variant="outline" size="sm">{b.date_of_birth}</Badge>
+        {/* Birthdays */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Gift className="h-4 w-4 text-pink-500" />
+              Sinh nhật Nhân sự
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2.5">
+            {upcoming_birthdays.length === 0 ? (
+              <p className="text-xs text-text-muted text-center py-4">Không có sinh nhật sắp tới</p>
+            ) : (
+              upcoming_birthdays.map((b) => (
+                <div key={b.id} className="p-2.5 rounded-lg border border-border/60 bg-surface flex items-center justify-between text-xs">
+                  <div>
+                    <p className="font-semibold text-text-primary">{b.full_name}</p>
+                    <p className="text-[10px] text-text-muted">{b.department_name || 'Phòng ban'}</p>
                   </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        )}
+                  <Badge variant="outline" size="sm">
+                    {b.days_until !== undefined
+                      ? b.days_until === 0
+                        ? '🎉 Hôm nay'
+                        : `Còn ${b.days_until} ngày`
+                      : b.date_of_birth}
+                  </Badge>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* 📊 ROW 6: Workforce & Task Allocation Table - Admin & Manager Only */}

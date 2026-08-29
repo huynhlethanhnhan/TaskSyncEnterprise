@@ -1,9 +1,10 @@
 # TaskSyncEnterprise — Nền Tảng Quản Lý Công Việc & Dự Án Doanh Nghiệp
 
-[![Release Candidate](https://img.shields.io/badge/Release%20Candidate-v1.0.0--RC1-blue.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
-[![Backend Pytest](https://img.shields.io/badge/Backend%20Pytest-416%20Passed-success.svg)](docs/reports/CODEX_FINAL_AUDIT.md)
-[![Frontend Vite](https://img.shields.io/badge/Vite%20Build-Passed-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
-[![Alembic Clean Database](https://img.shields.io/badge/Alembic%20Migrations-Verified%20Clean-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
+[![Release Candidate](https://img.shields.io/badge/Release%20Candidate-v1.0.0--RC2-blue.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
+[![Backend Pytest](https://img.shields.io/badge/Backend%20Pytest-437%20Passed-success.svg)](docs/reports/CODEX_FINAL_AUDIT.md)
+[![Frontend Vite](https://img.shields.io/badge/Vite%20Build-Passed%201.4s-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
+[![Contract Tests](https://img.shields.io/badge/Contract%20Tests-28%2F28%20Passed-success.svg)](frontend/ui-contract.test.mjs)
+[![Alembic Clean Database](https://img.shields.io/badge/Alembic%20Migrations-Verified%20Head-success.svg)](backend/alembic/versions/)
 
 ---
 
@@ -28,250 +29,159 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 
 - **Backend Framework**: Python 3.12+, FastAPI, Uvicorn (REST API v1)
 - **Cơ sở Dữ liệu & ORM**: MS SQL Server 2022 / SQLEXPRESS, SQLAlchemy 2.0, Alembic, `pymssql`
+- **Cache & Message Broker**: Redis 7 (In-memory caching, Cache Invalidation tự động, Session store)
+- **Reverse Proxy & Web Server**: Nginx 1.27 Alpine (Hardened Non-root, SSL/TLS, Gzip, WebSockets `/ws/`)
 - **Frontend Framework**: React 19, TypeScript, Vite, TailwindCSS v4, TanStack React Query
-- **Kiểm thử & Chất lượng**: Pytest (416 tests), Playwright E2E, Ruff, Black, ESLint, TypeScript
-
-> [!NOTE]
-> Local Windows + Python venv + MSSQL là đường chạy phát triển. Docker Compose là đường chạy tích hợp đầy đủ và được kiểm tra bằng `scripts/docker_smoke_test.ps1` trước khi phát hành.
+- **Kiểm thử & Chất lượng**: Pytest (437 tests passed 100%), Playwright E2E, Ruff, Black, ESLint, Hadolint
 
 ---
 
-## Cập Nhật Mới Nhất (Updates)
-- **Role & Permission (System Designer):** Đã tinh chỉnh hệ thống phân quyền cực kỳ chặt chẽ. Trưởng phòng tạm thời (Team Leader của dự án) mới có quyền chỉnh sửa dự án tương ứng, ngăn chặn việc quản lý chéo không hợp lệ. Giao diện Frontend hiển thị linh hoạt nút Hành động (Sửa/Xóa) dựa trên quyền `canEditTask(task)` của user, triệt tiêu hoàn toàn lỗi 403 Forbidden.
-- **Auditing & Tracking:** Frontend và Backend đã tích hợp hiển thị đầy đủ "Người tạo" (`creator_name`) cho Project, Task, Sprint và BacklogItem.
-- **Topic Discussion:** Cập nhật trạng thái "Closed" cho Topic, tự động chặn tạo reply mới trên Topic đã đóng.
-- **Docker & CI/CD:** Hệ thống đảm bảo 100% tests passed (437/437). Docker compose local chạy mượt mà.
-  > **Hướng dẫn cho Developer mới (Docker):** 
-  > 1. Clone branch `develop`.
-  > 2. Copy `.env.example` thành `.env` và thiết lập `MSSQL_SA_PASSWORD=TaskSync_2026` (Mật khẩu phải đáp ứng độ phức tạp của SQL Server).
-  > 3. Chạy `docker compose up -d --build`. Toàn bộ hệ thống sẽ tự động boot và vượt qua healthcheck!
+## 4. Cập Nhật Mới Nhất (Latest Engineering Updates)
+
+- **Kanban Card Responsive Layout:** Tái cấu trúc hoàn toàn layout thẻ Kanban thành 3 hàng độc lập, loại bỏ triệt để lỗi ép chữ xếp dọc 1-2 ký tự khi sidebar mở rộng hoặc màn hình co nhỏ. Tiêu đề hiển thị trọn vẹn, co giãn mượt mà.
+- **Phân quyền Xóa Toàn diện (RBAC & Delete Operations):**
+  - **Admin & Manager:** Toàn quyền CRUD trên thẻ Kanban (Action Menu `⋮`), Task Detail Drawer (Nút đỏ "Xóa công việc"), trang Chi tiết Dự án (Nút Sửa/Xóa công việc gần đây và Vùng Nguy Hiểm - Xóa Dự án trong Cài đặt).
+  - **Employee:** Tích hợp quy trình **Yêu cầu xóa (Request Delete)** kèm modal nhập lý do gửi cấp trên duyệt.
+- **Sprint Agile Deletion Workflow:** Bổ sung API `DELETE /api/v1/sprints/{id}` và nút "Xóa Sprint" trên giao diện cho các sprint `Planned` và `Cancelled`. Tự động giải phóng toàn bộ Task và Backlog Item liên kết về Product Backlog an toàn.
+- **Quy trình Thu hồi & Rút đơn Nghỉ phép (Vacation Revocation):**
+  - **Manager & HR/Admin Thu hồi:** Nút "Thu hồi duyệt" (icon `Undo2`) cho phép đảo ngược trạng thái từ `Manager Approved` hoặc `HR Approved` về `Pending` để xử lý các tình huống bấm nhầm.
+  - **Nhân viên Rút đơn:** Nhân viên có thể rút đơn (`Withdrawn`) ngay cả khi Manager đã duyệt sơ bộ nếu HR chưa duyệt cuối.
+  - **Superuser Admin:** Admin có toàn quyền can thiệp vào mọi bước duyệt và có nút "Xóa đơn" vĩnh viễn.
+- **CI/CD & Repository Hygiene:** Đảm bảo 100% test suites xanh trên GitHub Actions (`develop` và `master`), kiểm tra linter, typecheck, contract test và formatting chặt chẽ.
 
 ---
 
-## 4. Yêu Cầu Tiền Đề Môi Trường Windows
+## 5. Kiến Trúc Docker & Môi Trường Container (Docker, Redis, Nginx)
 
-Trước khi khởi tạo dự án trên Windows local, cần cài đặt:
-1. **Python 3.12+** (Đã thêm vào đường dẫn hệ thống `PATH`)
-2. **Microsoft SQL Server** (MSSQLSERVER hoặc SQLEXPRESS)
-3. **Node.js v20+** và `npm`
-4. **Git**
-5. **Docker Desktop** nếu chạy stack container
+Toàn bộ hệ thống được đóng gói thành các Docker container tối ưu hóa cho môi trường Enterprise:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                      Client Browser                         │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ :8080 (HTTP / WS)
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ tasksync-frontend (Nginx 1.27 Alpine Hardened, Non-root)    │
+│  - Static React 19 Bundle                                   │
+│  - Reverse Proxy: /api/ -> backend:8000                     │
+│  - Reverse Proxy: /ws/  -> backend:8000 (WebSockets)        │
+│  - Health Endpoint: /health (200 OK)                        │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ :8000
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ tasksync-backend (FastAPI + Python 3.12)                    │
+│  - REST API v1 & WebSocket Notification Engine              │
+│  - Alembic Auto-Migration                                   │
+└──────────────┬──────────────────────────────┬───────────────┘
+               │                              │
+               ▼ :6379                        ▼ :1433
+┌──────────────────────────────┐ ┌────────────────────────────┐
+│ tasksync-redis               │ │ tasksync-sqlserver         │
+│ (Redis 7 In-Memory Cache)    │ │ (MS SQL Server 2022)       │
+└──────────────────────────────┘ └────────────────────────────┘
+```
+
+### 🚀 Khởi Chạy Bằng Docker Compose (Chỉ 1 Lệnh)
+
+1. **Chuẩn bị file môi trường:**
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+   > Đảm bảo thiết lập `MSSQL_SA_PASSWORD=TaskSync@2026` và `SECRET_KEY` trong file `.env`.
+
+2. **Khởi động toàn bộ cụm dịch vụ:**
+   ```powershell
+   docker compose --env-file .env up -d --build
+   ```
+
+3. **Kiểm tra trạng thái container:**
+   ```powershell
+   docker compose ps
+   ```
+   Tất cả 4 containers phải ở trạng thái `healthy`:
+   - `tasksync-frontend`: `http://localhost:8080`
+   - `tasksync-backend`: `http://localhost:8000/api/v1/health`
+   - `tasksync-redis`: cổng `6379`
+   - `tasksync-sqlserver`: cổng `1433`
+
+4. **Kiểm tra sức khỏe Redis & Nginx:**
+   ```powershell
+   # Ping Redis
+   docker exec tasksync-redis redis-cli ping
+   # Kết quả: PONG
+
+   # Kiểm tra Nginx
+   docker exec tasksync-frontend wget -qO- http://127.0.0.1:8080/health
+   # Kết quả: healthy
+   ```
 
 ---
 
-## 5. Hướng Dẫn Khởi Tạo Dự Án Từ Đầu (Windows Local)
+## 6. Hướng Dẫn Phát Triển Local (Windows Native)
 
-### 🚀 Bước 1: Clone Nhánh `master`
-
-```powershell
-# Clone bản release ổn định
-git clone --branch master --single-branch https://github.com/huynhlethanhnhan/TaskSyncEnterprise.git TaskSyncEnterprise
-
-# Di chuyển vào thư mục dự án
-cd TaskSyncEnterprise
-```
-
----
-
-### 🐍 Bước 2: Khởi Tạo Môi Trường Ảo Backend & Cài Đặt Dependencies
-
-```powershell
-# Di chuyển vào thư mục backend
-cd backend
-
-# Tạo môi trường ảo Python
-python -m venv .venv
-
-# Kích hoạt môi trường ảo trên PowerShell
-.\.venv\Scripts\Activate.ps1
-
-# Cập nhật pip và cài đặt thư viện
-python -m pip install --upgrade pip
-pip install -r requirements.txt -r requirements-dev.txt
-```
-
----
-
-### ⚙️ Bước 3: Cấu Hình Biến Môi Trường `.env` & Hướng Dẫn MS SQL Server Authentication
-
-Sao chép file cấu hình mẫu từ thư mục gốc vào `backend\.env`:
-
-```powershell
-Copy-Item ..\.env.example .env
-```
-
-Điều chỉnh file `backend\.env` phù hợp với máy cục bộ:
-
-```env
-ENVIRONMENT=development
-APP_NAME=TaskSyncEnterprise
-SECRET_KEY=replace-with-a-strong-random-secret-at-least-32-characters
-
-# Kết nối MS SQL Server Local
-MSSQL_HOST=127.0.0.1
-MSSQL_PORT=1433
-MSSQL_DATABASE=TaskSyncEnterprise
-MSSQL_USER=sa
-MSSQL_PASSWORD=YourPassword123!
-
-# Cấu hình CORS & Allowed Hosts (Hỗ trợ định dạng JSON array hoặc dấu phẩy)
-BACKEND_CORS_ORIGINS=["http://localhost:5173","http://localhost:8080","http://localhost:8000"]
-CORS_ORIGINS=["http://localhost:5173","http://localhost:8080","http://localhost:8000"]
-ALLOWED_HOSTS=["localhost","127.0.0.1","backend","frontend"]
-```
-
-#### 🛠️ Hướng dẫn Cấu hình SQL Server Authentication & Đổi chế độ SQL Login:
-1. Mở **SQL Server Management Studio (SSMS)**, kết nối vào server.
-2. Chuột phải vào Server Node -> chọn **Properties** -> mục **Security**.
-3. Chọn chế độ **SQL Server and Windows Authentication mode** (Mixed Mode).
-4. Chuột phải chọn Server Node -> **Restart** SQL Server Service.
-5. Tạo hoặc Kích hoạt SQL User `sa`: Vào **Security -> Logins -> sa**, bật **Enabled** và đặt lại Password.
-
-#### ⚠️ Xử lý Lỗi SQL Server Error 18452 (*"Login failed. The login is from an untrusted domain..."*):
-- **Nguyên nhân**: SQL Server đang để chế độ *Windows Authentication Only* hoặc tài khoản SQL Login bị khóa/chưa được cấp quyền.
-- **Khắc phục**: Chuyển sang Mixed Mode như hướng dẫn ở bước trên, mở lại cổng `1433` trong *SQL Server Configuration Manager* -> *SQL Server Network Configuration* -> *Protocols for SQLEXPRESS/MSSQLSERVER* -> Bật *TCP/IP*.
-
----
-
-### 🗄️ Bước 4: Tạo Database MSSQL & Chạy Alembic Migrations
-
-1. Tạo database trống `TaskSyncEnterprise` trong SQL Server bằng script có sẵn:
-
-```powershell
-sqlcmd -S 127.0.0.1 -i scripts\create_database.sql
-```
-
-2. Sau khi kiểm tra kết nối MSSQL pass, chạy Alembic migration để nâng cấp schema:
-
-```powershell
-python -m alembic upgrade head
-```
-
-3. Nạp dữ liệu mẫu chuẩn hóa cho môi trường demo:
-
-```powershell
-python Seed_Example.py --reset
-```
-
----
-
-### ⚛️ Bước 5: Cài Đặt Frontend & Chạy Server
-
-Mở thêm một cửa sổ PowerShell mới, di chuyển đến thư mục `frontend`:
-
-```powershell
-cd TaskSyncEnterprise\frontend
-
-# Cài đặt gói thư viện Node
-npm install
-
-# Chạy Frontend Dev Server
-npm run dev
-```
-
-Chạy Backend API Server trong cửa sổ PowerShell backend:
-
+### 🐍 Bước 1: Khởi Tạo Backend (Python 3.12)
 ```powershell
 cd TaskSyncEnterprise\backend
-.\.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt -r requirements-dev.txt
+Copy-Item ..\.env.example .env
+python -m alembic upgrade head
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
----
-
-## 6. Chạy Toàn Bộ Hệ Thống Bằng Docker
-
-Tạo file môi trường rồi khởi động backend, frontend, SQL Server và Redis:
-
+### ⚛️ Bước 2: Khởi Tạo Frontend (React 19)
 ```powershell
-Copy-Item .env.example .env
-# Cập nhật SECRET_KEY và MSSQL_SA_PASSWORD trong .env trước khi chạy.
-docker compose --env-file .env config --quiet
-docker compose --env-file .env up -d --build
-docker compose ps
+cd TaskSyncEnterprise\frontend
+npm install
+npm run dev
 ```
-
-Nếu các cổng mặc định đang được ứng dụng local sử dụng, thay đổi
-`MSSQL_HOST_PORT`, `REDIS_HOST_PORT`, `BACKEND_HOST_PORT` và
-`FRONTEND_HOST_PORT` trong `.env`.
-
-- Frontend: `http://localhost:8080`
-- Backend health: `http://localhost:8000/health`
-- API docs: `http://localhost:8000/docs`
-
-Chạy smoke test tích hợp có tự động cleanup:
-
-```powershell
-.\scripts\docker_smoke_test.ps1
-```
-
-Tắt stack nhưng giữ volume dữ liệu:
-
-```powershell
-docker compose down
-```
+Truy cập giao diện tại: `http://localhost:5173`.
 
 ---
 
 ## 7. Tài Khoản Đăng Nhập Mẫu (Demo Credentials)
 
-Tất cả các tài khoản demo sử dụng chung một mật khẩu chuẩn:
-- **Mật khẩu chung:** `TaskSync@2026`
+Tất cả tài khoản sử dụng chung mật khẩu: **`TaskSync@2026`**
 
-| Vai trò | Email đăng nhập | Quyền hạn |
+| Vai trò | Email đăng nhập | Quyền hạn chính |
 | :--- | :--- | :--- |
-| **System Admin** | `admin@tasksync.example.com` | Quản trị toàn bộ hệ thống, phân quyền, đổi trưởng phòng/trưởng nhóm |
-| **IT Manager** | `manager.it@tasksync.example.com` | Quản lý phòng IT, xem dự án, quản lý công việc phòng ban |
-| **Product Manager** | `manager.product@tasksync.example.com` | Quản lý phòng Sản phẩm & Product Backlog |
-| **Operations Manager** | `manager.ops@tasksync.example.com` | Quản lý phòng Vận hành, đổi trưởng nhóm và quản lý dự án/phân công |
-| **Operations Team Leader** | `employee015@tasksync.example.com` | Quản lý thành viên Team Vận hành và công việc trong dự án |
-| **Operations Employee** | `employee014@tasksync.example.com` | Nhân viên thực thi công việc và cập nhật task được giao |
+| **System Admin** | `admin@tasksync.example.com` | Quản trị toàn hệ thống, toàn quyền CRUD mọi thực thể, Onboard/Offboard |
+| **IT Manager** | `manager.it@tasksync.example.com` | Quản lý phòng IT, duyệt nghỉ phép sơ bộ, CRUD dự án phòng ban |
+| **Product Manager** | `manager.product@tasksync.example.com` | Quản lý phòng Sản phẩm, Product Backlog, quản lý Sprint |
+| **Team Leader** | `employee015@tasksync.example.com` | Quản lý thành viên Team, phân công task, CRUD task dự án của team |
+| **Employee** | `employee014@tasksync.example.com` | Thực thi task, kéo thả trạng thái, gửi đơn nghỉ phép, gửi yêu cầu xóa task |
 
 ---
 
-## 8. Roadmap Sản Phẩm & AI
+## 8. Quy Trình Nhánh Git & CI/CD (Develop -> Master)
 
-Roadmap ưu tiên chất lượng dữ liệu và quyền riêng tư trước khi đưa AI vào quy trình:
+Dự án áp dụng chặt chẽ mô hình **GitFlow**:
+- **Nhánh `develop`**: Nhánh phát triển chính, nơi tích hợp toàn bộ tính năng và bug fix.
+- **Nhánh `master`**: Nhánh phát hành ổn định (Production Release).
 
-| Giai đoạn | Mục tiêu chính | Điều kiện kiểm soát |
-| :--- | :--- | :--- |
-| **1. Data foundation** | Sprint history, effort, blocker, skill profile, dữ liệu velocity/burndown thật | Dataset tái lập, không orphan, tối thiểu 10 Sprint/project demo |
-| **2. AI trợ lý an toàn** | Tóm tắt Project/Sprint, gợi ý Task và acceptance criteria, semantic search | RBAC, PII policy, prompt registry và AI audit log |
-| **3. Dự báo & tối ưu** | Cảnh báo deadline, workload/capacity và ước lượng story point | Chỉ đề xuất kèm lý do/độ tin cậy; không tự giao việc hoặc đánh giá nhân viên |
-| **4. Production governance** | Evaluation, cost/latency budget, fallback, retention và red-team | Có kiểm thử prompt injection, consent và delete workflow |
+### 🛡️ Tiêu chuẩn CI/CD GitHub Actions (100% Green Gate)
+Mỗi commit / Pull Request đẩy lên `develop` hoặc `master` bắt buộc phải vượt qua:
+1. **Repository Hygiene:** Không chứa file rác (`.env`, `.venv`, `dist`, `__pycache__`), `git diff --check` sạch sẽ không có trailing whitespace.
+2. **Backend CI:** Ruff check sạch, Black formatted, Alembic migration head hợp lệ, **437/437 Pytest passed** kèm báo cáo coverage, Bandit & pip-audit bảo mật.
+3. **Frontend CI:** ESLint 0 errors, TypeScript `tsc --noEmit` 0 errors, **28/28 Contract tests passed**, Vite production build thành công.
+4. **Docker Validation:** Hadolint Dockerfile linter pass, Docker Buildx build thành công cả backend và frontend, cú pháp Docker Compose hợp lệ.
 
-Chi tiết phạm vi, tiêu chí hoàn thành và backlog kỹ thuật nằm tại [Roadmap mở rộng sản phẩm và AI](docs/roadmap/AI_PRODUCT_ROADMAP.md).
-
----
-
-## 9. Kiểm Thử Tự Động & Báo Cáo Bằng Chứng
-
-### Kiểm Thử Tự Động Backend & Frontend Build
-
+### 🔄 Quy Trình Đẩy Code & Merge Lên Master
 ```powershell
-# Kiểm tra biên dịch code Python
-python -m compileall app alembic tests Seed_Example.py
+# 1. Kiểm tra trạng thái và commit trên develop
+git checkout develop
+git add .
+git commit -m "feat(system): comprehensive UI layout, RBAC delete, vacation revocation and docker stabilization"
 
-# Chạy bộ test tự động Pytest
-python -m pytest tests/
+# 2. Đẩy lên nhánh develop trên GitHub
+git push origin develop
 
-# Kiểm tra Linter Ruff & Format Black
-python -m ruff check app tests alembic Seed_Example.py
-python -m black --check .
-
-# Build sản phẩm Frontend
-cd ..\frontend
-npm run lint
-npm run typecheck
-npm test
-npm run build
+# 3. Tạo Pull Request hoặc merge sang master
+git checkout master
+git merge develop
+git push origin master
 ```
-
-### Chụp Ảnh Bằng Chứng Giao Diện Tự Động (Playwright)
-
-```powershell
-cd frontend
-node e2e/capture-screenshots.mjs
-```
-
-Ảnh chụp tự động của Codex được lưu tại: `docs/testing/screenshots/codex/`
-Báo cáo chi tiết xem tại: [CODEX_FINAL_AUDIT.md](docs/reports/CODEX_FINAL_AUDIT.md)

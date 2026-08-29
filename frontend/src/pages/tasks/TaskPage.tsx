@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useSearchParams } from 'react-router';
-import { Plus, Search, LayoutGrid, List } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, MoreVertical, Trash2, Edit3 } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardContent } from '../../components/common/Card';
@@ -9,11 +9,14 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/common/Badge';
 import { Avatar } from '../../components/common/Avatar';
+import { Dropdown } from '../../components/common/Dropdown';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { Pagination } from '../../components/data-display/Pagination';
 import { DataTableWrapper } from '../../components/data-display/DataTableWrapper';
 import { TaskDrawer } from '../../components/drawers/TaskDrawer';
+import { ConfirmationModal } from '../../components/common/ConfirmationModal';
+import { TaskDeleteRequestModal } from '../../components/modals/TaskDeleteRequestModal';
 import { useTasks, useCreateTask, useUpdateTask, useUpdateTaskStatus, useDeleteTask } from '../../hooks/useTasks';
 import { useProjects } from '../../hooks/useProjects';
 import { useEmployees } from '../../hooks/useEmployees';
@@ -33,9 +36,11 @@ const TaskPage: React.FC = () => {
   const toast = useToast();
   const role = (user?.role || '').toLowerCase();
   const roleId = Number(user?.role_id);
-  const isTeamLeaderRole = role === 'team_leader' || roleId === 3;
-  const isStaff = (role === 'employee' || role === 'staff' || roleId === 4) && !isTeamLeaderRole;
+  const isTeamLeaderRole = Boolean((user as any)?.is_team_leader) || role === 'team_leader';
   const isAdminOrManager = role === 'admin' || role === 'manager' || roleId === 1 || roleId === 2;
+  const isStaff = (!isAdminOrManager && !isTeamLeaderRole) || (roleId === 3 && !isTeamLeaderRole);
+
+  const [requestDeleteTask, setRequestDeleteTask] = React.useState<TaskItem | null>(null);
 
   const { data: tasks = [], isLoading, isError, refetch } = useTasks(isStaff);
   const { data: projects = [] } = useProjects();
@@ -123,13 +128,20 @@ const TaskPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (task: TaskItem, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm(`Xác nhận xóa công việc "${task.title || task.name}"?`)) return;
+  // Delete Confirmation State
+  const [taskToDelete, setTaskToDelete] = React.useState<TaskItem | null>(null);
 
+  const handleDeleteClick = (task: TaskItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setTaskToDelete(task);
+  };
+
+  const confirmDelete = async () => {
+    if (!taskToDelete) return;
     try {
-      await deleteTask.mutateAsync(task.id);
+      await deleteTask.mutateAsync(taskToDelete.id);
       toast.success('Đã xóa task thành công');
+      setTaskToDelete(null);
     } catch (err) {
       const apiError = extractApiError(err, 'Lỗi khi xóa task');
       toast.error(`Lỗi [${apiError.status}]`, apiError.message);
@@ -321,9 +333,21 @@ const TaskPage: React.FC = () => {
           <Button variant="outline" size="sm" onClick={(e) => handleOpenEdit(row.original, e)}>
             {canEditTask(row.original) ? 'Sửa' : 'Xem'}
           </Button>
-          {canEditTask(row.original) && (
-            <Button variant="danger" size="sm" onClick={(e) => handleDelete(row.original, e)}>
+          {canEditTask(row.original) ? (
+            <Button variant="danger" size="sm" onClick={(e) => handleDeleteClick(row.original, e)}>
               Xóa
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-rose-600 border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+              onClick={(e) => {
+                e.stopPropagation();
+                setRequestDeleteTask(row.original);
+              }}
+            >
+              Yêu cầu xóa
             </Button>
           )}
         </div>
@@ -452,44 +476,101 @@ const TaskPage: React.FC = () => {
                         <Card
                           key={task.id}
                           variant="interactive"
-                          className="cursor-pointer"
+                          className="cursor-pointer group relative hover:border-primary/50 transition-all shadow-xs"
                           onClick={() => handleOpenEdit(task)}
                         >
-                          <CardContent className="p-4 space-y-3">
-                            <div className="flex items-start gap-3">
-                              <h4 className="min-w-0 flex-1 text-sm font-bold leading-snug text-text-primary">
+                          <CardContent className="p-3.5 space-y-2.5">
+                            {/* Row 1: Title full width + 3-dots action menu */}
+                            <div className="flex items-start justify-between gap-2">
+                              <h4
+                                className="min-w-0 flex-1 text-xs font-bold leading-relaxed text-text-primary line-clamp-2 break-words"
+                                title={task.title || task.name}
+                              >
                                 {task.title || task.name}
                               </h4>
-                              <div className="w-36 shrink-0">
-                                <Select
-                                  value={task.status || 'To Do'}
-                                  disabled={!canEditTask(task) && Number(task.assigned_to) !== Number(user?.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => handleStatusChange(task.id, e.target.value, e)}
-                                  options={[
-                                    { value: 'To Do', label: 'To Do' },
-                                    { value: 'In Progress', label: 'In Progress' },
-                                    { value: 'Done', label: 'Done' },
+                              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                <Dropdown
+                                  align="right"
+                                  trigger={
+                                    <button
+                                      type="button"
+                                      className="p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-secondary/80 transition-colors"
+                                      title="Thao tác"
+                                    >
+                                      <MoreVertical className="h-3.5 w-3.5" />
+                                    </button>
+                                  }
+                                  items={[
+                                    {
+                                      key: 'edit',
+                                      label: canEditTask(task) ? 'Chỉnh sửa' : 'Xem chi tiết',
+                                      icon: <Edit3 className="h-3.5 w-3.5" />,
+                                      onClick: () => handleOpenEdit(task),
+                                    },
+                                    canEditTask(task)
+                                      ? {
+                                          key: 'delete',
+                                          label: 'Xóa công việc',
+                                          icon: <Trash2 className="h-3.5 w-3.5" />,
+                                          destructive: true,
+                                          onClick: () => handleDeleteClick(task),
+                                        }
+                                      : {
+                                          key: 'request-delete',
+                                          label: 'Yêu cầu xóa',
+                                          icon: <Trash2 className="h-3.5 w-3.5" />,
+                                          destructive: true,
+                                          onClick: () => setRequestDeleteTask(task),
+                                        },
                                   ]}
                                 />
                               </div>
                             </div>
 
-                            <p className="text-[11px] font-medium text-text-muted truncate">{proj?.name || 'Chưa gán dự án'}</p>
+                            {/* Row 2: Project name & Priority Badge */}
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[11px] font-medium text-text-muted truncate flex-1">
+                                {proj?.name || 'Chưa gán dự án'}
+                              </p>
+                              <Badge
+                                variant={
+                                  task.priority === 'Urgent' || task.priority === 'High'
+                                    ? 'danger'
+                                    : task.priority === 'Medium'
+                                      ? 'warning'
+                                      : 'primary'
+                                }
+                                size="sm"
+                              >
+                                {task.priority || 'Medium'}
+                              </Badge>
+                            </div>
 
-                            <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
+                            {/* Row 3: Assignee & Quick Status Dropdown */}
+                            <div className="flex items-center justify-between pt-2 border-t border-border/50 text-xs gap-2">
                               {assignee ? (
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 min-w-0">
                                   <Avatar name={assignee.full_name} src={assignee.avatar_url} size="sm" />
-                                  <span className="text-[11px] text-text-primary font-medium">{assignee.full_name}</span>
+                                  <span className="text-[11px] text-text-primary font-medium truncate">
+                                    {assignee.full_name}
+                                  </span>
                                 </div>
                               ) : (
                                 <span className="text-[11px] text-text-muted">Chưa gán</span>
                               )}
 
-                              <Badge variant={task.priority === 'High' ? 'danger' : 'warning'}>
-                                {task.priority || 'Medium'}
-                              </Badge>
+                              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                <select
+                                  value={task.status || 'To Do'}
+                                  disabled={!canEditTask(task) && Number(task.assigned_to) !== Number(user?.id)}
+                                  onChange={(e) => handleStatusChange(task.id, e.target.value, e)}
+                                  className="h-6 text-[10px] font-semibold rounded-md border border-border/80 bg-surface px-1.5 text-text-primary cursor-pointer hover:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                  <option value="To Do">To Do</option>
+                                  <option value="In Progress">In Progress</option>
+                                  <option value="Done">Done</option>
+                                </select>
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
@@ -526,7 +607,28 @@ const TaskPage: React.FC = () => {
         employees={employees}
         onSave={handleSave}
         canEdit={canEditTask(editingTask)}
+        canDelete={canEditTask(editingTask)}
+        onDelete={(task) => {
+          setIsDrawerOpen(false);
+          handleDeleteClick(task);
+        }}
         isLoading={createTask.isPending || updateTask.isPending}
+      />
+
+      <ConfirmationModal
+        isOpen={!!taskToDelete}
+        onClose={() => setTaskToDelete(null)}
+        title="Xóa công việc"
+        message="Bạn có chắc chắn muốn xóa công việc này? Hành động này không thể hoàn tác."
+        confirmText="Xóa"
+        onConfirm={confirmDelete}
+        isLoading={deleteTask.isPending}
+      />
+
+      <TaskDeleteRequestModal
+        isOpen={!!requestDeleteTask}
+        onClose={() => setRequestDeleteTask(null)}
+        task={requestDeleteTask}
       />
     </div>
   );
