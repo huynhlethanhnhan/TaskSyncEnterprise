@@ -44,6 +44,8 @@ interface TaskDrawerProps {
   onSave: (data: Partial<TaskItem>) => Promise<void>;
   isLoading?: boolean;
   canEdit?: boolean;
+  canDelete?: boolean;
+  onDelete?: (task: TaskItem) => void;
 }
 
 export const TaskDrawer: React.FC<TaskDrawerProps> = ({
@@ -54,6 +56,8 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   onSave,
   isLoading = false,
   canEdit = true,
+  canDelete = false,
+  onDelete,
 }) => {
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -345,15 +349,30 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       position="right"
       size={isEditMode ? 'lg' : 'md'}
       footer={
-        <div className="flex items-center justify-end gap-3 w-full border-t border-border pt-3">
-          <Button variant="outline" size="sm" onClick={onClose} type="button">
-            Hủy bỏ
-          </Button>
-          {(canEdit || (isEditMode && isAssignedToCurrentUser)) && (
-            <Button variant="primary" size="sm" onClick={handleSubmit} isLoading={isLoading}>
-              {isEditMode ? 'Lưu thay đổi' : 'Tạo Mới'}
+        <div className="flex items-center justify-between w-full border-t border-border pt-3">
+          <div>
+            {isEditMode && task && onDelete && canDelete && (
+              <Button
+                variant="danger"
+                size="sm"
+                leftIcon={<Trash2 className="h-4 w-4" />}
+                type="button"
+                onClick={() => onDelete(task)}
+              >
+                Xóa công việc
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={onClose} type="button">
+              Hủy bỏ
             </Button>
-          )}
+            {(canEdit || (isEditMode && isAssignedToCurrentUser)) && (
+              <Button variant="primary" size="sm" onClick={handleSubmit} isLoading={isLoading}>
+                {isEditMode ? 'Lưu thay đổi' : 'Tạo Mới'}
+              </Button>
+            )}
+          </div>
         </div>
       }
     >

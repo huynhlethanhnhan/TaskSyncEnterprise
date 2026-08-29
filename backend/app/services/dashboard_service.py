@@ -459,12 +459,28 @@ class DashboardService:
             dept_stmt = (
                 select(
                     Department.name.label("department_name"),
-                    func.count(Employee.id).label("employee_count"),
+                    func.count(
+                        case(
+                            (
+                                (Employee.is_deleted == False)
+                                & (Employee.is_active == True),
+                                Employee.id,
+                            ),
+                            else_=None,
+                        )
+                    ).label("employee_count"),
                 )
-                .join(Employee, Department.id == Employee.department_id)
-                .where(dept_filter)
-                .group_by(Department.name)
+                .outerjoin(
+                    Employee,
+                    (Department.id == Employee.department_id)
+                    & (Employee.is_deleted == False),
+                )
+                .where(Department.is_active == True)
             )
+            if role_id == ROLE_MANAGER and dept_id:
+                dept_stmt = dept_stmt.where(Department.id == dept_id)
+
+            dept_stmt = dept_stmt.group_by(Department.name).order_by(Department.name)
             dept_rows = db.execute(dept_stmt).all()
             employees_by_department = [
                 {
@@ -604,13 +620,24 @@ class DashboardService:
             .join(Employee, Vacation.requested_by == Employee.id)
             .where(
                 Vacation.start_date >= today,
-                Vacation.status.in_(["HR Approved", "Approved"]),
             )
         )
         if role_id == ROLE_MANAGER and dept_id:
-            leave_up_stmt = leave_up_stmt.where(Employee.department_id == dept_id)
+            leave_up_stmt = leave_up_stmt.where(
+                Employee.department_id == dept_id,
+                Vacation.status.in_(["HR Approved", "Approved", "Manager Approved"]),
+            )
         elif role_id == ROLE_EMPLOYEE:
-            leave_up_stmt = leave_up_stmt.where(Vacation.requested_by == user_id)
+            leave_up_stmt = leave_up_stmt.where(
+                Vacation.requested_by == user_id,
+                Vacation.status.in_(
+                    ["Pending", "Manager Approved", "HR Approved", "Approved"]
+                ),
+            )
+        else:
+            leave_up_stmt = leave_up_stmt.where(
+                Vacation.status.in_(["HR Approved", "Approved", "Manager Approved"]),
+            )
 
         leave_up_stmt = leave_up_stmt.order_by(Vacation.start_date.asc()).limit(5)
         leave_up_rows = db.execute(leave_up_stmt).all()
@@ -626,37 +653,62 @@ class DashboardService:
             for r in leave_up_rows
         ]
 
-        # 8. Upcoming Birthdays (only for Admin and Manager)
-        if role_id == ROLE_EMPLOYEE:
-            upcoming_birthdays = []
-        else:
-            bday_stmt = (
-                select(
-                    Employee.id,
-                    Employee.full_name,
-                    Employee.date_of_birth,
-                    Employee.job_title,
-                    Department.name.label("department_name"),
-                )
-                .outerjoin(Department, Employee.department_id == Department.id)
-                .where(
-                    Employee.is_deleted == False, Employee.date_of_birth.is_not(None)
-                )  # noqa: E712
+        # 8. Upcoming Birthdays (Sorted by nearest calendar date)
+        bday_stmt = (
+            select(
+                Employee.id,
+                Employee.full_name,
+                Employee.date_of_birth,
+                Employee.job_title,
+                Department.name.label("department_name"),
             )
-            if role_id == ROLE_MANAGER and dept_id:
-                bday_stmt = bday_stmt.where(Employee.department_id == dept_id)
-            bday_stmt = bday_stmt.limit(5)
-            bday_rows = db.execute(bday_stmt).all()
-            upcoming_birthdays = [
-                {
-                    "id": r.id,
-                    "full_name": r.full_name,
-                    "date_of_birth": str(r.date_of_birth),
-                    "job_title": r.job_title,
-                    "department_name": r.department_name,
-                }
-                for r in bday_rows
-            ]
+            .outerjoin(Department, Employee.department_id == Department.id)
+            .where(
+                Employee.is_deleted == False,
+                Employee.is_active == True,
+                Employee.date_of_birth.is_not(None),
+            )
+        )
+        if role_id == ROLE_MANAGER and dept_id:
+            bday_stmt = bday_stmt.where(Employee.department_id == dept_id)
+        elif role_id == ROLE_EMPLOYEE and dept_id:
+            bday_stmt = bday_stmt.where(Employee.department_id == dept_id)
+
+        all_bday_rows = db.execute(bday_stmt).all()
+        scored_bdays = []
+        for r in all_bday_rows:
+            if not r.date_of_birth:
+                continue
+            dob = r.date_of_birth
+            try:
+                this_year_bday = dob.replace(year=today.year)
+            except ValueError:
+                this_year_bday = dob.replace(year=today.year, day=28)
+
+            if this_year_bday < today:
+                try:
+                    next_bday = dob.replace(year=today.year + 1)
+                except ValueError:
+                    next_bday = dob.replace(year=today.year + 1, day=28)
+            else:
+                next_bday = this_year_bday
+
+            days_until = (next_bday - today).days
+            scored_bdays.append((days_until, r, next_bday))
+
+        scored_bdays.sort(key=lambda x: x[0])
+        upcoming_birthdays = [
+            {
+                "id": r.id,
+                "full_name": r.full_name,
+                "date_of_birth": str(r.date_of_birth),
+                "next_birthday": str(next_bday),
+                "days_until": days_until,
+                "job_title": r.job_title,
+                "department_name": r.department_name,
+            }
+            for days_until, r, next_bday in scored_bdays[:5]
+        ]
 
         # 9. Pending Approvals (only for Admin and Manager)
         if role_id == ROLE_EMPLOYEE:

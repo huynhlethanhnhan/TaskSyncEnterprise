@@ -21,9 +21,11 @@ import {
   useCreateEmployee,
   useUpdateEmployee,
   useDeleteEmployee,
+  useUpdateEmployeeStatus,
 } from '../../hooks/useEmployees';
 import { useDepartments } from '../../hooks/useDepartments';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
 import { extractApiError } from '../../utils/errorHelpers';
 import { type EmployeeItem } from '../../api/services';
@@ -32,6 +34,9 @@ const EmployeePage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const permissions = usePermissions();
+  const { user } = useAuth();
+  const isAdmin = user?.role_id === 1 || (user?.role || '').toLowerCase() === 'admin';
+  const isManager = user?.role_id === 2 || (user?.role || '').toLowerCase() === 'manager';
 
   const { data: employees = [], isLoading, isError, error, refetch } = useEmployees();
   const { data: departments = [] } = useDepartments();
@@ -39,6 +44,7 @@ const EmployeePage: React.FC = () => {
   const createEmployee = useCreateEmployee();
   const updateEmployee = useUpdateEmployee();
   const deleteEmployee = useDeleteEmployee();
+  const updateEmployeeStatus = useUpdateEmployeeStatus();
 
   // Filters & State
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -206,52 +212,87 @@ const EmployeePage: React.FC = () => {
     {
       accessorKey: 'is_active',
       header: 'Trạng thái',
-      cell: ({ row }: { row: { original: EmployeeItem } }) => (
-        <Badge variant={row.original.is_active ? 'success' : 'danger'} showDot>
-          {row.original.is_active ? 'Hoạt động' : 'Tạm khóa'}
-        </Badge>
-      ),
+      cell: ({ row }: { row: { original: EmployeeItem } }) => {
+        const emp = row.original;
+        let variant: "success" | "danger" | "warning" | "primary" | "default" | "outline" = 'success';
+        let label = 'Hoạt động';
+
+        if (emp.employment_status === 'Terminated') {
+          variant = 'danger';
+          label = 'Đã nghỉ việc';
+        } else if (emp.employment_status === 'Pending_Offboard') {
+          variant = 'warning';
+          label = 'Chờ duyệt nghỉ';
+        } else if (!emp.is_active) {
+          variant = 'danger';
+          label = 'Tạm khóa';
+        }
+
+        return (
+          <Badge variant={variant} showDot>
+            {label}
+          </Badge>
+        );
+      },
     },
     {
       id: 'actions',
       header: 'Hành động',
-      cell: ({ row }: { row: { original: EmployeeItem } }) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<Eye className="h-3.5 w-3.5" />}
-            onClick={() => navigate(`/employees/${row.original.id}`)}
-          >
-            Chi tiết
-          </Button>
+      cell: ({ row }: { row: { original: EmployeeItem } }) => {
+        const emp = row.original;
+        const isPending = emp.employment_status === 'Pending_Offboard';
+        const isTerminated = emp.employment_status === 'Terminated';
 
-          {permissions.canEditEmployee && (
+        return (
+          <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              leftIcon={<Edit3 className="h-3.5 w-3.5" />}
-              onClick={(e) => handleOpenEdit(row.original, e)}
+              leftIcon={<Eye className="h-3.5 w-3.5" />}
+              onClick={() => navigate(`/employees/${emp.id}`)}
             >
-              Sửa
+              Chi tiết
             </Button>
-          )}
 
-          {permissions.canDeleteEmployee && (
-            <Button
-              variant="danger"
-              size="sm"
-              leftIcon={<Trash2 className="h-3.5 w-3.5" />}
-              onClick={(e) => {
-                e.stopPropagation();
-                setDeletingEmployee(row.original);
-              }}
-            >
-              Xóa
-            </Button>
-          )}
-        </div>
-      ),
+            {permissions.canEditEmployee && (
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Edit3 className="h-3.5 w-3.5" />}
+                onClick={(e) => handleOpenEdit(emp, e)}
+              >
+                Sửa
+              </Button>
+            )}
+
+            {!isTerminated && (isManager || isAdmin) && (
+              <Button
+                variant={isPending && isAdmin ? "primary" : "danger"}
+                size="sm"
+                leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (isAdmin) {
+                    if (isPending) {
+                      if (!window.confirm(`Duyệt yêu cầu offboard cho ${emp.full_name}?`)) return;
+                      await updateEmployeeStatus.mutateAsync({ id: emp.id, status: 'Terminated' });
+                      toast.success('Thành công', 'Đã duyệt yêu cầu nghỉ việc.');
+                    } else {
+                      setDeletingEmployee(emp);
+                    }
+                  } else {
+                    if (!window.confirm(`Yêu cầu Offboard nhân sự ${emp.full_name}?`)) return;
+                    await updateEmployeeStatus.mutateAsync({ id: emp.id, status: 'Pending_Offboard' });
+                    toast.success('Thành công', 'Đã gửi yêu cầu Offboard.');
+                  }
+                }}
+              >
+                {isAdmin ? (isPending ? 'Duyệt xóa' : 'Xóa') : 'Offboard'}
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

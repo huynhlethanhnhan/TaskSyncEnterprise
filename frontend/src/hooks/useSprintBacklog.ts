@@ -201,6 +201,20 @@ export const useCancelSprint = () => {
   });
 };
 
+export const useDeleteSprint = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => sprintsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sprints'] });
+      queryClient.invalidateQueries({ queryKey: ['sprint-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['backlog'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+
 export const useReopenSprint = () => {
   const queryClient = useQueryClient();
   return useMutation({

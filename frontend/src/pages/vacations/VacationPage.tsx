@@ -11,6 +11,7 @@ import {
   Undo2,
   FileCheck,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import api from '../../api/axios';
 import VacationFormModal, { type VacationFormData } from './VacationFormModal';
@@ -19,6 +20,7 @@ import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/ui/Button';
+import { ConfirmationModal } from '../../components/common/ConfirmationModal';
 import { EmptyState } from '../../components/common/EmptyState';
 import { useToast } from '../../providers/ToastProvider';
 
@@ -79,6 +81,7 @@ export default function VacationPage(): React.ReactElement {
 
   const isManager = currentUser.role === 'manager' || Number(currentUser.role_id) === 2;
   const isAdmin = currentUser.role === 'admin' || Number(currentUser.role_id) === 1;
+  const canManagerAction = isManager || isAdmin;
 
   const loadData = React.useCallback(async () => {
     try {
@@ -128,13 +131,42 @@ export default function VacationPage(): React.ReactElement {
     }
   };
 
+  const [confirmModal, setConfirmModal] = useState<{
+    vacationId: number;
+    newStatus: string;
+    title: string;
+    message: string;
+  } | null>(null);
+  const [vacationToDelete, setVacationToDelete] = useState<VacationItem | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isDeletingVacation, setIsDeletingVacation] = useState(false);
+
   const handleUpdateStatus = async (vacationId: number, newStatus: string) => {
+    setIsUpdatingStatus(true);
     try {
       await api.patch(`/vacations/${vacationId}`, { status: newStatus });
       toast.success('Cập nhật trạng thái thành công', `Đơn nghỉ phép đã được chuyển sang "${newStatus}".`);
       loadData();
     } catch {
       toast.error('Cập nhật thất bại', 'Không thể thay đổi trạng thái đơn nghỉ.');
+    } finally {
+      setIsUpdatingStatus(false);
+      setConfirmModal(null);
+    }
+  };
+
+  const handleDeleteVacation = async () => {
+    if (!vacationToDelete) return;
+    setIsDeletingVacation(true);
+    try {
+      await api.delete(`/vacations/${vacationToDelete.id}`);
+      toast.success('Xóa đơn thành công', 'Đã xóa đơn nghỉ phép khỏi hệ thống.');
+      loadData();
+    } catch (err: any) {
+      toast.error('Xóa thất bại', err?.response?.data?.detail || 'Không thể xóa đơn nghỉ phép.');
+    } finally {
+      setIsDeletingVacation(false);
+      setVacationToDelete(null);
     }
   };
 
@@ -333,19 +365,26 @@ export default function VacationPage(): React.ReactElement {
 
                       <div className="flex items-center gap-2">
                         {/* Employee withdraw action */}
-                        {isOwner && (vacation.status === 'Pending' || vacation.status === 'Info Requested') && (
+                        {isOwner && (vacation.status === 'Pending' || vacation.status === 'Info Requested' || vacation.status === 'Manager Approved') && (
                           <Button
                             variant="outline"
                             size="sm"
                             leftIcon={<Undo2 className="h-3.5 w-3.5" />}
-                            onClick={() => handleUpdateStatus(vacation.id, 'Withdrawn')}
+                            onClick={() =>
+                              setConfirmModal({
+                                vacationId: vacation.id,
+                                newStatus: 'Withdrawn',
+                                title: 'Rút lại đơn nghỉ phép',
+                                message: 'Bạn có chắc chắn muốn rút lại đơn nghỉ phép này? Quá trình phê duyệt sẽ được hủy bỏ.',
+                              })
+                            }
                           >
                             Rút Đơn
                           </Button>
                         )}
 
                         {/* Manager approval actions */}
-                        {isManager && vacation.status === 'Pending' && (
+                        {canManagerAction && vacation.status === 'Pending' && (
                           <>
                             <Button
                               variant="outline"
@@ -364,13 +403,40 @@ export default function VacationPage(): React.ReactElement {
                           </>
                         )}
 
+                        {/* Manager revoke approval action */}
+                        {canManagerAction && vacation.status === 'Manager Approved' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Undo2 className="h-3.5 w-3.5" />}
+                            className="border-amber-300 text-amber-600 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400"
+                            onClick={() =>
+                              setConfirmModal({
+                                vacationId: vacation.id,
+                                newStatus: 'Pending',
+                                title: 'Thu hồi phê duyệt Manager',
+                                message: 'Bạn có chắc muốn thu hồi phê duyệt cho đơn này? Đơn sẽ quay trở lại trạng thái Chờ duyệt (Pending) để xem xét lại.',
+                              })
+                            }
+                          >
+                            Thu hồi duyệt
+                          </Button>
+                        )}
+
                         {/* HR/Admin final approval actions */}
                         {isAdmin && (vacation.status === 'Pending' || vacation.status === 'Manager Approved') && (
                           <>
                             <Button
                               variant="danger"
                               size="sm"
-                              onClick={() => handleUpdateStatus(vacation.id, 'Rejected')}
+                              onClick={() =>
+                                setConfirmModal({
+                                  vacationId: vacation.id,
+                                  newStatus: 'Rejected',
+                                  title: 'Từ chối đơn nghỉ phép',
+                                  message: 'Bạn có chắc chắn muốn từ chối đơn nghỉ phép này?',
+                                })
+                              }
                             >
                               Từ chối
                             </Button>
@@ -384,6 +450,40 @@ export default function VacationPage(): React.ReactElement {
                             </Button>
                           </>
                         )}
+
+                        {/* HR/Admin revoke actions */}
+                        {isAdmin && (vacation.status === 'HR Approved' || vacation.status === 'Rejected') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Undo2 className="h-3.5 w-3.5" />}
+                            className="border-amber-300 text-amber-600 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400"
+                            onClick={() =>
+                              setConfirmModal({
+                                vacationId: vacation.id,
+                                newStatus: 'Pending',
+                                title: 'Thu hồi quyết định HR',
+                                message: 'Bạn có chắc muốn thu hồi quyết định này? Đơn sẽ quay trở về trạng thái Chờ duyệt (Pending).',
+                              })
+                            }
+                          >
+                            Thu hồi duyệt
+                          </Button>
+                        )}
+
+                        {/* Delete Vacation button (Admin or Owner if Pending/Withdrawn/Rejected) */}
+                        {(isAdmin || (isOwner && ['Pending', 'Withdrawn', 'Rejected'].includes(vacation.status))) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                            className="border-rose-200 hover:bg-rose-50 text-rose-500 hover:text-rose-600 dark:border-rose-950/20"
+                            onClick={() => setVacationToDelete(vacation)}
+                            title="Xóa đơn nghỉ phép"
+                          >
+                            Xóa đơn
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -395,6 +495,32 @@ export default function VacationPage(): React.ReactElement {
       </Card>
 
       <VacationFormModal open={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSave} initialData={null} />
+
+      {/* Action Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={Boolean(confirmModal)}
+        onClose={() => setConfirmModal(null)}
+        title={confirmModal?.title || 'Xác nhận'}
+        message={confirmModal?.message || ''}
+        confirmText="Xác nhận"
+        onConfirm={() => {
+          if (confirmModal) {
+            handleUpdateStatus(confirmModal.vacationId, confirmModal.newStatus);
+          }
+        }}
+        isLoading={isUpdatingStatus}
+      />
+
+      {/* Delete Vacation Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={Boolean(vacationToDelete)}
+        onClose={() => setVacationToDelete(null)}
+        title="Xóa đơn nghỉ phép"
+        message={`Bạn có chắc chắn muốn xóa vĩnh viễn đơn nghỉ phép (${vacationToDelete?.type}) của ${vacationToDelete?.requested_by_name || 'nhân viên'}?`}
+        confirmText="Xóa đơn"
+        onConfirm={handleDeleteVacation}
+        isLoading={isDeletingVacation}
+      />
     </div>
   );
 }

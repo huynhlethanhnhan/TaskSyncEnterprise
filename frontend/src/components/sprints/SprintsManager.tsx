@@ -11,6 +11,7 @@ import {
   useSprints,
   useStartSprint,
   useCancelSprint,
+  useDeleteSprint,
 } from '../../hooks/useSprintBacklog';
 import { useTasks, useUpdateTask, useUpdateTaskStatus } from '../../hooks/useTasks';
 import { useEmployees } from '../../hooks/useEmployees';
@@ -21,13 +22,13 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { Badge } from '../common/Badge';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 import { useToast } from '../../providers/ToastProvider';
 import { useAuth } from '../../providers/AuthProvider';
-import { Target, Edit, Layers, X, Bookmark, ArrowUp, ArrowDown } from 'lucide-react';
+import { Target, Edit, Layers, X, Bookmark, ArrowUp, ArrowDown, Trash2, RefreshCw } from 'lucide-react';
 import { EditSprintModal } from './EditSprintModal';
 import { SprintBurndownChart } from './SprintBurndownChart';
 import { type SprintItem } from '../../api/services';
-import { RefreshCw } from 'lucide-react';
 
 interface SprintsManagerProps {
   projectId: number;
@@ -48,15 +49,29 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
   const startMutation = useStartSprint();
   const completeMutation = useCompleteSprint();
   const cancelMutation = useCancelSprint();
+  const deleteMutation = useDeleteSprint();
   const reopenMutation = useReopenSprint();
 
   // Edit Modal State
   const [editingSprint, setEditingSprint] = React.useState<SprintItem | null>(null);
+  const [sprintToDelete, setSprintToDelete] = React.useState<SprintItem | null>(null);
 
   // Form State
   const [name, setName] = React.useState('');
   const [goal, setGoal] = React.useState('');
   const [capacity, setCapacity] = React.useState(20);
+
+  const handleConfirmDeleteSprint = async () => {
+    if (!sprintToDelete) return;
+    try {
+      await deleteMutation.mutateAsync(sprintToDelete.id);
+      toast.success('Xóa Sprint thành công', `Đã xóa Sprint "${sprintToDelete.name}". Các công việc đã được trả về Backlog.`);
+    } catch (err: any) {
+      toast.error('Lỗi khi xóa Sprint', err.response?.data?.detail || 'Không thể xóa Sprint vào lúc này.');
+    } finally {
+      setSprintToDelete(null);
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,25 +233,33 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
                     {isManagerOrAdmin && (
                       <div className="flex items-center gap-2">
                         {sprint.status === 'Planned' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            leftIcon={<Edit className="h-3.5 w-3.5" />}
-                            onClick={() => setEditingSprint(sprint)}
-                          >
-                            Sửa
-                          </Button>
-                        )}
-
-                        {sprint.status === 'Planned' && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleStart(sprint.id)}
-                            isLoading={startMutation.isPending}
-                          >
-                            Kích hoạt Sprint
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              leftIcon={<Edit className="h-3.5 w-3.5" />}
+                              onClick={() => setEditingSprint(sprint)}
+                            >
+                              Sửa
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleStart(sprint.id)}
+                              isLoading={startMutation.isPending}
+                            >
+                              Kích hoạt Sprint
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                              onClick={() => setSprintToDelete(sprint)}
+                              className="border-rose-200 hover:bg-rose-50 text-rose-500 hover:text-rose-600 dark:border-rose-950/20"
+                            >
+                              Xóa Sprint
+                            </Button>
+                          </>
                         )}
 
                         {sprint.status === 'Active' && (
@@ -262,16 +285,29 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
                         )}
 
                         {(sprint.status === 'Completed' || sprint.status === 'Cancelled') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
-                            onClick={() => handleReopen(sprint.id)}
-                            isLoading={reopenMutation.isPending}
-                            className="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400"
-                          >
-                            Mở lại
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+                              onClick={() => handleReopen(sprint.id)}
+                              isLoading={reopenMutation.isPending}
+                              className="border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400"
+                            >
+                              Mở lại
+                            </Button>
+                            {sprint.status === 'Cancelled' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                                onClick={() => setSprintToDelete(sprint)}
+                                className="border-rose-200 hover:bg-rose-50 text-rose-500 hover:text-rose-600 dark:border-rose-950/20"
+                              >
+                                Xóa
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
@@ -319,6 +355,17 @@ export const SprintsManager: React.FC<SprintsManagerProps> = ({ projectId }) => 
             isOpen={Boolean(editingSprint)}
             onClose={() => setEditingSprint(null)}
             sprint={editingSprint}
+          />
+
+          {/* Delete Sprint Confirmation Modal */}
+          <ConfirmationModal
+            isOpen={Boolean(sprintToDelete)}
+            onClose={() => setSprintToDelete(null)}
+            title="Xóa Sprint"
+            message={`Bạn có chắc chắn muốn xóa Sprint "${sprintToDelete?.name}"? Toàn bộ công việc liên quan sẽ được tự động giải phóng và chuyển về Product Backlog.`}
+            confirmText="Xóa Sprint"
+            onConfirm={handleConfirmDeleteSprint}
+            isLoading={deleteMutation.isPending}
           />
         </div>
       </div>

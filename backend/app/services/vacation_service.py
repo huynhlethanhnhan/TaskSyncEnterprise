@@ -69,16 +69,17 @@ def update_vacation_status(
 
     normalized_status = "Withdrawn" if status == "Cancelled" else status
 
-    # Keep transitions explicit. The previous implementation allowed either
-    # reviewer role to set any arbitrary status supplied by the client.
+    from datetime import datetime, timezone
+
+    # Keep transitions explicit and support approval revocation / withdrawal
     if (
         is_owner
         and normalized_status == "Withdrawn"
-        and vacation.status in ["Pending", "Info Requested"]
+        and vacation.status in ["Pending", "Info Requested", "Manager Approved"]
     ):
         vacation.status = "Withdrawn"
     elif (
-        is_manager
+        (is_manager or is_admin)
         and vacation.status == "Pending"
         and normalized_status
         in {
@@ -89,9 +90,16 @@ def update_vacation_status(
     ):
         vacation.status = normalized_status
         vacation.approved_by = current_user.id
-        from datetime import datetime, timezone
-
         vacation.approved_at = datetime.now(timezone.utc)
+    elif (
+        (is_manager or is_admin)
+        and vacation.status == "Manager Approved"
+        and normalized_status == "Pending"
+    ):
+        # Manager or Admin revoking accidental approval
+        vacation.status = "Pending"
+        vacation.approved_by = None
+        vacation.approved_at = None
     elif is_admin and (
         (
             vacation.status in {"Pending", "Manager Approved"}
@@ -101,9 +109,20 @@ def update_vacation_status(
     ):
         vacation.status = normalized_status
         vacation.approved_by = current_user.id
-        from datetime import datetime, timezone
-
         vacation.approved_at = datetime.now(timezone.utc)
+    elif is_admin and (
+        (
+            vacation.status in {"HR Approved", "Rejected"}
+            and normalized_status in {"Pending", "Manager Approved"}
+        )
+        or (vacation.status == "Manager Approved" and normalized_status == "Pending")
+    ):
+        # Admin revoking accidental HR/Manager approval
+        vacation.status = normalized_status
+        vacation.approved_by = None
+        vacation.approved_at = None
+    elif is_admin and normalized_status == "Withdrawn":
+        vacation.status = "Withdrawn"
     else:
         raise HTTPException(
             status_code=409,
@@ -133,3 +152,23 @@ def update_vacation_status(
         app_logger.error(f"Error creating vacation notification: {e}")
 
     return vacation
+
+
+def delete_vacation(db: Session, vacation_id: int, current_user: Employee) -> None:
+    vacation = db.get(Vacation, vacation_id)
+    if vacation is None:
+        raise HTTPException(status_code=404, detail="Vacation request not found")
+
+    is_owner = vacation.requested_by == current_user.id
+    is_admin = current_user.role_id == ROLE_ADMIN
+
+    if not is_admin and not (
+        is_owner and vacation.status in ["Pending", "Withdrawn", "Rejected"]
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to delete this vacation request",
+        )
+
+    db.delete(vacation)
+    db.commit()

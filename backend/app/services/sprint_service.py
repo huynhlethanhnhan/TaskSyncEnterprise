@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.models.backlog_item import BacklogItem
@@ -206,6 +206,23 @@ def cancel_sprint(db: Session, sprint: Sprint) -> Sprint:
     db.commit()
     db.refresh(sprint)
     return sprint
+
+
+def delete_sprint(db: Session, sprint: Sprint) -> None:
+    if sprint.status == SPRINT_ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Active Sprint cannot be deleted. Please cancel or complete it first.",
+        )
+    db.execute(update(Task).where(Task.sprint_id == sprint.id).values(sprint_id=None))
+    db.execute(
+        update(BacklogItem)
+        .where(BacklogItem.sprint_id == sprint.id)
+        .values(sprint_id=None, status="Backlog")
+    )
+    sprint.is_deleted = True
+    sprint.deleted_at = datetime.now(UTC)
+    db.commit()
 
 
 def reopen_sprint(db: Session, sprint: Sprint) -> Sprint:

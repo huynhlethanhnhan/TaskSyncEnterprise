@@ -14,6 +14,9 @@ import {
   Settings,
   Users,
   UserPlus,
+  Trash2,
+  Edit3,
+  AlertTriangle,
 } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
@@ -25,16 +28,18 @@ import { Textarea } from '../../components/ui/Textarea';
 import { Select } from '../../components/ui/Select';
 import { Avatar } from '../../components/common/Avatar';
 import { Modal } from '../../components/common/Modal';
+import { ConfirmationModal } from '../../components/common/ConfirmationModal';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import {
   useProjectDetail,
   useUpdateProject,
+  useDeleteProject,
   useProjectMembersList,
   useProjectMembers,
   useAddProjectMember,
 } from '../../hooks/useProjects';
-import { useTasks, useCreateTask, useUpdateTask, useUpdateTaskStatus } from '../../hooks/useTasks';
+import { useTasks, useCreateTask, useUpdateTask, useUpdateTaskStatus, useDeleteTask } from '../../hooks/useTasks';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useToast } from '../../providers/ToastProvider';
 import { TaskDrawer } from '../../components/drawers/TaskDrawer';
@@ -101,6 +106,35 @@ const ProjectDetailPage: React.FC = () => {
   // Task Drawer states
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<TaskItem | null>(null);
+  const [taskToDelete, setTaskToDelete] = React.useState<TaskItem | null>(null);
+  const [isDeleteProjectOpen, setIsDeleteProjectOpen] = React.useState(false);
+
+  const deleteTaskMutation = useDeleteTask();
+  const deleteProjectMutation = useDeleteProject();
+
+  const handleConfirmDeleteTask = async () => {
+    if (!taskToDelete) return;
+    try {
+      await deleteTaskMutation.mutateAsync(taskToDelete.id);
+      toast.success('Xóa công việc thành công', `Đã xóa task ${taskToDelete.title || taskToDelete.name}.`);
+    } catch {
+      toast.error('Lỗi khi xóa công việc', 'Không thể xóa task vào lúc này.');
+    } finally {
+      setTaskToDelete(null);
+    }
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    try {
+      await deleteProjectMutation.mutateAsync(projectId);
+      toast.success('Xóa dự án thành công', `Đã xóa vĩnh viễn dự án ${project.name}.`);
+      navigate('/projects');
+    } catch {
+      toast.error('Lỗi khi xóa dự án', 'Không thể xóa dự án vào lúc này.');
+    } finally {
+      setIsDeleteProjectOpen(false);
+    }
+  };
 
   // Settings form states
   const [projName, setProjName] = React.useState('');
@@ -351,19 +385,44 @@ const ProjectDetailPage: React.FC = () => {
                   ) : (
                     <div className="divide-y divide-border/60">
                       {projectTasks.slice(0, 5).map((task) => (
-                        <div key={task.id} className="py-3 flex items-center justify-between">
-                          <div>
+                        <div key={task.id} className="py-3 flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
                             <p
-                              className="text-xs font-semibold text-text-primary hover:text-primary cursor-pointer"
+                              className="text-xs font-semibold text-text-primary hover:text-primary cursor-pointer truncate"
                               onClick={() => handleOpenEdit(task)}
+                              title={task.title || task.name}
                             >
                               {task.title || task.name}
                             </p>
                             <span className="text-[10px] text-text-muted">Độ ưu tiên: {task.priority || 'Medium'}</span>
                           </div>
-                          <Badge variant={task.status === 'Done' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} showDot>
-                            {task.status || 'To Do'}
-                          </Badge>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant={task.status === 'Done' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} showDot>
+                              {task.status || 'To Do'}
+                            </Badge>
+                            {canManageTasks && (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-1 h-7 w-7 text-text-muted hover:text-text-primary"
+                                  onClick={() => handleOpenEdit(task)}
+                                  title="Sửa công việc"
+                                >
+                                  <Edit3 className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-1 h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                                  onClick={() => setTaskToDelete(task)}
+                                  title="Xóa công việc"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -825,6 +884,25 @@ const ProjectDetailPage: React.FC = () => {
                   Cập nhật Thiết lập
                 </Button>
               </form>
+
+              {/* Danger Zone */}
+              <div className="mt-8 pt-6 border-t border-rose-500/20 max-w-xl">
+                <h4 className="text-xs font-bold text-rose-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4" /> Vùng Nguy Hiểm (Danger Zone)
+                </h4>
+                <p className="text-xs text-text-muted mb-4">
+                  Xóa dự án này sẽ gỡ bỏ liên kết của toàn bộ sprint, backlog và các công việc liên quan. Hành động này không thể hoàn tác.
+                </p>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  leftIcon={<Trash2 className="h-4 w-4" />}
+                  type="button"
+                  onClick={() => setIsDeleteProjectOpen(true)}
+                >
+                  Xóa Vĩnh viễn Dự án
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -839,6 +917,11 @@ const ProjectDetailPage: React.FC = () => {
         employees={employees}
         onSave={handleSaveTask}
         canEdit={canManageTasks}
+        canDelete={canManageTasks}
+        onDelete={(task) => {
+          setIsDrawerOpen(false);
+          setTaskToDelete(task);
+        }}
         isLoading={createTask.isPending || updateTask.isPending}
       />
 
@@ -878,6 +961,28 @@ const ProjectDetailPage: React.FC = () => {
           ]}
         />
       </Modal>
+
+      {/* Task Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!taskToDelete}
+        onClose={() => setTaskToDelete(null)}
+        title="Xóa công việc"
+        message={`Bạn có chắc chắn muốn xóa công việc "${taskToDelete?.title || taskToDelete?.name}"?`}
+        confirmText="Xóa"
+        onConfirm={handleConfirmDeleteTask}
+        isLoading={deleteTaskMutation.isPending}
+      />
+
+      {/* Project Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteProjectOpen}
+        onClose={() => setIsDeleteProjectOpen(false)}
+        title="Xóa vĩnh viễn dự án"
+        message={`Bạn có chắc chắn muốn xóa vĩnh viễn dự án "${project.name}"? Toàn bộ tài nguyên liên quan sẽ bị gỡ bỏ.`}
+        confirmText="Xóa Dự án"
+        onConfirm={handleConfirmDeleteProject}
+        isLoading={deleteProjectMutation.isPending}
+      />
     </div>
   );
 };

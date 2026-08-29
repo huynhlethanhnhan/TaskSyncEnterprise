@@ -65,6 +65,10 @@ class Employee(Base):
 
     job_title: Mapped[str | None] = mapped_column(Unicode(150))
 
+    employment_status: Mapped[str] = mapped_column(
+        String(50), server_default=text("'Active'")
+    )
+
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("1"))
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, server_default=text("0"))

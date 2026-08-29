@@ -55,8 +55,18 @@ export const Dropdown: React.FC<DropdownProps> = ({
   }, [isOpen]);
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
-      <div onClick={toggle} className="cursor-pointer">
+    <div
+      className={cn("relative inline-block text-left", className)}
+      ref={dropdownRef}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          toggle();
+        }}
+        className="cursor-pointer"
+      >
         {trigger}
       </div>
 
@@ -68,6 +78,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
+            onClick={(e) => e.stopPropagation()}
             className={cn(
               'absolute z-dropdown mt-1.5 w-56 rounded-lg border border-border bg-surface p-1 shadow-md text-text-primary focus:outline-none',
               align === 'right' ? 'right-0' : 'left-0',
