@@ -9,11 +9,14 @@ COPY package.json package-lock.json ./
 # Install packages
 RUN npm ci
 
+# Cache-invalidation hook for frontend rebuilds
+ARG CACHEBUST=1
+
 # Copy the rest of the frontend source code
 COPY . .
 
 # Set Vite production api url argument/env if needed
-ARG VITE_API_URL
+ARG VITE_API_URL=/api/v1
 ENV VITE_API_URL=$VITE_API_URL
 
 # Build production bundle

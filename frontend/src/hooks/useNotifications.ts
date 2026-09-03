@@ -32,7 +32,7 @@ export const useNotificationRealtime = () => {
       let baseUrl = import.meta.env.VITE_WS_URL;
       if (!baseUrl) {
         const apiUrl = import.meta.env.VITE_API_URL;
-        if (apiUrl) {
+        if (apiUrl && /^https?:\/\//i.test(apiUrl)) {
           baseUrl = apiUrl
             .replace(/^http/, 'ws')
             .replace(/\/api\/v1\/?$/, '/ws/notifications')
