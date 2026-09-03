@@ -117,9 +117,57 @@ Toàn bộ hệ thống được đóng gói thành các Docker container tối 
    # Kết quả: healthy
    ```
 
+5. **Nạp dữ liệu mẫu (Seeding Database):**
+   > [!IMPORTANT]
+   > Khi khởi chạy Docker lần đầu, cơ sở dữ liệu hoàn toàn trống rỗng (`RUN_DEMO_SEED=false`) để đảm bảo an toàn. Nếu không nạp dữ liệu mẫu, đăng nhập sẽ báo lỗi tài khoản không tồn tại. Để nạp bộ tài khoản và dữ liệu mẫu chuẩn theo đúng **Mục 8**, bạn chỉ cần chạy 1 lệnh:
+   ```powershell
+   docker exec tasksync-backend python Seed_Example.py
+   ```
+   > **Lệnh khôi phục lại dữ liệu mẫu từ đầu (Reset & Re-seed):**
+   > ```powershell
+   > docker exec -e ALLOW_DESTRUCTIVE_RESET=true tasksync-backend python Seed_Example.py --reset
+   > ```
+
 ---
 
-## 6. Hướng Dẫn Phát Triển Local (Windows Native)
+## 6. Kiến Trúc Giám Sát & Quan Sát (Monitoring & Observability: Prometheus, Grafana, Redis)
+
+Hệ thống tích hợp cụm quan sát toàn diện theo chuẩn doanh nghiệp (3 Pillars of Observability: Metrics, Traces, Logs):
+
+- **Prometheus (v3.13)**: Thu thập số liệu định lượng (Metrics) mỗi 15 giây từ endpoint `/metrics` của Backend và cAdvisor.
+- **Grafana (v11.1)**: Trực quan hóa dữ liệu qua các bảng điều khiển (Dashboards) thời gian thực.
+- **Redis (v7 Alpine)**: Bộ đệm In-Memory, quản lý phiên làm việc và kiểm soát Rate-Limit.
+- **OpenTelemetry (OTel)**: Tự động đo lường và truy vết phân tán (Distributed Tracing) trên FastAPI, SQLAlchemy, Redis và HTTPX.
+
+### 🚀 Khởi Chạy Cụm Giám Sát
+```powershell
+docker compose -f docker-compose.monitoring.yml up -d prometheus grafana
+```
+
+### 🌐 Bảng Tra Cứu Đường Dẫn Giám Sát & Tài Khoản
+
+| Dịch vụ / Công cụ | Đường dẫn truy cập | Thông tin đăng nhập / Chức năng |
+| :--- | :--- | :--- |
+| **Grafana Dashboards** | `http://localhost:3000` | Tài khoản: **`admin`** / Mật khẩu: **`admin`** |
+| **Prometheus Explorer** | `http://localhost:9090` | Truy vấn metrics PromQL (ví dụ: `http_requests_total`, `redis_requests_total`) |
+| **Prometheus Targets** | `http://localhost:9090/targets` | Kiểm tra trạng thái kết nối các dịch vụ (State: `UP`) |
+| **Redis Cache Server** | Cổng `6379` (TCP) | Xem qua Grafana hoặc lệnh: `docker exec tasksync-redis redis-cli keys "*"` |
+| **Backend Metrics** | `http://localhost:8000/metrics` | Endpoint cung cấp số liệu thô định dạng Prometheus |
+| **Backend Health Probe**| `http://localhost:8000/health/live` | Kiểm tra sức khỏe SRE của Backend (200 OK) |
+| **Backend Swagger Docs**| `http://localhost:8000/docs` | Tài liệu tương tác và kiểm thử trực tiếp REST API v1 |
+
+### 📊 Danh Mục Dashboards Tích Hợp Sẵn Trong Grafana
+Khi truy cập `http://localhost:3000` (đăng nhập `admin`/`admin`), mở mục **Dashboards** bên menu trái để xem các màn hình giám sát chuyên sâu:
+1. **Redis Overview (`/d/tasksync-redis-overview`)**: Giám sát trạng thái client Redis (`ONLINE`), tần suất gọi lệnh `GET`/`SETEX`, độ trễ truy xuất và tỷ lệ cache hit.
+2. **Backend Overview (`/d/tasksync-backend-overview`)**: Lưu lượng truy cập (RPS), độ trễ P95/P99, tỷ lệ phản hồi HTTP 200/401/500.
+3. **API Overview (`/d/tasksync-api-overview`)**: Thống kê chi tiết theo từng endpoint API.
+4. **Database Overview (`/d/tasksync-database-overview`)**: Tần suất truy vấn SQL Server, thời gian phản hồi câu lệnh DB.
+5. **Docker Overview (`/d/tasksync-docker-overview`)**: Tỷ lệ tiêu hao CPU, RAM của các container.
+6. **Executive Overview (`/d/tasksync-executive-overview`)**: Báo cáo tổng quan sức khỏe toàn hệ thống dành cho quản lý.
+
+---
+
+## 7. Hướng Dẫn Phát Triển Local (Windows Native)
 
 ### 🐍 Bước 1: Khởi Tạo Backend (Python 3.12)
 ```powershell
@@ -143,9 +191,10 @@ Truy cập giao diện tại: `http://localhost:5173`.
 
 ---
 
-## 7. Tài Khoản Đăng Nhập Mẫu (Demo Credentials)
+## 8. Tài Khoản Đăng Nhập Mẫu (Demo Credentials)
 
 Tất cả tài khoản sử dụng chung mật khẩu: **`TaskSync@2026`**
+*(Được tự động tạo sau khi chạy lệnh nạp dữ liệu mẫu `Seed_Example.py`)*
 
 | Vai trò | Email đăng nhập | Quyền hạn chính |
 | :--- | :--- | :--- |
@@ -157,7 +206,7 @@ Tất cả tài khoản sử dụng chung mật khẩu: **`TaskSync@2026`**
 
 ---
 
-## 8. Quy Trình Nhánh Git & CI/CD (Develop -> Master)
+## 9. Quy Trình Nhánh Git & CI/CD (Develop -> Master)
 
 Dự án áp dụng chặt chẽ mô hình **GitFlow**:
 - **Nhánh `develop`**: Nhánh phát triển chính, nơi tích hợp toàn bộ tính năng và bug fix.
@@ -175,7 +224,7 @@ Mỗi commit / Pull Request đẩy lên `develop` hoặc `master` bắt buộc p
 # 1. Kiểm tra trạng thái và commit trên develop
 git checkout develop
 git add .
-git commit -m "feat(system): comprehensive UI layout, RBAC delete, vacation revocation and docker stabilization"
+git commit -m "feat(docs): add docker seeding instructions and monitoring stack guide"
 
 # 2. Đẩy lên nhánh develop trên GitHub
 git push origin develop
