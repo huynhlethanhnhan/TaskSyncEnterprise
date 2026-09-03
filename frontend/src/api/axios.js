@@ -1,8 +1,15 @@
 import axios from "axios";
 import { tokenService } from "../services/tokenService";
 
+const getBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  return import.meta.env.DEV ? "http://127.0.0.1:8000/api/v1" : "/api/v1";
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1",
+  baseURL: getBaseUrl(),
 });
 
 let isRefreshing = false;
@@ -65,7 +72,7 @@ api.interceptors.response.use(
       }
 
       try {
-        const refreshUrl = `${import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1"}/auth/refresh`;
+        const refreshUrl = `${getBaseUrl()}/auth/refresh`;
         const res = await axios.post(refreshUrl, { refresh_token: refreshToken });
 
         const { access_token, refresh_token } = res.data;
