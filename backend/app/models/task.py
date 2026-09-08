@@ -79,6 +79,23 @@ class Task(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    backlog_items = relationship(
+        "BacklogItem",
+        back_populates="task",
+        lazy="selectin",
+    )
+
+    @property
+    def sprint_name(self) -> str | None:
+        return self.sprint.name if self.sprint else None
+
+    @property
+    def is_standalone(self) -> bool:
+        return self.sprint_id is None
+
+    @property
+    def is_from_backlog(self) -> bool:
+        return bool(self.backlog_items)
 
     @property
     def creator_name(self) -> str | None:

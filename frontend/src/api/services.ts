@@ -84,6 +84,9 @@ export interface TaskItem {
   attachments?: any[];
   creator_name?: string | null;
   assignee?: any | null;
+  sprint_name?: string | null;
+  is_standalone?: boolean;
+  is_from_backlog?: boolean;
 }
 
 export interface EmployeeItem {

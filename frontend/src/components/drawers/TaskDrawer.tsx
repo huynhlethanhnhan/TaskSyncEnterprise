@@ -30,6 +30,9 @@ import {
   Briefcase,
   Clock,
   User,
+  Layers,
+  Zap,
+  AlertTriangle,
 } from 'lucide-react';
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
@@ -377,6 +380,75 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Work Context Notice / Warning Banner */}
+        {(() => {
+          const currentSprint = projectSprints.find((s) => s.id === Number(sprintId)) || (activeTask?.sprint_name ? { name: activeTask.sprint_name, status: 'Active' } : null);
+          const isSprintTask = Boolean(sprintId || activeTask?.sprint_id);
+          const isBacklogTask = Boolean(activeTask?.is_from_backlog);
+
+          if (isSprintTask) {
+            return (
+              <div data-testid="task-sprint-warning" className="rounded-xl border border-amber-300/80 bg-amber-500/10 p-3.5 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-3 shadow-xs">
+                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-amber-800 dark:text-amber-300">
+                      Công việc thuộc Sprint: {currentSprint?.name || activeTask?.sprint_name || 'Sprint dự án'}
+                    </span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                      Scrum Lifecycle
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-amber-800/90 dark:text-amber-300/90">
+                    ⚠️ <strong>Cảnh báo quản lý:</strong> Công việc này nằm trong phạm vi chu kỳ Sprint. Việc cập nhật trạng thái hoặc điểm Story Points sẽ trực tiếp tác động tới <strong>Sprint Burndown Chart</strong>, <strong>Velocity</strong> và tự động đồng bộ thời gian thực với tiến độ Dự án.
+                  </p>
+                </div>
+              </div>
+            );
+          }
+
+          if (isBacklogTask) {
+            return (
+              <div data-testid="task-backlog-notice" className="rounded-xl border border-indigo-300/80 bg-indigo-500/10 p-3.5 text-xs text-indigo-900 dark:text-indigo-200 flex items-start gap-3 shadow-xs">
+                <Layers className="h-5 w-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-indigo-800 dark:text-indigo-300">
+                      Chuyển đổi từ Product Backlog
+                    </span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
+                      Backlog Item
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-indigo-800/90 dark:text-indigo-300/90">
+                    📦 Công việc này bắt nguồn từ danh mục Product Backlog. Khi hoàn thành toàn bộ công việc, Backlog Item sẽ được đánh dấu hoàn tất và giải phóng vào tiến độ hoàn thành của dự án.
+                  </p>
+                </div>
+              </div>
+            );
+          }
+
+          // Standalone task
+          return (
+            <div data-testid="task-standalone-notice" className="rounded-xl border border-emerald-300/80 bg-emerald-500/10 p-3.5 text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-3 shadow-xs">
+              <Zap className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-emerald-800 dark:text-emerald-300">
+                    Công việc Riêng lẻ (Standalone Task)
+                  </span>
+                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    Độc lập
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-emerald-800/90 dark:text-emerald-300/90">
+                  ⚡ Công việc này nằm độc lập ngoài chu kỳ Sprint. Khi hoàn thành, tiến độ tổng thể của <strong>Dự án</strong> và <strong>KPI Phòng ban / Team</strong> sẽ tăng/giảm trực tiếp theo tỷ lệ thực tế.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
+
         {isEditMode ? (
           /* Dual-Column Layout for Editing/Details Mode */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

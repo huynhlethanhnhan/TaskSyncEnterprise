@@ -797,6 +797,20 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
             )
 
         db.commit()
+
+        # Đồng bộ hóa chính xác tiến độ thực tế và trạng thái của toàn bộ dự án
+        from app.services.progress_service import (
+            recalculate_project_progress,
+            sync_sprint_daily_progress,
+        )
+
+        for project in projects.values():
+            recalculate_project_progress(db, project.id)
+
+        for sprint in sprints.values():
+            sync_sprint_daily_progress(db, sprint.id)
+
+        db.commit()
         _clear_application_cache()
         counts = dict(EXPECTED_COUNTS)
         counts["vacations"] = 14
