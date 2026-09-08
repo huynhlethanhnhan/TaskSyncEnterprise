@@ -354,6 +354,15 @@ def update_my_task(
     db.commit()
     db.refresh(task)
 
+    from app.services.progress_service import (
+        recalculate_project_progress,
+        sync_sprint_daily_progress,
+    )
+
+    recalculate_project_progress(db, task.project_id)
+    if task.sprint_id:
+        sync_sprint_daily_progress(db, task.sprint_id)
+
     from app.cache import CacheInvalidator
 
     CacheInvalidator.invalidate_task(

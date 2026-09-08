@@ -172,6 +172,21 @@ const ProjectDetailPage: React.FC = () => {
     );
   }, [projectTasks]);
 
+  const computedProgress = React.useMemo(() => {
+    if (projectTasks.length > 0) {
+      return Math.round((taskCounts.done / projectTasks.length) * 100);
+    }
+    return Math.round(project?.progress_percent ?? 0);
+  }, [projectTasks.length, taskCounts.done, project?.progress_percent]);
+
+  const effectiveProjectStatus = React.useMemo(() => {
+    if (projectTasks.length > 0) {
+      if (taskCounts.done === projectTasks.length) return 'Completed';
+      if (project?.status === 'Completed') return 'Active';
+    }
+    return project?.status || 'Active';
+  }, [projectTasks.length, taskCounts.done, project?.status]);
+
   // Handle saving task in drawer
   const handleSaveTask = async (data: Partial<TaskItem>) => {
     try {
@@ -184,6 +199,7 @@ const ProjectDetailPage: React.FC = () => {
       }
       setIsDrawerOpen(false);
       refetchTasks();
+      refetch();
     } catch {
       toast.error('Lỗi khi lưu công việc');
     }
@@ -204,6 +220,7 @@ const ProjectDetailPage: React.FC = () => {
       await updateTaskStatus.mutateAsync({ id: taskId, status: newStatus });
       toast.success('Cập nhật trạng thái thành công');
       refetchTasks();
+      refetch();
     } catch {
       toast.error('Lỗi cập nhật trạng thái');
     }
@@ -339,14 +356,14 @@ const ProjectDetailPage: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>Tiến độ Dự án</span>
-                    <Badge variant="primary">{project.progress_percent ?? 0}% Hoàn thành</Badge>
+                    <Badge variant="primary">{computedProgress}% Hoàn thành</Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="h-3 w-full bg-accent rounded-full overflow-hidden">
                     <div
                       className="h-full bg-primary transition-all duration-500"
-                      style={{ width: `${Math.min(100, Math.max(0, project.progress_percent ?? 0))}%` }}
+                      style={{ width: `${Math.min(100, Math.max(0, computedProgress))}%` }}
                     />
                   </div>
 
@@ -384,7 +401,7 @@ const ProjectDetailPage: React.FC = () => {
                     <p className="text-xs text-text-muted text-center py-6">Chưa có công việc nào gắn với dự án này.</p>
                   ) : (
                     <div className="divide-y divide-border/60">
-                      {projectTasks.slice(0, 5).map((task) => (
+                      {projectTasks.slice(0, 10).map((task) => (
                         <div key={task.id} className="py-3 flex items-center justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <p
@@ -394,12 +411,45 @@ const ProjectDetailPage: React.FC = () => {
                             >
                               {task.title || task.name}
                             </p>
-                            <span className="text-[10px] text-text-muted">Độ ưu tiên: {task.priority || 'Medium'}</span>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <span className="text-[10px] text-text-muted">Độ ưu tiên: {task.priority || 'Medium'}</span>
+                              {task.sprint_id ? (
+                                <Badge variant="primary" size="sm" className="text-[9px] py-0 px-1.5 font-semibold">
+                                  🏃 Sprint: {task.sprint_name || `#${task.sprint_id}`}
+                                </Badge>
+                              ) : task.is_from_backlog ? (
+                                <Badge variant="warning" size="sm" className="text-[9px] py-0 px-1.5 font-semibold">
+                                  📦 Backlog
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" size="sm" className="text-[9px] py-0 px-1.5 font-semibold text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-800">
+                                  ⚡ Riêng lẻ
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <Badge variant={task.status === 'Done' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} showDot>
-                              {task.status || 'To Do'}
-                            </Badge>
+                            {canManageTasks ? (
+                              <select
+                                value={task.status || 'To Do'}
+                                onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                                className={`h-6 px-2 rounded-md font-bold text-[10px] uppercase border cursor-pointer focus:outline-none transition-colors ${
+                                  task.status === 'Done'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/90 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
+                                    : task.status === 'In Progress'
+                                      ? 'bg-blue-50 text-blue-700 border-blue-200/90 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/60'
+                                      : 'bg-amber-50 text-amber-800 border-amber-200/90 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60'
+                                }`}
+                              >
+                                <option value="To Do">To Do</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Done">Done</option>
+                              </select>
+                            ) : (
+                              <Badge variant={task.status === 'Done' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} showDot>
+                                {task.status || 'To Do'}
+                              </Badge>
+                            )}
                             {canManageTasks && (
                               <div className="flex items-center gap-1">
                                 <Button
@@ -445,7 +495,9 @@ const ProjectDetailPage: React.FC = () => {
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
                     <span className="text-text-muted">Trạng thái:</span>
-                    <Badge variant="primary" showDot>{project.status || 'Active'}</Badge>
+                    <Badge variant={effectiveProjectStatus === 'Completed' ? 'success' : effectiveProjectStatus === 'Active' ? 'primary' : 'warning'} showDot>
+                      {effectiveProjectStatus}
+                    </Badge>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
@@ -469,7 +521,7 @@ const ProjectDetailPage: React.FC = () => {
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
                     <span className="text-text-muted">Tiến độ:</span>
-                    <span className="font-bold text-text-primary">{project.progress_percent ?? 0}%</span>
+                    <span className="font-bold text-text-primary">{computedProgress}%</span>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">

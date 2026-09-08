@@ -253,6 +253,15 @@ def convert_to_task(
     db.commit()
     db.refresh(task)
 
+    from app.services.progress_service import (
+        recalculate_project_progress,
+        sync_sprint_daily_progress,
+    )
+
+    recalculate_project_progress(db, task.project_id)
+    if task.sprint_id is not None:
+        sync_sprint_daily_progress(db, task.sprint_id)
+
     CacheInvalidator.invalidate_task(task.id, project_id=task.project_id)
     if task.sprint_id is not None:
         CacheInvalidator.invalidate_sprint(

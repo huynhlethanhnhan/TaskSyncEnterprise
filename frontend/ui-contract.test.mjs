@@ -255,3 +255,23 @@ test('dark variant is bound to class strategy and project detail omits budget', 
   assert.doesNotMatch(projectDetail, /Ngân sách/);
   assert.doesNotMatch(projectDetail, /project\.budget/);
 });
+
+test('task drawer and project detail provide sprint, backlog, and standalone work context warnings', async () => {
+  const taskDrawer = await read('./src/components/drawers/TaskDrawer.tsx');
+  const projectDetail = await read('./src/pages/projects/ProjectDetailPage.tsx');
+
+  // Verify TaskDrawer context banners
+  assert.match(taskDrawer, /data-testid=["']task-sprint-warning["']/);
+  assert.match(taskDrawer, /data-testid=["']task-backlog-notice["']/);
+  assert.match(taskDrawer, /data-testid=["']task-standalone-notice["']/);
+  assert.match(taskDrawer, /Sprint Burndown Chart/);
+  assert.match(taskDrawer, /Công việc Riêng lẻ \(Standalone Task\)/);
+
+  // Verify ProjectDetailPage context badges and real-time progress
+  assert.match(projectDetail, /computedProgress/);
+  assert.match(projectDetail, /effectiveProjectStatus/);
+  assert.match(projectDetail, /Sprint:/);
+  assert.match(projectDetail, /Backlog/);
+  assert.match(projectDetail, /Riêng lẻ/);
+});
+

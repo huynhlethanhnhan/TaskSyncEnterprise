@@ -134,6 +134,15 @@ def create(db: Session, data: TaskCreate):
             app_logger.error(f"Error creating notification: {e}")
 
     db.refresh(obj)
+    from app.services.progress_service import (
+        recalculate_project_progress,
+        sync_sprint_daily_progress,
+    )
+
+    recalculate_project_progress(db, obj.project_id)
+    if obj.sprint_id:
+        sync_sprint_daily_progress(db, obj.sprint_id)
+
     return obj
 
 
@@ -236,14 +245,32 @@ def update(db: Session, obj: Task, data: TaskUpdate):
             app_logger.error(f"Error creating status notification: {e}")
 
     db.refresh(obj)
+    from app.services.progress_service import (
+        recalculate_project_progress,
+        sync_sprint_daily_progress,
+    )
+
+    recalculate_project_progress(db, obj.project_id)
+    if project_was_set and target_project_id != obj.project_id:
+        recalculate_project_progress(db, target_project_id)
+    if obj.sprint_id:
+        sync_sprint_daily_progress(db, obj.sprint_id)
+
     return obj
 
 
 def delete(db: Session, obj: Task):
-
     obj.is_deleted = True
-
     db.commit()
+
+    from app.services.progress_service import (
+        recalculate_project_progress,
+        sync_sprint_daily_progress,
+    )
+
+    recalculate_project_progress(db, obj.project_id)
+    if obj.sprint_id:
+        sync_sprint_daily_progress(db, obj.sprint_id)
 
 
 def get_by_project(db: Session, project_id: int):

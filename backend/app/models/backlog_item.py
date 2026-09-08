@@ -38,4 +38,4 @@ class BacklogItem(AuditMixin, Base):
     project = relationship("Project")
     sprint = relationship("Sprint", back_populates="backlog_items")
     topic = relationship("DiscussionTopic")
-    task = relationship("Task")
+    task = relationship("Task", back_populates="backlog_items")

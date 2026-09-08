@@ -131,3 +131,6 @@ class TaskResponse(TaskCreate):
     creator_name: str | None = None
     attachments: list[TaskAttachmentResponse] = []
     assignee: AssigneeSummaryResponse | None = None
+    sprint_name: str | None = None
+    is_standalone: bool = True
+    is_from_backlog: bool = False
