@@ -343,15 +343,15 @@ export default function VacationPage(): React.ReactElement {
                     </div>
 
                     {/* Step Approval Timeline Bar */}
-                    <div className="p-3 rounded-lg bg-accent/20 border border-border/60">
+                    <div className="p-3 rounded-lg bg-secondary/40 dark:bg-slate-900/60 border border-border/60">
                       <div className="flex items-center justify-between text-[11px] font-medium text-text-muted">
-                        <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
                           <CheckCircle2 className="h-3.5 w-3.5" /> 1. Đã Gửi đơn
                         </span>
-                        <span className={`flex items-center gap-1 ${vacation.status === 'Manager Approved' || vacation.status === 'HR Approved' || vacation.status === 'Approved' ? 'text-emerald-600 font-semibold' : ''}`}>
+                        <span className={`flex items-center gap-1 ${vacation.status === 'Manager Approved' || vacation.status === 'HR Approved' || vacation.status === 'Approved' ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ''}`}>
                           <UserCheck className="h-3.5 w-3.5" /> 2. Manager Phê duyệt
                         </span>
-                        <span className={`flex items-center gap-1 ${vacation.status === 'HR Approved' || vacation.status === 'Approved' ? 'text-emerald-600 font-semibold' : ''}`}>
+                        <span className={`flex items-center gap-1 ${vacation.status === 'HR Approved' || vacation.status === 'Approved' ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ''}`}>
                           <FileCheck className="h-3.5 w-3.5" /> 3. HR Hoàn tất
                         </span>
                       </div>

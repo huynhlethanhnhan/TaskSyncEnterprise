@@ -569,13 +569,13 @@ const SprintJiraTaskTable: React.FC<{
 
         {/* Story Points Summary Badges (Matching Image 3) */}
         <div className="flex items-center gap-1.5 text-[10px] font-bold">
-          <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20" title="To Do SP">
+          <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60" title="To Do SP">
             {spSummary.todo} To Do
           </span>
-          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 border border-blue-500/20" title="In Progress SP">
+          <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/60" title="In Progress SP">
             {spSummary.inProgress} In Progress
           </span>
-          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" title="Done SP">
+          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60" title="Done SP">
             {spSummary.done} Done
           </span>
         </div>
@@ -606,7 +606,7 @@ const SprintJiraTaskTable: React.FC<{
                 <div className="flex items-center gap-3 shrink-0">
                   {/* Epic Tag Badge (Matching Image 3) */}
                   {topic ? (
-                    <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-purple-500/10 text-purple-600 border border-purple-500/20 max-w-[130px] truncate">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-purple-50 text-purple-700 border border-purple-200/80 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800/60 max-w-[130px] truncate">
                       {topic.title || topic.name}
                     </span>
                   ) : null}
@@ -616,11 +616,11 @@ const SprintJiraTaskTable: React.FC<{
                     value={t.status}
                     onChange={(e) => handleStatusChange(t.id, e.target.value)}
                     disabled={!isSprintMutable}
-                    className={`h-7 px-2 rounded font-bold text-[10px] uppercase border cursor-pointer focus:outline-none ${t.status === 'Done'
-                      ? 'bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400'
+                    className={`h-7 px-2 rounded-md font-bold text-[10px] uppercase border cursor-pointer focus:outline-none transition-colors ${t.status === 'Done'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200/90 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
                       : t.status === 'In Progress'
-                        ? 'bg-blue-50 text-blue-600 border-blue-300 dark:bg-blue-950/40 dark:text-blue-400'
-                        : 'bg-amber-50 text-amber-600 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200/90 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/60'
+                        : 'bg-amber-50 text-amber-800 border-amber-200/90 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60'
                       }`}
                   >
                     <option value="To Do">TO DO</option>

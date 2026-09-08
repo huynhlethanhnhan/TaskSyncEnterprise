@@ -217,7 +217,7 @@ const TaskPage: React.FC = () => {
       cell: ({ row }: { row: { original: TaskItem } }) => {
         const p = row.original.priority || 'Medium';
         return (
-          <Badge variant={p === 'High' ? 'danger' : p === 'Medium' ? 'warning' : 'default'}>
+          <Badge variant={p === 'Urgent' || p === 'High' ? 'danger' : p === 'Medium' ? 'warning' : 'primary'}>
             {p}
           </Badge>
         );
