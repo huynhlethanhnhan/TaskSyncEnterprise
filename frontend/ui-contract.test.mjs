@@ -246,3 +246,12 @@ test('non-manager dashboards do not request the protected Department directory',
   assert.match(departmentHooks, /queryFn: departmentsApi\.getAll,[\s\S]*?enabled,/);
   assert.match(dashboard, /useDepartments\(permissions\.canManageDepartment\)/);
 });
+
+test('dark variant is bound to class strategy and project detail omits budget', async () => {
+  const css = await read('./src/index.css');
+  const projectDetail = await read('./src/pages/projects/ProjectDetailPage.tsx');
+
+  assert.match(css, /@custom-variant\s+dark\s+\(&:\s*where\(\.dark,\s*\.dark\s*\*\)\);/);
+  assert.doesNotMatch(projectDetail, /Ngân sách/);
+  assert.doesNotMatch(projectDetail, /project\.budget/);
+});

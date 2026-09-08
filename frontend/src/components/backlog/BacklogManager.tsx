@@ -353,9 +353,9 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                           </Badge>
                         )}
                         {item.topic_id ? (
-                          <Badge variant="warning">
+                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200/80 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800/60">
                             Epic: {topics.find((t) => t.id === item.topic_id)?.title || `#${item.topic_id}`}
-                          </Badge>
+                          </span>
                         ) : (
                           <Badge variant="outline" className="text-text-muted border-dashed">
                             Chưa gán Epic

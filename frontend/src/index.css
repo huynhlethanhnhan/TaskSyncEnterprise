@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* 🌓 Bind dark variant strictly to the .dark class strategy (independent of OS prefers-color-scheme) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* 🎨 TASK SYNC ENTERPRISE - DESIGN TOKENS (HSL SYSTEM) */
 
 :root {

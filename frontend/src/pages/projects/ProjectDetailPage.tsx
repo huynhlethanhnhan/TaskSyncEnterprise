@@ -486,14 +486,6 @@ const ProjectDetailPage: React.FC = () => {
                     </span>
                   </div>
 
-                  {project.budget != null && (
-                    <div className="flex items-center justify-between py-2 border-b border-border/60">
-                      <span className="text-text-muted">Ngân sách:</span>
-                      <span className="font-semibold text-text-primary">
-                        {project.budget.toLocaleString('vi-VN')} VNĐ
-                      </span>
-                    </div>
-                  )}
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
                     <span className="text-text-muted">Người tạo:</span>
@@ -638,7 +630,15 @@ const ProjectDetailPage: React.FC = () => {
                           <tr key={t.id} className="hover:bg-accent/20 transition-colors">
                             <td className="p-3 font-semibold text-text-primary">{t.title || t.name}</td>
                             <td className="p-3">
-                              <Badge variant={t.priority === 'High' ? 'danger' : 'warning'}>
+                              <Badge
+                                variant={
+                                  t.priority === 'Urgent' || t.priority === 'High'
+                                    ? 'danger'
+                                    : t.priority === 'Medium'
+                                      ? 'warning'
+                                      : 'primary'
+                                }
+                              >
                                 {t.priority || 'Medium'}
                               </Badge>
                             </td>
@@ -721,7 +721,16 @@ const ProjectDetailPage: React.FC = () => {
                                 ) : (
                                   <span className="text-text-muted">Chưa gán</span>
                                 )}
-                                <Badge variant={t.priority === 'High' ? 'danger' : 'warning'} size="sm">
+                                <Badge
+                                  variant={
+                                    t.priority === 'Urgent' || t.priority === 'High'
+                                      ? 'danger'
+                                      : t.priority === 'Medium'
+                                        ? 'warning'
+                                        : 'outline'
+                                  }
+                                  size="sm"
+                                >
                                   {t.priority || 'Medium'}
                                 </Badge>
                               </div>
