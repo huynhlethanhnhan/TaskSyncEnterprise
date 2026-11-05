@@ -8,6 +8,10 @@
 USE TaskSyncEnterprise;
 GO
 
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- ============================================================================
 -- THỦ TỤC 1: sp_GetProjectOverviewStats
 -- Kỹ thuật tối ưu hóa: Conditional Aggregation (Tổng hợp có điều kiện)

@@ -374,3 +374,53 @@ BEGIN
     );
 END;
 GO
+
+-- ============================================================================
+-- PHẦN 3: BẢO ĐẢM TÍNH TƯƠNG THÍCH TRÊN CSDL ĐÃ TỒN TẠI TỪ TRƯỚC (IDEMPOTENT MIGRATION)
+-- Nếu các bảng đã tồn tại từ các phiên bản migration cũ, tự động bổ sung các cột còn thiếu.
+-- ============================================================================
+
+-- Bổ sung cho dbo.tasks
+IF COL_LENGTH('dbo.tasks', 'deleted_at') IS NULL
+    ALTER TABLE dbo.tasks ADD deleted_at DATETIME2(7) NULL;
+GO
+IF COL_LENGTH('dbo.tasks', 'updated_at') IS NULL
+    ALTER TABLE dbo.tasks ADD updated_at DATETIME2(7) NULL;
+GO
+IF COL_LENGTH('dbo.tasks', 'created_by_id') IS NULL
+    ALTER TABLE dbo.tasks ADD created_by_id INT NULL;
+GO
+IF COL_LENGTH('dbo.tasks', 'updated_by_id') IS NULL
+    ALTER TABLE dbo.tasks ADD updated_by_id INT NULL;
+GO
+IF COL_LENGTH('dbo.tasks', 'deleted_by_id') IS NULL
+    ALTER TABLE dbo.tasks ADD deleted_by_id INT NULL;
+GO
+
+-- Bổ sung cho dbo.sprints
+IF COL_LENGTH('dbo.sprints', 'updated_at') IS NULL
+    ALTER TABLE dbo.sprints ADD updated_at DATETIME2(7) NULL;
+GO
+
+-- Bổ sung cho dbo.project_members
+IF COL_LENGTH('dbo.project_members', 'role_in_project') IS NULL
+    ALTER TABLE dbo.project_members ADD role_in_project NVARCHAR(50) NOT NULL CONSTRAINT DF_project_members_role DEFAULT (N'Member');
+GO
+
+-- Bổ sung cho dbo.audit_logs
+IF COL_LENGTH('dbo.audit_logs', 'entity_type') IS NULL
+    ALTER TABLE dbo.audit_logs ADD entity_type NVARCHAR(100) NULL;
+GO
+IF COL_LENGTH('dbo.audit_logs', 'entity_id') IS NULL
+    ALTER TABLE dbo.audit_logs ADD entity_id INT NULL;
+GO
+IF COL_LENGTH('dbo.audit_logs', 'old_values') IS NULL
+    ALTER TABLE dbo.audit_logs ADD old_values NVARCHAR(MAX) NULL;
+GO
+IF COL_LENGTH('dbo.audit_logs', 'new_values') IS NULL
+    ALTER TABLE dbo.audit_logs ADD new_values NVARCHAR(MAX) NULL;
+GO
+IF COL_LENGTH('dbo.audit_logs', 'ip_address') IS NULL
+    ALTER TABLE dbo.audit_logs ADD ip_address NVARCHAR(50) NULL;
+GO
+

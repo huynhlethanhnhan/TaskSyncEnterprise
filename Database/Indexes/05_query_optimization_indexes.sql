@@ -8,6 +8,10 @@
 USE TaskSyncEnterprise;
 GO
 
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- ============================================================================
 -- PHẦN 1: TẠO CHỈ MỤC B-TREE TRÊN KHÓA NGOẠI (FOREIGN KEY INDEXES)
 -- Lưu ý: SQL Server KHÔNG tự động đánh index trên Foreign Key.

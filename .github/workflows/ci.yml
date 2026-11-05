@@ -5,11 +5,13 @@ on:
     branches:
       - develop
       - master
+      - Dev-Database
 
   pull_request:
     branches:
       - develop
       - master
+      - Dev-Database
 
   workflow_dispatch:
 

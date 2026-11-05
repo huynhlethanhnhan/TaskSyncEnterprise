@@ -7,6 +7,10 @@
 USE TaskSyncEnterprise;
 GO
 
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- ============================================================================
 -- TRIGGER 1: INSTEAD OF DELETE — BẢO VỆ NGUYÊN TẮC XÓA MỀM (SOFT DELETION)
 -- Nghiệp vụ: Tuyệt đối không cho phép xóa vật lý (hard delete) bản ghi Task.

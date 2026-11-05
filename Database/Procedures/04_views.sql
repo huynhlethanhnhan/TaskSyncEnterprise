@@ -8,6 +8,10 @@
 USE TaskSyncEnterprise;
 GO
 
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- ============================================================================
 -- VIEW 1: vw_ActiveTasksOverview
 -- Quy tắc toàn cục:
