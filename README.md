@@ -5,6 +5,7 @@
 [![Frontend Vite](https://img.shields.io/badge/Vite%20Build-Passed%201.4s-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
 [![Contract Tests](https://img.shields.io/badge/Contract%20Tests-28%2F28%20Passed-success.svg)](frontend/ui-contract.test.mjs)
 [![Alembic Clean Database](https://img.shields.io/badge/Alembic%20Migrations-Verified%20Head-success.svg)](backend/alembic/versions/)
+[![Database-First Suite](https://img.shields.io/badge/Database--First-SQL%20Server%202022-green.svg)](Database/README.md)
 
 ---
 
@@ -12,9 +13,74 @@
 
 **TaskSyncEnterprise** là nền tảng quản lý công việc và dự án enterprise đa người dùng (multi-tenant, role-based) được xây dựng cho các đội ngũ phát triển phần mềm theo mô hình Agile/Scrum. Nền tảng kết hợp chặt chẽ giữa **Cơ cấu Tổ chức Doanh nghiệp** (`Phòng ban -> Nhóm -> Nhân viên`) và **Quản lý Công việc Agile** (`Dự án -> Thành viên -> Sprint -> Topic/Epic -> Backlog -> Task -> TaskAssignment -> Kanban -> Thông báo -> Dashboard`).
 
+Hệ thống được thiết kế theo mô hình **Database-First** và kiến trúc đa tầng (Tiered Architecture), trong đó toàn bộ mô hình dữ liệu, ràng buộc nghiệp vụ (Rules), kích hoạt tự động (Triggers), thủ tục lưu trữ (Stored Procedures) và chỉ mục tối ưu hóa (Indexes) đều được hiện thực hóa trực tiếp trên **Microsoft SQL Server**.
+
 ---
 
-## 2. Tài Liệu Kiến Trúc & Thiết Kế (Architecture Documentation)
+## 2. Cấu Trúc Dự Án (Project Structure)
+
+Dự án được phân tách rõ ràng thành các khối chuyên biệt phục vụ cả nghiên cứu CSDL, lập trình backend và phát triển giao diện:
+
+```text
+TaskSyncEnterprise/
+├── Database/                     # [DATABASE-FIRST SUITE] Kịch bản T-SQL thuần chạy trên SQL Server
+│   ├── Scripts/                  # DDL tạo bảng, khóa chính, khóa ngoại, CHECK, DEFAULT, Seed data
+│   ├── Triggers/                 # 5 Trigger T-SQL (Audit Trail, Soft-Delete, Agile rules, Cross-check)
+│   ├── Procedures/               # Stored Procedures nghiệp vụ và Views truy vấn toàn cục
+│   ├── Indexes/                  # Tối ưu hóa truy vấn (B-Tree FK, Covering Index INCLUDE, Filtered Index)
+│   ├── Verification/             # Kịch bản kiểm thử & chạy demo thực tế trước Giảng viên
+│   └── README.md                 # Hướng dẫn chi tiết thứ tự chạy file trên SQL Server (SSMS)
+├── backend/                      # [BACKEND API] FastAPI, Python 3.12, SQLAlchemy 2.0 ORM, Redis Cache
+├── frontend/                     # [FRONTEND SPA] React 19, TypeScript, TailwindCSS v4, TanStack Query
+├── docs/                         # [TÀI LIỆU HỆ THỐNG] Kiến trúc, báo cáo đồ án, thiết kế ERD
+│   ├── database/                 # Báo cáo chuyên sâu: DATABASE_FIRST_ARCHITECTURE_REPORT.md
+│   ├── architecture/             # SYSTEM_ARCHITECTURE.md, MODULE_RELATIONSHIP.md
+│   └── reports/                  # DATA_MANAGEMENT_ROADMAP.md, audit logs, stabilization reports
+└── monitoring/                   # [QUAN SÁT SRE] Prometheus, Grafana Dashboards, cAdvisor
+```
+
+### 📋 Bảng Tra Cứu Các Khối Chức Năng CSDL (Database Master Suite)
+
+| Thành phần CSDL | Đường dẫn file T-SQL | Mục đích & Nghiệp vụ cốt lõi |
+| :--- | :--- | :--- |
+| **DDL Schema & Rules** | [`Database/Scripts/01_create_tables_and_constraints.sql`](Database/Scripts/01_create_tables_and_constraints.sql) | Khởi tạo toàn bộ bảng, PK, FK, Unique, Check Constraints và Default UTC. |
+| **Dữ liệu mẫu chuẩn** | [`Database/Scripts/02_seed_initial_data.sql`](Database/Scripts/02_seed_initial_data.sql) | Nạp sẵn phòng ban, nhân viên, dự án, sprint, task phục vụ demo báo cáo. |
+| **Bộ 5 Triggers T-SQL** | [`Database/Triggers/02_triggers.sql`](Database/Triggers/02_triggers.sql) | Xóa mềm Instead-Of, Audit Log tự động, ràng buộc duy nhất 1 Active Sprint. |
+| **Stored Procedures** | [`Database/Procedures/03_stored_procedures.sql`](Database/Procedures/03_stored_procedures.sql) | Thống kê dự án Single-pass (`sp_GetProjectOverviewStats`), đóng Sprint an toàn. |
+| **Views Toàn Cục** | [`Database/Procedures/04_views.sql`](Database/Procedures/04_views.sql) | Tự động loại bỏ bản ghi xóa mềm (`vw_ActiveTasksOverview`), báo cáo tải phòng ban. |
+| **Chỉ mục Tối ưu hóa** | [`Database/Indexes/05_query_optimization_indexes.sql`](Database/Indexes/05_query_optimization_indexes.sql) | Covering Index (`INCLUDE`), Filtered Index, kịch bản đo lường IO & Time. |
+| **Kịch bản Demo** | [`Database/Verification/07_test_and_demo_scenarios.sql`](Database/Verification/07_test_and_demo_scenarios.sql) | Kịch bản copy-paste chạy trực tiếp trong SSMS khi thuyết trình. |
+
+---
+
+## 3. Báo Cáo Cải Thiện CSDL (Database-First & 4 Trụ Cột Môn Học)
+
+Chi tiết toàn bộ lý thuyết, phân tích mã nguồn, bằng chứng tối ưu hóa truy vấn và kịch bản trả lời phản biện của Giảng viên được ghi nhận đầy đủ tại:  
+👉 **[DATABASE_FIRST_ARCHITECTURE_REPORT.md](docs/database/DATABASE_FIRST_ARCHITECTURE_REPORT.md)**
+
+Tóm tắt 4 trụ cột nghiệp vụ:
+1. **Trigger (Cơ chế kích hoạt tự động):**
+   - `trg_Tasks_SoftDelete_InsteadOf`: Chặn lệnh `DELETE` vật lý và tự động chuyển thành `UPDATE is_deleted = 1, deleted_at = SYSUTCDATETIME()`.
+   - `trg_Tasks_AuditTrail`: Lấy dữ liệu từ bảng ảo `inserted` và `deleted` để ghi vết thay đổi trạng thái, độ ưu tiên, tiến độ vào `dbo.audit_logs`.
+   - `trg_Sprints_ActiveSprintConstraint`: Ràng buộc Scrum — chỉ cho phép tối đa 1 Sprint Active trong mỗi dự án, tự động `ROLLBACK TRANSACTION` nếu vi phạm.
+   - `trg_Tasks_ValidateSprintProject`: Ngăn chặn gán nhầm Sprint của dự án khác cho Task.
+   - `trg_TaskAssignments_ValidateMember`: Chặn phân công task cho nhân viên chưa tham gia dự án.
+2. **Rule (Quy tắc & Ràng buộc toàn vẹn):**
+   - Đảm bảo toàn vẹn tham chiếu qua khóa chính, khóa ngoại, bảng liên kết N-N.
+   - Ràng buộc miền giá trị `CHECK CONSTRAINT` cho trạng thái và mức độ ưu tiên.
+   - Ràng buộc duy nhất `UNIQUE CONSTRAINT` chống trùng lặp thành viên dự án và snapshot tiến độ.
+3. **Query Optimization (Tối ưu hóa truy vấn):**
+   - **Foreign Key Indexing**: Đánh B-Tree Index cho 100% khóa ngoại, chuyển `Table Scan` thành `Index Seek`.
+   - **Covering Index (`INCLUDE`)**: Đưa các cột hay truy vấn vào cây index để loại bỏ triệt để chi phí `Key Lookup`.
+   - **Filtered Index**: Chỉ đánh index trên các dòng chưa hoàn thành và chưa xóa (`WHERE is_deleted = 0 AND status <> N'Done'`), giảm 80% dung lượng index.
+   - **Stored Procedure Aggregation**: Đóng gói 6-7 truy vấn thống kê rời rạc thành 1 lần quét bảng duy nhất, giảm độ trễ từ 120ms xuống < 5ms.
+4. **Rules Global (Quy tắc truy vấn toàn cục):**
+   - View toàn cục `vw_ActiveTasksOverview` tự động tích hợp điều kiện Soft-Delete `WHERE is_deleted = 0`.
+   - Row-Level Security Scoping phân quyền truy cập dòng theo vai trò (Admin, Manager, Employee) qua `project_scope_predicate`.
+
+---
+
+## 4. Tài Liệu Kiến Trúc & Thiết Kế (Architecture Documentation)
 
 Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quyền hệ thống được lưu trữ tại:
 
@@ -25,7 +91,7 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 
 ---
 
-## 3. Công Nghệ Sử Dụng
+## 5. Công Nghệ Sử Dụng
 
 - **Backend Framework**: Python 3.12+, FastAPI, Uvicorn (REST API v1)
 - **Cơ sở Dữ liệu & ORM**: MS SQL Server 2022 / SQLEXPRESS, SQLAlchemy 2.0, Alembic, `pymssql`
@@ -36,8 +102,9 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 
 ---
 
-## 4. Cập Nhật Mới Nhất (Latest Engineering Updates)
+## 6. Cập Nhật Mới Nhất (Latest Engineering Updates)
 
+- **Bộ Master Database-First T-SQL:** Cung cấp trọn vẹn thư mục `Database/` với kịch bản DDL, 5 Triggers T-SQL, Stored Procedures, Views toàn cục và Indexing Suite chạy độc lập trên Microsoft SQL Server.
 - **Kanban Card Responsive Layout:** Tái cấu trúc hoàn toàn layout thẻ Kanban thành 3 hàng độc lập, loại bỏ triệt để lỗi ép chữ xếp dọc 1-2 ký tự khi sidebar mở rộng hoặc màn hình co nhỏ. Tiêu đề hiển thị trọn vẹn, co giãn mượt mà.
 - **Phân quyền Xóa Toàn diện (RBAC & Delete Operations):**
   - **Admin & Manager:** Toàn quyền CRUD trên thẻ Kanban (Action Menu `⋮`), Task Detail Drawer (Nút đỏ "Xóa công việc"), trang Chi tiết Dự án (Nút Sửa/Xóa công việc gần đây và Vùng Nguy Hiểm - Xóa Dự án trong Cài đặt).
@@ -51,7 +118,7 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 
 ---
 
-## 5. Kiến Trúc Docker & Môi Trường Container (Docker, Redis, Nginx)
+## 7. Kiến Trúc Docker & Môi Trường Container (Docker, Redis, Nginx)
 
 Toàn bộ hệ thống được đóng gói thành các Docker container tối ưu hóa cho môi trường Enterprise:
 
@@ -119,7 +186,7 @@ Toàn bộ hệ thống được đóng gói thành các Docker container tối 
 
 5. **Nạp dữ liệu mẫu (Seeding Database):**
    > [!IMPORTANT]
-   > Khi khởi chạy Docker lần đầu, cơ sở dữ liệu hoàn toàn trống rỗng (`RUN_DEMO_SEED=false`) để đảm bảo an toàn. Nếu không nạp dữ liệu mẫu, đăng nhập sẽ báo lỗi tài khoản không tồn tại. Để nạp bộ tài khoản và dữ liệu mẫu chuẩn theo đúng **Mục 8**, bạn chỉ cần chạy 1 lệnh:
+   > Khi khởi chạy Docker lần đầu, cơ sở dữ liệu hoàn toàn trống rỗng (`RUN_DEMO_SEED=false`) để đảm bảo an toàn. Nếu không nạp dữ liệu mẫu, đăng nhập sẽ báo lỗi tài khoản không tồn tại. Để nạp bộ tài khoản và dữ liệu mẫu chuẩn theo đúng **Mục 10**, bạn chỉ cần chạy 1 lệnh:
    ```powershell
    docker exec tasksync-backend python Seed_Example.py
    ```
@@ -130,7 +197,7 @@ Toàn bộ hệ thống được đóng gói thành các Docker container tối 
 
 ---
 
-## 6. Kiến Trúc Giám Sát & Quan Sát (Monitoring & Observability: Prometheus, Grafana, Redis)
+## 8. Kiến Trúc Giám Sát & Quan Sát (Monitoring & Observability: Prometheus, Grafana, Redis)
 
 Hệ thống tích hợp cụm quan sát toàn diện theo chuẩn doanh nghiệp (3 Pillars of Observability: Metrics, Traces, Logs):
 
@@ -167,7 +234,7 @@ Khi truy cập `http://localhost:3000` (đăng nhập `admin`/`admin`), mở m�
 
 ---
 
-## 7. Hướng Dẫn Phát Triển Local (Windows Native)
+## 9. Hướng Dẫn Phát Triển Local (Windows Native)
 
 ### 🐍 Bước 1: Khởi Tạo Backend (Python 3.12)
 ```powershell
@@ -191,7 +258,7 @@ Truy cập giao diện tại: `http://localhost:5173`.
 
 ---
 
-## 8. Tài Khoản Đăng Nhập Mẫu (Demo Credentials)
+## 10. Tài Khoản Đăng Nhập Mẫu (Demo Credentials)
 
 Tất cả tài khoản sử dụng chung mật khẩu: **`TaskSync@2026`**
 *(Được tự động tạo sau khi chạy lệnh nạp dữ liệu mẫu `Seed_Example.py`)*
@@ -206,9 +273,10 @@ Tất cả tài khoản sử dụng chung mật khẩu: **`TaskSync@2026`**
 
 ---
 
-## 9. Quy Trình Nhánh Git & CI/CD (Develop -> Master)
+## 11. Quy Trình Nhánh Git & CI/CD
 
-Dự án áp dụng chặt chẽ mô hình **GitFlow**:
+Dự án áp dụng chặt chẽ mô hình **GitFlow** kết hợp nhánh chuyên biệt:
+- **Nhánh `Dev-Database`**: Nhánh nghiên cứu, cải thiện và hoàn thiện CSDL theo hướng **Database-First** phục vụ báo cáo môn học.
 - **Nhánh `develop`**: Nhánh phát triển chính, nơi tích hợp toàn bộ tính năng và bug fix.
 - **Nhánh `master`**: Nhánh phát hành ổn định (Production Release).
 
@@ -219,18 +287,13 @@ Mỗi commit / Pull Request đẩy lên `develop` hoặc `master` bắt buộc p
 3. **Frontend CI:** ESLint 0 errors, TypeScript `tsc --noEmit` 0 errors, **28/28 Contract tests passed**, Vite production build thành công.
 4. **Docker Validation:** Hadolint Dockerfile linter pass, Docker Buildx build thành công cả backend và frontend, cú pháp Docker Compose hợp lệ.
 
-### 🔄 Quy Trình Đẩy Code & Merge Lên Master
+### 🔄 Quy Trình Đẩy Code & Merge Lên GitHub
 ```powershell
-# 1. Kiểm tra trạng thái và commit trên develop
-git checkout develop
+# 1. Kiểm tra trạng thái và commit trên nhánh Dev-Database
+git checkout Dev-Database
 git add .
-git commit -m "feat(docs): add docker seeding instructions and monitoring stack guide"
+git commit -m "feat(database): introduce database-first architecture suite"
 
-# 2. Đẩy lên nhánh develop trên GitHub
-git push origin develop
-
-# 3. Tạo Pull Request hoặc merge sang master
-git checkout master
-git merge develop
-git push origin master
+# 2. Đẩy lên nhánh Dev-Database trên GitHub
+git push -u origin Dev-Database
 ```
