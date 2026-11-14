@@ -55,7 +55,8 @@ TaskSyncEnterprise/
 
 ## 3. Kiến Trúc CSDL Doanh Nghiệp (Enterprise Data Architecture & Optimization)
 
-Chi tiết thiết kế, chỉ mục tối ưu và ma trận đối tượng SQL Server được lưu trữ tại:  
+Chi tiết thiết kế, chỉ mục tối ưu và ma trận đối tượng SQL Server được lưu trữ tại:
+
 👉 **[DATABASE_FIRST_ARCHITECTURE_REPORT.md](docs/database/DATABASE_FIRST_ARCHITECTURE_REPORT.md)**
 
 Tóm tắt 4 trụ cột nghiệp vụ:
@@ -119,10 +120,10 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 
 ### 🔀 So Sánh Các Nhánh Git (`master` vs `develop` vs `Dev-Database`)
 
-| Tiêu chí | `master` (Production Release) | `develop` (Tích hợp & Phát triển) | `Dev-Database` (Nghiên cứu & Môn học CSDL) |
+| Tiêu chí | `master` (Production Release) | `develop` (Tích hợp & Phát triển) | `Dev-Database` (Tối ưu CSDL SQL Server) |
 | :--- | :--- | :--- | :--- |
-| **Mục tiêu** | Phát hành ổn định, tài liệu doanh nghiệp chuẩn | Tích hợp tính năng, kiểm thử CI/E2E trước release | Phát triển chuyên sâu Database-First phục vụ đồ án/môn học |
-| **Tài liệu `README.md`** | Chỉ tập trung kiến trúc Enterprise, so sánh version, Docker & Production | Đầy đủ thông tin phát triển, kiểm thử và tài liệu nghiên cứu CSDL | Bao gồm 4 trụ cột môn học CSDL, kịch bản Demo Giảng viên |
+| **Mục tiêu** | Phát hành ổn định, tài liệu vận hành doanh nghiệp chuẩn | Tích hợp tính năng, kiểm thử CI/E2E và phát triển trước release | Phát triển chuyên sâu kịch bản T-SQL Database-First & tối ưu truy vấn |
+| **Tài liệu `README.md`** | Tập trung kiến trúc Enterprise, bảng so sánh version, Docker & Production | Đầy đủ tài liệu phát triển và nội dung học thuật / nghiên cứu CSDL | Lưu tài liệu Database-First chuyên sâu và kịch bản kiểm thử CSDL |
 | **Tag phát hành** | `v3.4.0`, `v3.4.1`, `v3.5.0`, **`v3.5.1`** | Không gắn tag release | Nhánh làm việc / PR lên `develop` |
 
 ### 🏷️ Phiên bản `v3.5.1` / `v3.5.0` — Database-First, HRM Suite, Password Reset & Full-Stack Stabilization
