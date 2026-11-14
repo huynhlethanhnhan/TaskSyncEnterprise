@@ -19,43 +19,43 @@ Hệ thống được thiết kế theo mô hình **Database-First** và kiến 
 
 ## 2. Cấu Trúc Dự Án (Project Structure)
 
-Dự án được phân tách rõ ràng thành các khối chuyên biệt phục vụ cả nghiên cứu CSDL, lập trình backend và phát triển giao diện:
+Dự án được phân tách rõ ràng thành các khối chuyên biệt phục vụ vận hành CSDL SQL Server, API backend và giao diện người dùng:
 
 ```text
 TaskSyncEnterprise/
 ├── Database/                     # [DATABASE-FIRST SUITE] Kịch bản T-SQL thuần chạy trên SQL Server
 │   ├── Scripts/                  # DDL tạo bảng, khóa chính, khóa ngoại, CHECK, DEFAULT, Seed data
 │   ├── Triggers/                 # 5 Trigger T-SQL (Audit Trail, Soft-Delete, Agile rules, Cross-check)
-│   ├── Procedures/               # Stored Procedures nghiệp vụ và Views truy vấn toàn cục
+│   ├── Procedures/               # Stored Procedures nghiệp vụ, Backup Audit và Views truy vấn toàn cục
 │   ├── Indexes/                  # Tối ưu hóa truy vấn (B-Tree FK, Covering Index INCLUDE, Filtered Index)
-│   ├── Verification/             # Kịch bản kiểm thử & chạy demo thực tế trước Giảng viên
-│   └── README.md                 # Hướng dẫn chi tiết thứ tự chạy file trên SQL Server (SSMS)
+│   ├── Backup/                   # Chiến lược Backup Full/Differential & Restore kiểm thử tính toàn vẹn
+│   └── Verification/             # Kịch bản kiểm thử & đối soát dữ liệu SQL Server
 ├── backend/                      # [BACKEND API] FastAPI, Python 3.12, SQLAlchemy 2.0 ORM, Redis Cache
 ├── frontend/                     # [FRONTEND SPA] React 19, TypeScript, TailwindCSS v4, TanStack Query
-├── docs/                         # [TÀI LIỆU HỆ THỐNG] Kiến trúc, báo cáo đồ án, thiết kế ERD
-│   ├── database/                 # Báo cáo chuyên sâu: DATABASE_FIRST_ARCHITECTURE_REPORT.md
+├── docs/                         # [TÀI LIỆU HỆ THỐNG] Kiến trúc, vận hành CSDL, thiết kế ERD
+│   ├── database/                 # Tài liệu kiến trúc CSDL: DATABASE_FIRST_ARCHITECTURE_REPORT.md
 │   ├── architecture/             # SYSTEM_ARCHITECTURE.md, MODULE_RELATIONSHIP.md
 │   └── reports/                  # DATA_MANAGEMENT_ROADMAP.md, audit logs, stabilization reports
 └── monitoring/                   # [QUAN SÁT SRE] Prometheus, Grafana Dashboards, cAdvisor
 ```
 
-### 📋 Bảng Tra Cứu Các Khối Chức Năng CSDL (Database Master Suite)
+### 📋 Bảng Tra Cứu Các Khối Chức Năng CSDL (Enterprise SQL Server Suite)
 
 | Thành phần CSDL | Đường dẫn file T-SQL | Mục đích & Nghiệp vụ cốt lõi |
 | :--- | :--- | :--- |
 | **DDL Schema & Rules** | [`Database/Scripts/01_create_tables_and_constraints.sql`](Database/Scripts/01_create_tables_and_constraints.sql) | Khởi tạo toàn bộ bảng, PK, FK, Unique, Check Constraints và Default UTC. |
-| **Dữ liệu mẫu chuẩn** | [`Database/Scripts/02_seed_initial_data.sql`](Database/Scripts/02_seed_initial_data.sql) | Nạp sẵn phòng ban, nhân viên, dự án, sprint, task phục vụ demo báo cáo. |
+| **Dữ liệu khởi tạo chuẩn** | [`Database/Scripts/02_seed_initial_data.sql`](Database/Scripts/02_seed_initial_data.sql) | Nạp sẵn phòng ban, nhân viên, dự án, sprint, task cho môi trường staging/demo. |
 | **Bộ 5 Triggers T-SQL** | [`Database/Triggers/02_triggers.sql`](Database/Triggers/02_triggers.sql) | Xóa mềm Instead-Of, Audit Log tự động, ràng buộc duy nhất 1 Active Sprint. |
-| **Stored Procedures** | [`Database/Procedures/03_stored_procedures.sql`](Database/Procedures/03_stored_procedures.sql) | Thống kê dự án Single-pass (`sp_GetProjectOverviewStats`), đóng Sprint an toàn. |
-| **Views Toàn Cục** | [`Database/Procedures/04_views.sql`](Database/Procedures/04_views.sql) | Tự động loại bỏ bản ghi xóa mềm (`vw_ActiveTasksOverview`), báo cáo tải phòng ban. |
-| **Chỉ mục Tối ưu hóa** | [`Database/Indexes/05_query_optimization_indexes.sql`](Database/Indexes/05_query_optimization_indexes.sql) | Covering Index (`INCLUDE`), Filtered Index, kịch bản đo lường IO & Time. |
-| **Kịch bản Demo** | [`Database/Verification/07_test_and_demo_scenarios.sql`](Database/Verification/07_test_and_demo_scenarios.sql) | Kịch bản copy-paste chạy trực tiếp trong SSMS khi thuyết trình. |
+| **Stored Procedures** | [`Database/Procedures/03_stored_procedures.sql`](Database/Procedures/03_stored_procedures.sql) | Thống kê dự án Single-pass (`sp_GetProjectOverviewStats`), Backup Audit (`sp_BackupDatabaseWithAudit`). |
+| **Views Toàn Cục** | [`Database/Procedures/04_views.sql`](Database/Procedures/04_views.sql) | Tự động loại bỏ bản ghi xóa mềm (`vw_ActiveTasksOverview`), tổng hợp tải phòng ban. |
+| **Chỉ mục Tối ưu hóa** | [`Database/Indexes/05_query_optimization_indexes.sql`](Database/Indexes/05_query_optimization_indexes.sql) | Covering Index (`INCLUDE`), Filtered Index giảm I/O truy vấn đọc. |
+| **Chiến lược Backup/Restore** | [`Database/Backup/08_backup_and_restore_strategy.sql`](Database/Backup/08_backup_and_restore_strategy.sql) | Sao lưu Full/Diff kèm `RESTORE VERIFYONLY` và kiểm tra tính toàn vẹn. |
 
 ---
 
-## 3. Báo Cáo Cải Thiện CSDL (Database-First & 4 Trụ Cột Môn Học)
+## 3. Kiến Trúc CSDL Doanh Nghiệp (Enterprise Data Architecture & Optimization)
 
-Chi tiết toàn bộ lý thuyết, phân tích mã nguồn, bằng chứng tối ưu hóa truy vấn và kịch bản trả lời phản biện của Giảng viên được ghi nhận đầy đủ tại:  
+Chi tiết thiết kế, chỉ mục tối ưu và ma trận đối tượng SQL Server được lưu trữ tại:  
 👉 **[DATABASE_FIRST_ARCHITECTURE_REPORT.md](docs/database/DATABASE_FIRST_ARCHITECTURE_REPORT.md)**
 
 Tóm tắt 4 trụ cột nghiệp vụ:
@@ -300,9 +300,9 @@ Tất cả tài khoản sử dụng chung mật khẩu: **`TaskSync@2026`**
 ## 11. Quy Trình Nhánh Git & CI/CD
 
 Dự án áp dụng chặt chẽ mô hình **GitFlow** kết hợp nhánh chuyên biệt:
-- **Nhánh `Dev-Database`**: Nhánh nghiên cứu, cải thiện và hoàn thiện CSDL theo hướng **Database-First** phục vụ báo cáo môn học.
-- **Nhánh `develop`**: Nhánh phát triển chính, nơi tích hợp toàn bộ tính năng và bug fix.
-- **Nhánh `master`**: Nhánh phát hành ổn định (Production Release).
+- **Nhánh `Dev-Database`**: Nhánh chuyên biệt nghiên cứu và hoàn thiện kịch bản CSDL thuần **Database-First**.
+- **Nhánh `develop`**: Nhánh phát triển chính, tích hợp tính năng, tài liệu phát triển và kiểm thử tự động.
+- **Nhánh `master`**: Nhánh phát hành ổn định (Production Release) với tài liệu vận hành doanh nghiệp.
 
 ### 🛡️ Tiêu chuẩn CI/CD GitHub Actions (100% Green Gate)
 Mỗi commit / Pull Request đẩy lên `develop` hoặc `master` bắt buộc phải vượt qua:
