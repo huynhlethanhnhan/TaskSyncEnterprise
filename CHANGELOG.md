@@ -1,3 +1,11 @@
+## [3.5.1] — 2026-11-14
+
+### Changed
+- **Docker Full-Stack Synchronization:** Integrated `ensure_hrm_and_upcoming_demo_data` into `backend/Seed_Example.py` and synced live Docker containers (`tasksync-sqlserver`, `tasksync-backend`, `tasksync-frontend`) with Alembic `b2c3d4e5f6a7`, HRM/payroll/upcoming datasets, Nginx `/uploads/` proxy, and `./backups:/var/opt/mssql/backup` mount.
+- **Documentation & Branch Separation:** Added `v3.4.1` vs `v3.5.1` and `master` vs `develop`/`Dev-Database` comparison tables in `README.md`, and separated academic course documentation strictly to development branches (`develop` / `Dev-Database`) while keeping `master` focused on enterprise production usage.
+
+---
+
 ## [3.5.0] — 2026-11-14
 
 ### Added
