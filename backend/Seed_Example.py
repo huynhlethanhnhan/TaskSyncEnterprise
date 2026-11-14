@@ -809,13 +809,17 @@ def seed(reset_existing: bool = False) -> dict[str, int]:
         for project in projects.values():
             recalculate_project_progress(db, project.id)
 
+        from app.seeds.seed_hrm import ensure_hrm_and_upcoming_demo_data
+
         for sprint in sprints.values():
             sync_sprint_daily_progress(db, sprint.id)
 
+        hrm_counts = ensure_hrm_and_upcoming_demo_data(db)
         db.commit()
         _clear_application_cache()
         counts = dict(EXPECTED_COUNTS)
         counts["vacations"] = 14
+        counts["hrm"] = hrm_counts
         print(json.dumps({"status": "ok", "counts": counts}, ensure_ascii=False))
         return counts
     except Exception:

@@ -1,6 +1,6 @@
 # TaskSyncEnterprise — Nền Tảng Quản Lý Công Việc & Dự Án Doanh Nghiệp
 
-[![Release Version](https://img.shields.io/badge/Version-v3.5.0-blue.svg)](CHANGELOG.md)
+[![Release Version](https://img.shields.io/badge/Version-v3.5.1-blue.svg)](CHANGELOG.md)
 [![Backend Pytest](https://img.shields.io/badge/Backend%20Pytest-493%20Passed-success.svg)](docs/reports/CODEX_FINAL_AUDIT.md)
 [![Frontend Vite](https://img.shields.io/badge/Vite%20Build-Passed-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
 [![Contract Tests](https://img.shields.io/badge/Contract%20Tests-38%2F38%20Passed-success.svg)](frontend/ui-contract.test.mjs)
@@ -102,15 +102,36 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 
 ---
 
-## 6. Lịch Sử Phiên Bản Trên `master` & Cập Nhật Mới Nhất
+## 6. Lịch Sử Phiên Bản & Bảng So Sánh Hệ Thống
 
-### 🏷️ Phiên bản `v3.5.0` (Hiện tại trên `master`) — Database-First, HRM Suite, Password Reset & Full-Stack Stabilization
+### 📊 So Sánh Phiên Bản `v3.4.1` vs `v3.5.1`
+
+| Hạng mục | Phiên bản `v3.4.1` (Trước đây) | Phiên bản `v3.5.1` (Hiện tại) |
+| :--- | :--- | :--- |
+| **Lược đồ CSDL & Migration** | `91d53e9f6c91` (28 bảng cốt lõi Work/Agile) | **`b2c3d4e5f6a7`** (`35` bảng: thêm HRM, Payroll, Recruitment, Password Reset, Backup Audit) |
+| **Quản trị Nhân sự (HRM)** | Chỉ có danh sách Nhân viên & Nghỉ phép cơ bản | **HRM Hub (`/hrm`) đầy đủ:** Hợp đồng lao động, Chấm công, Tăng ca, Tuyển dụng, Bảng lương VND tự động |
+| **Quên & Cấp lại mật khẩu** | Chưa có luồng yêu cầu/duyệt cấp lại mật khẩu | **`password_reset_service.py`:** Nhân viên tự gửi yêu cầu ở `/profile`, Admin duyệt/cấp lại kèm thông báo realtime |
+| **UI Controls & Dark Mode** | `<select>` và `<input type="month">` mặc định trình duyệt; lỗi icon mắt kép & `* *` | **Portal `Select` & `MonthYearSelect`** hiện đại; ẩn icon mắt mặc định (`input::-ms-reveal`); chuẩn UTF-8 & Dark mode |
+| **Tương thích Trigger SQL Server** | Lỗi `Error 334` nếu bảng có Trigger `OUTPUT inserted` | Thiết lập **`implicit_returning = False`** trên `Task`, `Sprint`, `TaskAssignment`; hỗ trợ đầy đủ Triggers T-SQL |
+| **Dữ liệu Demo & Docker Stack** | `Seed_Example.py` chưa có HRM/Deadline 14 ngày; Nginx thiếu `/uploads/` | Tự động nạp HRM, lương khác 0 VND, deadline/nghỉ phép sắp tới; cập nhật `nginx.conf` (`/uploads/`) & backup mount |
+| **Backup & Rollback Thực tế** | Script backup chưa chuẩn hóa LF / sai path Windows-Linux | Chuẩn hóa **LF toàn bộ `.sh`**, sửa path `restore_database.sh`, kiểm thử `sp_BackupDatabaseWithAudit` + `DBCC CHECKDB` + `alembic downgrade/upgrade` |
+| **Kiểm thử Tự động & Security** | 437 Pytest, 28 Frontend Contract tests | **493 Pytest (100% pass)**, **38/38 Frontend Contract tests**, `black==26.5.1`, `ruff`, `bandit`, nâng cấp OpenTelemetry `1.45.2` vá `CVE-2026-126360` |
+
+### 🔀 So Sánh Các Nhánh Git (`master` vs `develop` vs `Dev-Database`)
+
+| Tiêu chí | `master` (Production Release) | `develop` (Tích hợp & Phát triển) | `Dev-Database` (Nghiên cứu & Môn học CSDL) |
+| :--- | :--- | :--- | :--- |
+| **Mục tiêu** | Phát hành ổn định, tài liệu doanh nghiệp chuẩn | Tích hợp tính năng, kiểm thử CI/E2E trước release | Phát triển chuyên sâu Database-First phục vụ đồ án/môn học |
+| **Tài liệu `README.md`** | Chỉ tập trung kiến trúc Enterprise, so sánh version, Docker & Production | Đầy đủ thông tin phát triển, kiểm thử và tài liệu nghiên cứu CSDL | Bao gồm 4 trụ cột môn học CSDL, kịch bản Demo Giảng viên |
+| **Tag phát hành** | `v3.4.0`, `v3.4.1`, `v3.5.0`, **`v3.5.1`** | Không gắn tag release | Nhánh làm việc / PR lên `develop` |
+
+### 🏷️ Phiên bản `v3.5.1` / `v3.5.0` — Database-First, HRM Suite, Password Reset & Full-Stack Stabilization
 Những gì đã triển khai và bổ sung trên nhánh `master` so với `v3.4.1`:
 - **Bộ Master Database-First T-SQL & Backup/Rollback Audit:** Bổ sung trọn vẹn thư mục `Database/` (DDL schema, 5 Triggers T-SQL, Stored Procedures bao gồm `dbo.sp_BackupDatabaseWithAudit`, Views toàn cục, Indexing Suite, kịch bản verification); chuẩn hóa LF và sửa path trong `infrastructure/backup/scripts/` (`backup_database.sh`, `restore_database.sh`), đồng thời kiểm thử thực tế `RESTORE DATABASE` + `DBCC CHECKDB` + `alembic downgrade` / `upgrade head`.
-- **Phân hệ Quản trị Nhân sự HRM, Bảng lương & Tuyển dụng:** Bổ sung 2 migration Alembic (`a1b2c3d4e5f6` -> `b2c3d4e5f6a7`), các API & giao diện `/hrm` cho Hợp đồng lao động, Chấm công, Tăng ca, Tính lương VND (với bộ chọn kỳ lương portal `MonthYearSelect`), Ứng viên tuyển dụng và dữ liệu mẫu idempotent (`seed_hrm.py`).
+- **Phân hệ Quản trị Nhân sự HRM, Bảng lương & Tuyển dụng:** Bổ sung 2 migration Alembic (`a1b2c3d4e5f6` -> `b2c3d4e5f6a7`), các API & giao diện `/hrm` cho Hợp đồng lao động, Chấm công, Tăng ca, Tính lương VND (với bộ chọn kỳ lương portal `MonthYearSelect`), Ứng viên tuyển dụng và dữ liệu mẫu (`seed_hrm.py`, `Seed_Example.py`).
 - **Quy trình Quên mật khẩu & Cấp lại mật khẩu (Admin & Nhân viên):** Bổ sung dịch vụ `password_reset_service.py`, luồng tự yêu cầu cấp lại mật khẩu trong trang `/profile` cho nhân viên, modal cấp lại/reset ở Admin, và xử lý triệt để lỗi icon con mắt kép (`input::-ms-reveal`) cùng dấu `*` lặp.
 - **Hiện đại hóa UI Controls & Sửa lỗi SQL Server Trigger Compatibility:** Thay thế `<select>` và `<input type="month">` mặc định bằng component portal hiện đại (`Select`, `MonthYearSelect`), thêm cấu hình `implicit_returning = False` cho các bảng có trigger SQL Server (`Task`, `Sprint`, `TaskAssignment`), và bổ sung dữ liệu deadline 14 ngày tới / lịch nghỉ phép sắp tới trên Dashboard.
-- **Tăng cường Docker & CI/CD Gates:** Bổ sung proxy `/uploads/` trong `frontend/nginx.conf`, biến môi trường `FRONTEND_BASE_URL` / `SMTP_*` và volume backup trong `docker-compose*.yml`, đồng bộ `database-ci.yml`, `black --check`, `ruff`, `pip-audit` và `bandit`.
+- **Tăng cường Docker & CI/CD Gates:** Bổ sung proxy `/uploads/` trong `frontend/nginx.conf`, biến môi trường `FRONTEND_BASE_URL` / `SMTP_*` và volume backup trong `docker-compose*.yml`, đồng bộ `database-ci.yml`, `black --check`, `ruff`, `pip-audit` (nâng cấp `opentelemetry-api==1.45.2`) và `bandit`.
 
 ### 📌 Tổng kết các phiên bản `master` trước đó (`v3.4.0` -> `v3.4.1`)
 - **Đồng bộ tiến độ & Cảnh báo ngữ cảnh (`v3.4.0` / `v3.4.1`):** Đồng bộ tiến độ Dự án & Sprint theo thời gian thực, cảnh báo ngữ cảnh Sprint/Backlog/Task riêng lẻ và kiểm thử Chrome E2E.
@@ -301,6 +322,6 @@ git push -u origin Dev-Database
 # 2. Tích hợp lên develop và phát hành trên master kèm tag SemVer
 git checkout develop && git merge --ff-only Dev-Database && git push origin develop
 git checkout master && git merge develop && git push origin master
-git tag -a v3.5.0 -m "Release v3.5.0: Database-First, HRM Suite, Password Reset & Full-Stack Stabilization"
-git push origin v3.5.0
+git tag -a v3.5.1 -m "Release v3.5.1: Updated Docker Full Stack, HRM Seed, Enterprise README & Version Comparison"
+git push origin v3.5.1
 ```
