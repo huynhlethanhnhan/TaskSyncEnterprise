@@ -33,6 +33,15 @@ def update_my_preferences(
     return crud_setting.update_user_preference(db, current_user.id, data)
 
 
+@router.get("/runtime", response_model=SystemSettingResponse)
+def get_runtime_settings(
+    current_user: Employee = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Non-sensitive runtime UI settings accessible to any authenticated user."""
+    return crud_setting.get_system_settings_dict(db)
+
+
 @router.get("/system", response_model=SystemSettingResponse)
 def get_system_settings(
     current_user: Employee = Depends(get_current_user),

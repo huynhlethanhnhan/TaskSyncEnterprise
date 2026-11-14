@@ -272,3 +272,337 @@ BEGIN
     END CATCH;
 END;
 GO
+
+-- ============================================================================
+-- THỦ TỤC 4 (ÁP DỤNG CURSOR): sp_AutoCheckOverdueTasksAndNotify
+-- Kỹ thuật: CURSOR LOCAL FAST_FORWARD + Transaction Batching
+-- Nghiệp vụ: Quét các công việc quá hạn (deadline < SYSUTCDATETIME(), chưa Done),
+--            duyệt từng cặp (Task - Assignee) để chèn thông báo nhắc việc tự động
+--            vào bảng dbo.notifications (tránh gửi trùng trong cùng một ngày).
+-- ============================================================================
+IF OBJECT_ID(N'dbo.sp_AutoCheckOverdueTasksAndNotify', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_AutoCheckOverdueTasksAndNotify;
+GO
+
+CREATE PROCEDURE dbo.sp_AutoCheckOverdueTasksAndNotify
+    @ProjectId INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE
+        @TaskId INT,
+        @TaskTitle NVARCHAR(200),
+        @ProjectName NVARCHAR(255),
+        @EmpId INT,
+        @Deadline DATETIME2(7),
+        @NotifiedCount INT = 0,
+        @Today DATE = CAST(SYSUTCDATETIME() AS DATE);
+
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        DECLARE cur_overdue CURSOR LOCAL FAST_FORWARD FOR
+            SELECT
+                t.id,
+                t.title,
+                p.name,
+                ta.employee_id,
+                t.deadline
+            FROM dbo.tasks t
+            INNER JOIN dbo.projects p ON t.project_id = p.id
+            INNER JOIN dbo.task_assignments ta ON ta.task_id = t.id
+            INNER JOIN dbo.employees e ON ta.employee_id = e.id
+            WHERE t.is_deleted = 0
+              AND p.is_deleted = 0
+              AND e.is_deleted = 0
+              AND e.is_active = 1
+              AND t.status <> N'Done'
+              AND t.deadline IS NOT NULL
+              AND t.deadline < SYSUTCDATETIME()
+              AND (@ProjectId IS NULL OR t.project_id = @ProjectId);
+
+        OPEN cur_overdue;
+        FETCH NEXT FROM cur_overdue INTO @TaskId, @TaskTitle, @ProjectName, @EmpId, @Deadline;
+
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            DECLARE @EventKey NVARCHAR(100) = N'OVERDUE_TASK_' + CAST(@TaskId AS NVARCHAR(20)) + N'_' + CONVERT(NVARCHAR(10), @Today, 23);
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM dbo.notifications
+                WHERE employee_id = @EmpId
+                  AND event_id = @EventKey
+            )
+            BEGIN
+                INSERT INTO dbo.notifications (
+                    employee_id, event_id, type, title, message, priority, status, channel, created_at
+                )
+                VALUES (
+                    @EmpId,
+                    @EventKey,
+                    N'TASK_OVERDUE',
+                    N'Nhắc việc quá hạn: ' + @TaskTitle,
+                    N'Công việc "' + @TaskTitle + N'" thuộc dự án "' + @ProjectName + N'" đã quá hạn vào ' + CONVERT(NVARCHAR(19), @Deadline, 120) + N' UTC.',
+                    N'HIGH',
+                    N'PENDING',
+                    N'IN_APP',
+                    SYSUTCDATETIME()
+                );
+
+                SET @NotifiedCount = @NotifiedCount + 1;
+            END;
+
+            FETCH NEXT FROM cur_overdue INTO @TaskId, @TaskTitle, @ProjectName, @EmpId, @Deadline;
+        END;
+
+        CLOSE cur_overdue;
+        DEALLOCATE cur_overdue;
+
+        COMMIT TRANSACTION;
+
+        SELECT
+            @NotifiedCount AS notifications_created,
+            @ProjectId AS filtered_project_id,
+            SYSUTCDATETIME() AS checked_at_utc;
+    END TRY
+    BEGIN CATCH
+        IF CURSOR_STATUS('local', 'cur_overdue') >= -1
+        BEGIN
+            CLOSE cur_overdue;
+            DEALLOCATE cur_overdue;
+        END;
+
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR(@ErrMsg, 16, 1);
+    END CATCH;
+END;
+GO
+
+-- ============================================================================
+-- THỦ TỤC 5 (ROLLBACK / RESTORE DỮ LIỆU): sp_RollbackTaskFromAudit
+-- Kỹ thuật: SAVE TRANSACTION (Savepoint) + Transaction Rollback + Audit Recovery
+-- Nghiệp vụ: Cho phép DBA / Admin phục hồi (Rollback) một Task:
+--   - Chế độ 'RESTORE_SOFT_DELETE': Khôi phục bản ghi đã xóa mềm (is_deleted = 1 -> 0).
+--   - Chế độ 'REVERT_LAST_STATUS': Đọc trạng thái cũ từ audit_logs và trả Task về trạng thái trước.
+-- ============================================================================
+IF OBJECT_ID(N'dbo.sp_RollbackTaskFromAudit', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_RollbackTaskFromAudit;
+GO
+
+CREATE PROCEDURE dbo.sp_RollbackTaskFromAudit
+    @TaskId INT,
+    @ActionMode NVARCHAR(30) = N'RESTORE_SOFT_DELETE',
+    @PerformedBy INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.tasks WHERE id = @TaskId)
+    BEGIN
+        RAISERROR(N'Không tìm thấy Task có ID = %d.', 16, 1, @TaskId);
+        RETURN;
+    END;
+
+    IF @ActionMode NOT IN (N'RESTORE_SOFT_DELETE', N'REVERT_LAST_STATUS')
+    BEGIN
+        RAISERROR(N'ActionMode không hợp lệ. Chỉ chấp nhận RESTORE_SOFT_DELETE hoặc REVERT_LAST_STATUS.', 16, 1);
+        RETURN;
+    END;
+
+    BEGIN TRANSACTION;
+    SAVE TRANSACTION SavePoint_BeforeTaskRollback;
+
+    BEGIN TRY
+        DECLARE @CurrentStatus NVARCHAR(30);
+        DECLARE @CurrentDeleted BIT;
+
+        SELECT @CurrentStatus = status, @CurrentDeleted = is_deleted
+        FROM dbo.tasks
+        WHERE id = @TaskId;
+
+        IF @ActionMode = N'RESTORE_SOFT_DELETE'
+        BEGIN
+            IF @CurrentDeleted = 0
+            BEGIN
+                RAISERROR(N'Task này đang hoạt động (is_deleted = 0), không cần phục hồi xóa mềm.', 16, 1);
+            END;
+
+            UPDATE dbo.tasks
+            SET
+                is_deleted = 0,
+                deleted_at = NULL,
+                deleted_by_id = NULL,
+                updated_at = SYSUTCDATETIME(),
+                updated_by_id = @PerformedBy
+            WHERE id = @TaskId;
+
+            INSERT INTO dbo.audit_logs (employee_id, action, entity_type, entity_id, old_values, new_values, timestamp)
+            VALUES (
+                @PerformedBy,
+                N'ROLLBACK_SOFT_DELETE_TASK',
+                N'Task',
+                @TaskId,
+                N'is_deleted = 1',
+                N'is_deleted = 0 | Restored via sp_RollbackTaskFromAudit',
+                SYSUTCDATETIME()
+            );
+        END
+        ELSE IF @ActionMode = N'REVERT_LAST_STATUS'
+        BEGIN
+            DECLARE @LastOldValues NVARCHAR(MAX);
+            SELECT TOP 1 @LastOldValues = old_values
+            FROM dbo.audit_logs
+            WHERE entity_type = N'Task'
+              AND entity_id = @TaskId
+              AND action = N'UPDATE_TASK_DETAILS'
+            ORDER BY id DESC;
+
+            IF @LastOldValues IS NULL
+            BEGIN
+                RAISERROR(N'Không có lịch sử UPDATE_TASK_DETAILS trong audit_logs để rollback.', 16, 1);
+            END;
+
+            -- Trích xuất lại Status từ chuỗi 'Status: <val>, Priority: ...'
+            DECLARE @StatusStart INT = CHARINDEX(N'Status: ', @LastOldValues);
+            DECLARE @PriorityPos INT = CHARINDEX(N', Priority: ', @LastOldValues);
+            DECLARE @RestoredStatus NVARCHAR(30) = NULL;
+
+            IF @StatusStart > 0 AND @PriorityPos > @StatusStart
+            BEGIN
+                SET @RestoredStatus = LTRIM(RTRIM(SUBSTRING(@LastOldValues, @StatusStart + 8, @PriorityPos - (@StatusStart + 8))));
+            END;
+
+            IF @RestoredStatus IS NULL OR @RestoredStatus NOT IN (N'To Do', N'In Progress', N'Review', N'Done')
+            BEGIN
+                RAISERROR(N'Không thể phân tích trạng thái cũ hợp lệ từ nhật ký kiểm toán.', 16, 1);
+            END;
+
+            UPDATE dbo.tasks
+            SET
+                status = @RestoredStatus,
+                updated_at = SYSUTCDATETIME(),
+                updated_by_id = @PerformedBy
+            WHERE id = @TaskId;
+
+            INSERT INTO dbo.audit_logs (employee_id, action, entity_type, entity_id, old_values, new_values, timestamp)
+            VALUES (
+                @PerformedBy,
+                N'ROLLBACK_TASK_STATUS',
+                N'Task',
+                @TaskId,
+                N'Status: ' + @CurrentStatus,
+                N'Status: ' + @RestoredStatus + N' | Reverted from audit_logs',
+                SYSUTCDATETIME()
+            );
+        END;
+
+        INSERT INTO dbo.backup_history_logs (backup_type, database_name, backup_path, status, performed_by, notes)
+        VALUES (
+            N'LOGICAL_ROLLBACK',
+            DB_NAME(),
+            N'dbo.tasks#' + CAST(@TaskId AS NVARCHAR(20)),
+            N'RESTORED',
+            @PerformedBy,
+            N'Logical rollback mode: ' + @ActionMode
+        );
+
+        COMMIT TRANSACTION;
+
+        SELECT
+            id AS task_id,
+            title,
+            status,
+            is_deleted,
+            updated_at,
+            N'Phục hồi dữ liệu Task thành công.' AS message
+        FROM dbo.tasks
+        WHERE id = @TaskId;
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE() = 1
+            ROLLBACK TRANSACTION SavePoint_BeforeTaskRollback;
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR(@ErrMsg, 16, 1);
+    END CATCH;
+END;
+GO
+
+-- ============================================================================
+-- THỦ TỤC 6 (BACKUP & VERIFY): sp_BackupDatabaseWithAudit
+-- Kỹ thuật: BACKUP DATABASE (FULL / DIFFERENTIAL) + RESTORE VERIFYONLY + Audit
+-- Nghiệp vụ: Tự động sao lưu toàn bộ CSDL ra file .bak, kiểm tra tính toàn vẹn
+--            của bản backup và ghi lịch sử vào dbo.backup_history_logs.
+-- ============================================================================
+IF OBJECT_ID(N'dbo.sp_BackupDatabaseWithAudit', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_BackupDatabaseWithAudit;
+GO
+
+CREATE PROCEDURE dbo.sp_BackupDatabaseWithAudit
+    @BackupType NVARCHAR(20) = N'FULL',
+    @BackupDirectory NVARCHAR(400) = NULL,
+    @PerformedBy INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @BackupType NOT IN (N'FULL', N'DIFFERENTIAL')
+    BEGIN
+        RAISERROR(N'BackupType chỉ hỗ trợ FULL hoặc DIFFERENTIAL.', 16, 1);
+        RETURN;
+    END;
+
+    DECLARE @DbName SYSNAME = DB_NAME();
+    DECLARE @DefaultDir NVARCHAR(400) = CAST(SERVERPROPERTY('InstanceDefaultBackupPath') AS NVARCHAR(400));
+    DECLARE @TargetDir NVARCHAR(400) = COALESCE(NULLIF(LTRIM(RTRIM(@BackupDirectory)), N''), @DefaultDir);
+    DECLARE @Sep NVARCHAR(1) = CASE WHEN CHARINDEX(N'/', @TargetDir) > 0 THEN N'/' ELSE N'\' END;
+
+    IF RIGHT(@TargetDir, 1) NOT IN (N'\', N'/')
+        SET @TargetDir = @TargetDir + @Sep;
+
+    DECLARE @Timestamp NVARCHAR(20) = REPLACE(REPLACE(REPLACE(CONVERT(NVARCHAR(19), SYSUTCDATETIME(), 120), N'-', N''), N' ', N'_'), N':', N'');
+    DECLARE @BackupFile NVARCHAR(500) = @TargetDir + @DbName + N'_' + @BackupType + N'_' + @Timestamp + N'.bak';
+
+    BEGIN TRY
+        IF @BackupType = N'FULL'
+        BEGIN
+            BACKUP DATABASE @DbName
+            TO DISK = @BackupFile
+            WITH INIT, CHECKSUM, NAME = N'TaskSyncEnterprise Full Backup';
+        END
+        ELSE
+        BEGIN
+            BACKUP DATABASE @DbName
+            TO DISK = @BackupFile
+            WITH DIFFERENTIAL, INIT, CHECKSUM, NAME = N'TaskSyncEnterprise Differential Backup';
+        END;
+
+        RESTORE VERIFYONLY FROM DISK = @BackupFile WITH CHECKSUM;
+
+        INSERT INTO dbo.backup_history_logs (backup_type, database_name, backup_path, status, performed_by, notes)
+        VALUES (@BackupType, @DbName, @BackupFile, N'VERIFIED', @PerformedBy, N'Backup & RESTORE VERIFYONLY passed.');
+
+        SELECT
+            @DbName AS database_name,
+            @BackupType AS backup_type,
+            @BackupFile AS backup_file,
+            N'VERIFIED' AS status;
+    END TRY
+    BEGIN CATCH
+        DECLARE @Err NVARCHAR(4000) = ERROR_MESSAGE();
+
+        INSERT INTO dbo.backup_history_logs (backup_type, database_name, backup_path, status, performed_by, notes)
+        VALUES (@BackupType, @DbName, @BackupFile, N'FAILED', @PerformedBy, LEFT(@Err, 500));
+
+        RAISERROR(@Err, 16, 1);
+    END CATCH;
+END;
+GO

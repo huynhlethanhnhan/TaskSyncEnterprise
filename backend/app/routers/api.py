@@ -22,6 +22,7 @@ from app.routers.v1 import (
     files,
     reports,
     settings,
+    hrm,
 )
 
 api_router = APIRouter()
@@ -49,3 +50,4 @@ api_router.include_router(feedback.router)
 api_router.include_router(files.router)
 api_router.include_router(reports.router)
 api_router.include_router(settings.router)
+api_router.include_router(hrm.router)

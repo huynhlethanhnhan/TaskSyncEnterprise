@@ -147,3 +147,48 @@ GROUP BY
     d.name, 
     t_team.name;
 GO
+
+-- ============================================================================
+-- VIEW 4 (HRM EXTENSIBILITY): vw_HRM_EmployeeLeaveAndContractOverview
+-- Mục đích: Kết hợp thông tin Nhân sự, Hợp đồng lao động đang hiệu lực và
+--           Quỹ phép năm còn lại phục vụ phân hệ HRM mở rộng sau này.
+-- ============================================================================
+IF OBJECT_ID(N'dbo.vw_HRM_EmployeeLeaveAndContractOverview', N'V') IS NOT NULL
+    DROP VIEW dbo.vw_HRM_EmployeeLeaveAndContractOverview;
+GO
+
+CREATE VIEW dbo.vw_HRM_EmployeeLeaveAndContractOverview
+AS
+SELECT
+    e.id AS employee_id,
+    e.employee_code,
+    e.full_name,
+    e.email,
+    e.job_title,
+    e.employment_status,
+    d.department_code,
+    d.name AS department_name,
+    tm.name AS team_name,
+    ec.contract_code,
+    ec.contract_type,
+    ec.base_salary,
+    ec.currency,
+    ec.status AS contract_status,
+    lb.leave_year,
+    lb.annual_entitlement,
+    lb.carried_over_days,
+    lb.used_days,
+    lb.remaining_days
+FROM dbo.employees e
+LEFT JOIN dbo.departments d ON e.department_id = d.id
+LEFT JOIN dbo.teams tm ON e.team_id = tm.id
+LEFT JOIN dbo.employment_contracts ec
+    ON ec.employee_id = e.id
+   AND ec.status = N'Active'
+   AND ec.is_deleted = 0
+LEFT JOIN dbo.leave_balances lb
+    ON lb.employee_id = e.id
+   AND lb.leave_year = YEAR(SYSUTCDATETIME())
+WHERE e.is_active = 1
+  AND e.is_deleted = 0;
+GO

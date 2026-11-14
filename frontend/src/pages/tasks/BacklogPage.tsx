@@ -4,8 +4,10 @@ import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { useProjects } from '../../hooks/useProjects';
 import { Select } from '../../components/ui/Select';
 import { BacklogManager } from '../../components/backlog/BacklogManager';
+import { useSettings } from '../../providers/SettingsProvider';
 
 const BacklogPage: React.FC = () => {
+  const { t } = useSettings();
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = React.useState<string>('');
 
@@ -19,12 +21,12 @@ const BacklogPage: React.FC = () => {
     <div className="space-y-6 font-sans pb-12 text-xs">
       {/* Page Header */}
       <PageHeader
-        title="Product Backlog Planning"
-        description="Quản lý danh sách tính năng sản phẩm, user stories và sắp xếp mức độ ưu tiên backlog"
+        title={t('Kế hoạch Product Backlog', 'Product Backlog Planning')}
+        description={t('Quản lý danh sách tính năng sản phẩm, user stories và sắp xếp mức độ ưu tiên backlog', 'Manage product features, user stories, and prioritize the backlog')}
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: 'Work Management', href: '#' },
+              { label: t('Quản lý Công việc', 'Work Management'), href: '#' },
               { label: 'Product Backlog' },
             ]}
           />
@@ -32,18 +34,18 @@ const BacklogPage: React.FC = () => {
       />
 
       {projectsLoading ? (
-        <div className="text-center py-6 text-text-muted">Đang tải danh sách dự án...</div>
+        <div className="text-center py-6 text-text-muted">{t('Đang tải danh sách dự án...', 'Loading projects...')}</div>
       ) : projects.length === 0 ? (
         <div className="text-center py-12 border border-dashed border-border rounded-xl bg-surface/50 text-xs text-text-muted">
-          Bạn chưa tham gia vào dự án nào. Vui lòng tạo dự án hoặc tham gia thành viên để sử dụng Backlog.
+          {t('Bạn chưa tham gia vào dự án nào. Vui lòng tạo dự án hoặc tham gia thành viên để sử dụng Backlog.', 'You are not in any project yet. Create or join a project to use Backlog.')}
         </div>
       ) : (
         <div className="space-y-6">
           {/* Project Selector Box */}
           <div className="p-4 rounded-xl border border-border bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h4 className="font-bold text-text-primary text-sm">Lựa chọn dự án làm việc</h4>
-              <p className="text-text-muted mt-0.5 text-[11px]">Chọn dự án để lên kế hoạch và quản lý Backlog tương ứng.</p>
+              <h4 className="font-bold text-text-primary text-sm">{t('Lựa chọn dự án làm việc', 'Select Project')}</h4>
+              <p className="text-text-muted mt-0.5 text-[11px]">{t('Chọn dự án để lên kế hoạch và quản lý Backlog tương ứng.', 'Choose a project to plan and manage its Product Backlog.')}</p>
             </div>
             <div className="w-full sm:max-w-xs shrink-0">
               <Select

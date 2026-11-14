@@ -1,13 +1,14 @@
 import * as React from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { Plus, Search, Briefcase, Trash2, Edit3, Eye, X } from 'lucide-react';
+import { Plus, Search, Briefcase, X } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/common/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
-import { Badge } from '../../components/common/Badge';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { EntityActions } from '../../components/common/EntityActions';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/feedback/ErrorState';
@@ -23,12 +24,14 @@ import {
 } from '../../hooks/useProjects';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useToast } from '../../providers/ToastProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { type ProjectItem } from '../../api/services';
 
 const ProjectPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
+  const { t, statusLabel, formatDate } = useSettings();
   const permissions = usePermissions();
 
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -151,7 +154,7 @@ const ProjectPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="space-y-6 font-sans">
-        <PageHeader title="Quản lý Dự án" description="Đang tải danh sách dự án..." />
+        <PageHeader title={t('Quản lý Dự án', 'Project Management')} description={t('Đang tải danh sách dự án...', 'Loading project list...')} />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <SkeletonCard />
           <SkeletonCard />
@@ -165,7 +168,7 @@ const ProjectPage: React.FC = () => {
   if (isForbidden) {
     return (
       <div className="space-y-6 font-sans">
-        <PageHeader title="Quản lý Dự án" description="Tổng quan dự án và tiến độ" />
+        <PageHeader title={t('Quản lý Dự án', 'Project Management')} description={t('Tổng quan dự án và tiến độ', 'Projects overview and progress')} />
         <ForbiddenState onBack={() => navigate('/dashboard')} />
       </div>
     );
@@ -174,10 +177,10 @@ const ProjectPage: React.FC = () => {
   if (isError) {
     return (
       <div className="space-y-6 font-sans">
-        <PageHeader title="Quản lý Dự án" description="Tổng quan dự án và tiến độ" />
+        <PageHeader title={t('Quản lý Dự án', 'Project Management')} description={t('Tổng quan dự án và tiến độ', 'Projects overview and progress')} />
         <ErrorState
-          title="Lỗi tải danh sách dự án"
-          message="Không thể kết nối đến backend API. Vui lòng kiểm tra lại dịch vụ."
+          title={t('Lỗi tải danh sách dự án', 'Failed to load projects')}
+          message={t('Không thể kết nối đến backend API. Vui lòng kiểm tra lại dịch vụ.', 'Could not connect to backend API service.')}
           onRetry={() => refetch()}
         />
       </div>
@@ -188,20 +191,20 @@ const ProjectPage: React.FC = () => {
     <div className="space-y-6 font-sans pb-12">
       {/* Page Header */}
       <PageHeader
-        title="Quản lý Dự án"
-        description="Tổng quan danh sách dự án, lập kế hoạch và theo dõi tiến độ công việc"
+        title={t('Quản lý Dự án', 'Project Management')}
+        description={t('Tổng quan danh sách dự án, lập kế hoạch và theo dõi tiến độ công việc', 'Manage projects, planning and progress tracking')}
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Danh sách Dự án' },
+              { label: t('Trang chủ', 'Dashboard'), href: '/dashboard' },
+              { label: t('Danh sách Dự án', 'Projects') },
             ]}
           />
         }
         actions={
           permissions.canCreateProject ? (
             <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
-              Tạo Dự án Mới
+              {t('Tạo Dự án Mới', 'New Project')}
             </Button>
           ) : undefined
         }
@@ -211,7 +214,7 @@ const ProjectPage: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border/60 py-3 text-xs">
           <div className="flex items-center gap-2 text-text-secondary">
             <Briefcase className="h-4 w-4 text-primary" />
-            <span>Đang lọc dự án theo <strong className="text-text-primary">{organizationFilterLabel}</strong></span>
+            <span>{t('Đang lọc dự án theo', 'Filtering projects by')} <strong className="text-text-primary">{organizationFilterLabel}</strong></span>
           </div>
           <Button
             variant="ghost"
@@ -219,7 +222,7 @@ const ProjectPage: React.FC = () => {
             leftIcon={<X className="h-3.5 w-3.5" />}
             onClick={clearOrganizationFilter}
           >
-            Xóa bộ lọc tổ chức
+            {t('Xóa bộ lọc tổ chức', 'Clear organization filter')}
           </Button>
         </div>
       )}
@@ -229,7 +232,7 @@ const ProjectPage: React.FC = () => {
         <CardContent className="p-4 flex flex-col md:flex-row items-center gap-4 justify-between">
           <div className="flex-1 w-full md:w-auto">
             <Input
-              placeholder="Tìm kiếm theo tên dự án hoặc mô tả..."
+              placeholder={t('Tìm kiếm theo tên dự án hoặc mô tả...', 'Search by project name or description...')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               leftIcon={<Search className="h-4 w-4 text-text-muted" />}
@@ -244,10 +247,11 @@ const ProjectPage: React.FC = () => {
                 setCurrentPage(1);
               }}
               options={[
-                { value: 'all', label: 'Tất cả trạng thái' },
-                { value: 'Active', label: 'Hoạt động (Active)' },
-                { value: 'Planning', label: 'Lập kế hoạch (Planning)' },
-                { value: 'Completed', label: 'Hoàn thành (Completed)' },
+                { value: 'all', label: t('Tất cả trạng thái', 'All Statuses') },
+                { value: 'Active', label: statusLabel('Active') },
+                { value: 'Planning', label: statusLabel('Planning') },
+                { value: 'In Progress', label: statusLabel('In Progress') },
+                { value: 'Completed', label: statusLabel('Completed') },
               ]}
             />
           </div>
@@ -257,20 +261,19 @@ const ProjectPage: React.FC = () => {
       {/* Projects Grid Container */}
       {paginatedProjects.length === 0 ? (
         <EmptyState
-          title="Không tìm thấy dự án nào"
-          description={searchTerm ? 'Không có dự án phù hợp với từ khóa tìm kiếm.' : 'Chưa có dự án nào được khởi tạo trong hệ thống.'}
+          title={t('Không tìm thấy dự án nào', 'No projects found')}
+          description={searchTerm ? t('Không có dự án phù hợp với từ khóa tìm kiếm.', 'No projects match your search query.') : t('Chưa có dự án nào được khởi tạo trong hệ thống.', 'No projects have been created yet.')}
           action={
             permissions.canCreateProject ? (
               <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
-                Khởi tạo Dự án Mới
+                {t('Khởi tạo Dự án Mới', 'Create New Project')}
               </Button>
             ) : undefined
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="card-grid-fluid">
           {paginatedProjects.map((project) => {
-            const isCompleted = project.status === 'Completed';
             return (
               <Card
                 key={project.id}
@@ -279,34 +282,31 @@ const ProjectPage: React.FC = () => {
                 onClick={() => navigate(`/projects/${project.id}`)}
               >
                 <CardHeader>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-accent text-accent-foreground">
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="p-2 rounded-lg bg-accent text-accent-foreground shrink-0">
                         <Briefcase className="h-4.5 w-4.5 text-primary" />
                       </div>
-                      <span className="text-xs font-mono font-bold text-text-muted">
+                      <span className="text-xs font-mono font-bold text-text-muted truncate">
                         {project.project_code || `PRJ-${project.id}`}
                       </span>
                     </div>
 
-                    <Badge
-                      variant={isCompleted ? 'success' : project.status === 'Active' ? 'primary' : 'warning'}
-                      showDot
-                    >
-                      {project.status || 'Active'}
-                    </Badge>
+                    <StatusBadge status={project.status || 'Active'} className="shrink-0" />
                   </div>
 
-                  <CardTitle className="text-lg font-bold text-text-primary mt-3">{project.name}</CardTitle>
+                  <CardTitle className="text-lg font-bold text-text-primary mt-3 truncate" title={project.name}>
+                    {project.name}
+                  </CardTitle>
                   <CardDescription className="line-clamp-2 min-h-[2.5rem]">
-                    {project.description || 'Chưa có mô tả chi tiết cho dự án này.'}
+                    {project.description || t('Chưa có mô tả chi tiết cho dự án này.', 'No detailed description available.')}
                   </CardDescription>
                 </CardHeader>
 
                 <CardContent className="pt-0 space-y-4">
                   <div className="space-y-1 border-t border-border/60 pt-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-text-muted">Tiến độ:</span>
+                      <span className="text-text-muted">{t('Tiến độ:', 'Progress:')}</span>
                       <span className="font-bold text-text-primary">
                         {project.progress_percent ?? 0}%
                       </span>
@@ -321,78 +321,50 @@ const ProjectPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs border-t border-border/60 pt-2">
-                    <span className="text-text-muted">Phòng ban / Team:</span>
-                    <span className="font-semibold text-text-primary text-right">
+                  <div className="flex items-center justify-between gap-2 text-xs border-t border-border/60 pt-2 min-w-0">
+                    <span className="text-text-muted shrink-0">{t('Phòng ban / Nhóm:', 'Department / Team:')}</span>
+                    <span
+                      className="font-semibold text-text-primary text-right min-w-0 truncate"
+                      title={
+                        project.department_name
+                          ? `${project.department_name}${project.team_name ? ` • ${project.team_name}` : ''}`
+                          : t('Chưa gán Phòng ban', 'Unassigned')
+                      }
+                    >
                       {project.department_name ? (
                         <>
                           {project.department_name}
                           {project.team_name ? ` • ${project.team_name}` : ''}
                         </>
                       ) : (
-                        <span className="text-text-muted italic">Chưa gán Phòng ban</span>
+                        <span className="text-text-muted italic">{t('Chưa gán Phòng ban', 'Unassigned')}</span>
                       )}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs border-t border-border/60 pt-2">
-                    <span className="text-text-muted">Thời gian thực hiện:</span>
-                    <span className="font-semibold text-text-primary">
-                      {project.start_date
-                        ? new Date(project.start_date).toLocaleDateString('vi-VN')
-                        : '—'}
+                  <div className="flex items-center justify-between gap-2 text-xs border-t border-border/60 pt-2 min-w-0">
+                    <span className="text-text-muted shrink-0">{t('Thời gian thực hiện:', 'Timeline:')}</span>
+                    <span className="font-semibold text-text-primary text-right truncate">
+                      {project.start_date ? formatDate(project.start_date) : '—'}
                       {' → '}
-                      {project.end_date
-                        ? new Date(project.end_date).toLocaleDateString('vi-VN')
-                        : '—'}
+                      {project.end_date ? formatDate(project.end_date) : '—'}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs border-t border-border/60 pt-2">
-                    <span className="text-text-muted">Ngày khởi tạo:</span>
-                    <span className="font-semibold text-text-primary">
-                      {project.created_at
-                        ? new Date(project.created_at).toLocaleDateString('vi-VN')
-                        : 'Mới cập nhật'}
+                  <div className="flex items-center justify-between gap-2 text-xs border-t border-border/60 pt-2 min-w-0">
+                    <span className="text-text-muted shrink-0">{t('Ngày khởi tạo:', 'Created:')}</span>
+                    <span className="font-semibold text-text-primary truncate">
+                      {project.created_at ? formatDate(project.created_at) : t('Mới cập nhật', 'Recently updated')}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      leftIcon={<Eye className="h-3.5 w-3.5" />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/projects/${project.id}`);
-                      }}
-                    >
-                      Chi tiết
-                    </Button>
-                    {permissions.canEditProject && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<Edit3 className="h-3.5 w-3.5" />}
-                        onClick={(e) => handleOpenEdit(project, e)}
-                      >
-                        Sửa
-                      </Button>
-                    )}
-                    {permissions.canDeleteProject && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        leftIcon={<Trash2 className="h-3.5 w-3.5" />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingProject(project);
-                        }}
-                      >
-                        Xóa
-                      </Button>
-                    )}
-                  </div>
+                  <EntityActions
+                    align="end"
+                    className="pt-3 border-t border-border/60"
+                    onView={() => navigate(`/projects/${project.id}`)}
+                    onEdit={permissions.canEditProject ? (e) => handleOpenEdit(project, e) : undefined}
+                    onDelete={permissions.canDeleteProject ? () => setDeletingProject(project) : undefined}
+                  />
                 </CardContent>
               </Card>
             );
@@ -428,9 +400,9 @@ const ProjectPage: React.FC = () => {
         isOpen={Boolean(deletingProject)}
         onClose={() => setDeletingProject(null)}
         onConfirm={handleConfirmDelete}
-        title="Xác nhận xóa dự án"
-        message={`Bạn có chắc chắn muốn xóa dự án ${deletingProject?.name}? Mọi dữ liệu liên quan sẽ bị xóa khỏi hệ thống.`}
-        confirmText="Xóa dự án"
+        title={t('Xác nhận xóa dự án', 'Confirm Delete Project')}
+        message={t(`Bạn có chắc chắn muốn xóa dự án ${deletingProject?.name}? Mọi dữ liệu liên quan sẽ bị xóa khỏi hệ thống.`, `Are you sure you want to delete project ${deletingProject?.name}?`)}
+        confirmText={t('Xóa dự án', 'Delete Project')}
         isLoading={deleteProject.isPending}
       />
     </div>

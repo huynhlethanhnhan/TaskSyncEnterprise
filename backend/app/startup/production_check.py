@@ -40,6 +40,13 @@ def run_production_readiness_check() -> dict:
             )
             security_deductions += 10
 
+        seed_pwd = settings.SEED_ADMIN_PASSWORD.get_secret_value()
+        if seed_pwd in ("Admin@Task2026!", "TaskSync@2026") or len(seed_pwd) < 12:
+            app_logger.warning(
+                "PRODUCTION AUDIT WARNING: SEED_ADMIN_PASSWORD uses a default or weak value in production."
+            )
+            security_deductions += 20
+
     final_score = max(0, base_score - security_deductions)
 
     report = {

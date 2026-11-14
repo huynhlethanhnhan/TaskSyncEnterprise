@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Search, ChevronRight, ChevronDown, Clock, Zap, Bookmark } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../common/Card';
-import { Badge } from '../common/Badge';
+import { StatusBadge } from '../common/StatusBadge';
 import { Input } from '../ui/Input';
 
 import { Avatar } from '../common/Avatar';
@@ -12,6 +12,8 @@ import { useProjects } from '../../hooks/useProjects';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useTopics } from '../../hooks/useTopics';
 import { useToast } from '../../providers/ToastProvider';
+import { useSettings } from '../../providers/SettingsProvider';
+import { extractApiError } from '../../utils/errorHelpers';
 import { type TaskItem, type TopicItem } from '../../api/services';
 
 interface JiraTimelineProps {
@@ -28,6 +30,7 @@ interface EpicGroup {
 
 export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
   const toast = useToast();
+  const { t, statusLabel, formatDate, isEnglish } = useSettings();
   const [viewScale, setViewScale] = React.useState<'Months' | 'Weeks' | 'Quarters'>('Months');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedStatus, setSelectedStatus] = React.useState<string>('All');
@@ -60,7 +63,7 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
     const today = new Date();
     for (let i = -1; i < 5; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-      const name = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const name = d.toLocaleDateString(isEnglish ? 'en-US' : 'vi-VN', { month: 'long', year: 'numeric' });
       months.push({
         date: d,
         name,
@@ -69,7 +72,7 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
       });
     }
     return months;
-  }, []);
+  }, [isEnglish]);
 
   // Filter tasks
   const filteredTasks = React.useMemo(() => {
@@ -139,16 +142,17 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
     if (!selectedTask) return;
     try {
       await updateTask.mutateAsync({ id: selectedTask.id, payload: data });
-      toast.success('Cập nhật công việc thành công');
+      toast.success(t('Cập nhật công việc thành công', 'Task updated'));
       setIsDrawerOpen(false);
       refetchTasks();
-    } catch {
-      toast.error('Lỗi lưu công việc');
+    } catch (err) {
+      const apiError = extractApiError(err, t('Lỗi lưu công việc', 'Error saving task'));
+      toast.error(`${t('Lỗi', 'Error')} [${apiError.status}]`, apiError.message);
     }
   };
 
   // Timeline position calculation helper
-  const getTimelineBarStyles = (startDateInput?: string | Date | null, endDateInput?: string | Date | null) => {
+  const getTimelineBarMetrics = (startDateInput?: string | Date | null, endDateInput?: string | Date | null) => {
     const today = new Date();
     const startDate = startDateInput ? new Date(startDateInput) : new Date(today.getFullYear(), today.getMonth(), 1);
     const endDate = endDateInput ? new Date(endDateInput) : new Date(today.getFullYear(), today.getMonth() + 1, 15);
@@ -162,9 +166,16 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
     const widthPercent = Math.max(4, rightPercent - leftPercent);
 
     return {
-      left: `${leftPercent}%`,
-      width: `${widthPercent}%`,
+      widthPercent,
+      style: {
+        left: `${leftPercent}%`,
+        width: `${widthPercent}%`,
+      },
     };
+  };
+
+  const getTimelineBarStyles = (startDateInput?: string | Date | null, endDateInput?: string | Date | null) => {
+    return getTimelineBarMetrics(startDateInput, endDateInput).style;
   };
 
   // Epic timeline bar range (min start, max deadline of child items)
@@ -192,7 +203,7 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
   };
 
   if (tasksLoading || sprintsLoading) {
-    return <div className="text-center py-8 text-xs text-text-muted">Đang khởi tạo giao diện Jira Timeline...</div>;
+    return <div className="text-center py-8 text-xs text-text-muted">{t('Đang khởi tạo giao diện Jira Timeline...', 'Initializing Jira Timeline...')}</div>;
   }
 
   // Today indicator position
@@ -209,7 +220,7 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
           <div className="flex items-center gap-2">
             <div className="relative w-56">
               <Input
-                placeholder="Search timeline..."
+                placeholder={t('Tìm trên lộ trình...', 'Search timeline...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8 h-8 text-xs"
@@ -229,7 +240,7 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
                     : 'bg-secondary/60 text-text-secondary hover:bg-secondary'
                     }`}
                 >
-                  {st}
+                  {st === 'All' ? t('Tất cả', 'All') : statusLabel(st)}
                 </button>
               ))}
             </div>
@@ -248,7 +259,7 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
                     : 'text-text-muted hover:text-text-primary'
                     }`}
                 >
-                  {scale}
+                  {scale === 'Weeks' ? t('Tuần', 'Weeks') : scale === 'Months' ? t('Tháng', 'Months') : t('Quý', 'Quarters')}
                 </button>
               ))}
             </div>
@@ -261,18 +272,18 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
           {/* Left Work Items Column (Epics -> Tasks Tree) */}
           <div className="w-96 shrink-0 border-r border-border/40 bg-surface/50">
             <div className="h-14 px-3 flex items-center justify-between border-b border-border/40 font-bold text-[11px] text-text-muted uppercase tracking-wider">
-              <span>Work / Epics ({filteredTasks.length})</span>
+              <span>{t('Hạng mục / Epics', 'Work / Epics')} ({filteredTasks.length})</span>
               <span className="text-[10px] text-text-muted">Sprints: {sprints.length}</span>
             </div>
 
             {/* Top Sprint Track Header Placeholder */}
             <div className="h-10 px-3 flex items-center font-bold text-[11px] text-primary border-b border-border/30 bg-secondary/30">
-              <Clock className="h-3.5 w-3.5 mr-1.5" /> Sprints Track
+              <Clock className="h-3.5 w-3.5 mr-1.5" /> {t('Lộ trình Sprint', 'Sprints Track')}
             </div>
 
             <div className="divide-y divide-border/20 max-h-[550px] overflow-y-auto">
               {epicGroups.length === 0 ? (
-                <div className="p-6 text-center text-text-muted text-xs">Chưa có công việc nào.</div>
+                <div className="p-6 text-center text-text-muted text-xs">{t('Chưa có công việc nào.', 'No tasks found.')}</div>
               ) : (
                 epicGroups.map((group) => {
                   const isExpanded = expandedEpics[group.id] !== false;
@@ -291,38 +302,41 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
                           <span className="truncate text-text-primary font-bold">{group.title}</span>
                         </div>
                         <span className="text-[10px] text-text-muted shrink-0 font-normal">
-                          ({group.items.length} items)
+                          ({group.items.length} {t('mục', 'items')})
                         </span>
                       </div>
 
                       {/* Child Tasks List */}
                       {isExpanded &&
-                        group.items.map((t) => {
-                          const emp = (t as any).assignee || employees.find((e) => e.id === t.assigned_to);
+                        group.items.map((tItem) => {
+                          const emp = (tItem as any).assignee || employees.find((e) => e.id === tItem.assigned_to);
                           return (
                             <div
-                              key={t.id}
-                              onClick={() => handleTaskClick(t)}
+                              key={tItem.id}
+                              onClick={() => handleTaskClick(tItem)}
                               className="h-11 pl-8 pr-3 flex items-center justify-between gap-2 hover:bg-accent/40 transition-colors cursor-pointer group border-b border-border/10"
                             >
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <Bookmark className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                <span className="font-mono text-text-muted text-[10px] shrink-0">TS-{t.id}</span>
-                                <span className="font-semibold text-text-primary truncate group-hover:text-primary transition-colors" title={t.title || t.name}>
-                                  {t.title || t.name}
+                                <span className="font-mono text-text-muted text-[10px] shrink-0">TS-{tItem.id}</span>
+                                <span className="font-semibold text-text-primary truncate group-hover:text-primary transition-colors" title={tItem.title || tItem.name}>
+                                  {tItem.title || tItem.name}
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-1.5 shrink-0">
+                                {tItem.story_points ? (
+                                  <span className="px-1.5 py-0.5 rounded bg-secondary text-[10px] font-mono font-semibold text-text-secondary shrink-0">
+                                    {tItem.story_points} SP
+                                  </span>
+                                ) : null}
                                 {emp ? (
-                                  <div className="flex items-center gap-1 bg-surface px-1.5 py-0.5 rounded-full border border-border/60 text-[10px]" title={`Người làm: ${emp.full_name}`}>
+                                  <div className="flex items-center gap-1 bg-surface px-1.5 py-0.5 rounded-full border border-border/60 text-[10px]" title={`${t('Người làm:', 'Assignee:')} ${emp.full_name}`}>
                                     <Avatar name={emp.full_name} src={emp.avatar_url} size="sm" />
                                   </div>
                                 ) : null}
 
-                                <Badge variant={t.status === 'Done' ? 'success' : t.status === 'In Progress' ? 'primary' : 'warning'} size="sm">
-                                  {t.status}
-                                </Badge>
+                                <StatusBadge status={tItem.status} size="sm" />
                               </div>
                             </div>
                           );
@@ -352,7 +366,7 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
                 style={{ left: `${todayLeftPercent}%` }}
               >
                 <div className="bg-blue-500 text-white text-[9px] font-bold px-1 rounded-xs absolute top-0 -translate-x-1/2">
-                  Today
+                  {t('Hôm nay', 'Today')}
                 </div>
               </div>
 
@@ -365,9 +379,9 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
                       key={s.id}
                       className="absolute h-7 rounded-full bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 shadow-xs text-[10px] font-bold px-3 flex items-center justify-between truncate cursor-pointer hover:opacity-90 transition-opacity"
                       style={barStyle}
-                      title={`Sprint: ${s.name} (${s.status})\nThời gian: ${s.start_date ? new Date(s.start_date).toLocaleDateString('vi-VN') : 'N/A'} - ${s.end_date ? new Date(s.end_date).toLocaleDateString('vi-VN') : 'N/A'}`}
+                      title={`Sprint: ${s.name} (${statusLabel(s.status)})\n${t('Thời gian:', 'Period:')} ${s.start_date ? formatDate(s.start_date) : 'N/A'} - ${s.end_date ? formatDate(s.end_date) : 'N/A'}`}
                     >
-                      <span className="truncate pr-1">🏃 {s.name} ({s.status})</span>
+                      <span className="truncate pr-1">🏃 {s.name} ({statusLabel(s.status)})</span>
                     </div>
                   );
                 })}
@@ -394,24 +408,25 @@ export const JiraTimeline: React.FC<JiraTimelineProps> = ({ projectId }) => {
 
                       {/* Child Tasks Gantt Bars */}
                       {isExpanded &&
-                        group.items.map((t) => {
-                          const matchedSprint = sprints.find((s) => s.id === t.sprint_id);
-                          const barStyle = getTimelineBarStyles(t.created_at, t.deadline || matchedSprint?.end_date);
-                          const colorClass = getBarColor(t.status, t.priority);
-                          const emp = (t as any).assignee || employees.find((e) => e.id === t.assigned_to);
+                        group.items.map((tItem) => {
+                          const matchedSprint = sprints.find((s) => s.id === tItem.sprint_id);
+                          const barMetrics = getTimelineBarMetrics(tItem.created_at, tItem.deadline || matchedSprint?.end_date);
+                          const showInlineSpPill = Boolean(tItem.story_points && barMetrics.widthPercent >= 16);
+                          const colorClass = getBarColor(tItem.status, tItem.priority);
+                          const emp = (tItem as any).assignee || employees.find((e) => e.id === tItem.assigned_to);
 
                           return (
-                            <div key={t.id} className="h-11 relative flex items-center px-1 border-b border-border/10">
+                            <div key={tItem.id} className="h-11 relative flex items-center px-1 border-b border-border/10">
                               <div
-                                onClick={() => handleTaskClick(t)}
-                                className={`absolute h-6 rounded-md ${colorClass} shadow-xs text-white text-[10px] font-bold px-2.5 flex items-center justify-between transition-all group cursor-pointer hover:shadow-md hover:scale-[1.01]`}
-                                style={barStyle}
-                                title={`Task: TS-${t.id} - ${t.title || t.name}\nNgười thực hiện: ${emp?.full_name || 'Chưa gán'}\nTrạng thái: ${t.status}`}
+                                onClick={() => handleTaskClick(tItem)}
+                                className={`absolute h-6 rounded-md ${colorClass} shadow-xs text-white text-[10px] font-bold px-2 flex items-center justify-between gap-1.5 overflow-hidden transition-all group cursor-pointer hover:shadow-md hover:scale-[1.01]`}
+                                style={barMetrics.style}
+                                title={`Task: TS-${tItem.id} - ${tItem.title || tItem.name}${tItem.story_points ? `\nStory Points: ${tItem.story_points} SP` : ''}\n${t('Người thực hiện:', 'Assignee:')} ${emp?.full_name || t('Chưa gán', 'Unassigned')}\n${t('Trạng thái:', 'Status:')} ${statusLabel(tItem.status)}`}
                               >
-                                <span className="truncate pr-1">TS-{t.id}: {t.title || t.name}</span>
-                                {t.story_points ? (
-                                  <span className="px-1.5 py-0.2 bg-black/20 rounded text-[9px] font-mono shrink-0">
-                                    {t.story_points} SP
+                                <span className="truncate min-w-0">TS-{tItem.id}: {tItem.title || tItem.name}</span>
+                                {showInlineSpPill ? (
+                                  <span className="px-1.5 py-0.5 bg-black/25 rounded text-[9px] font-mono leading-none shrink-0">
+                                    {tItem.story_points} SP
                                   </span>
                                 ) : null}
                               </div>

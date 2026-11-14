@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Avatar } from '../common/Avatar';
+import { useSettings } from '../../providers/SettingsProvider';
 import { cn } from '../../utils/cn';
-
 
 interface SidebarNavItem {
   key: string;
@@ -21,6 +21,7 @@ export interface SidebarSection {
 export interface SidebarProps {
   brandName?: string;
   brandLogo?: React.ReactNode;
+  onBrandClick?: () => void;
   sections: SidebarSection[];
   activeKey: string;
   isCollapsed?: boolean;
@@ -38,6 +39,7 @@ export interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   brandName = 'TaskSync',
   brandLogo,
+  onBrandClick,
   sections,
   activeKey,
   isCollapsed = false,
@@ -46,23 +48,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onProfileClick,
   className,
 }) => {
+  const { t } = useSettings();
+
   return (
     <aside
       className={cn(
-        'sticky top-0 z-sidebar h-screen flex flex-col border-r border-border bg-surface text-text-primary transition-all duration-300 select-none overflow-x-hidden',
+        'sticky top-0 z-sidebar h-screen flex flex-col border-r border-border bg-surface text-text-primary transition-[width] duration-200 ease-out select-none overflow-x-hidden',
         isCollapsed ? 'w-18' : 'w-64',
         className
       )}
     >
       {/* Brand Header */}
-      <div className="h-16 px-4 flex items-center justify-between border-b border-border/60 shrink-0">
+      <div className="h-16 px-4 flex items-center justify-between border-b border-border/60 shrink-0 gap-2">
         <button
           type="button"
-          onClick={onToggleCollapse}
-          className="flex items-center gap-3 overflow-hidden text-left focus-visible:outline-none group cursor-pointer"
-          title={isCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+          onClick={onBrandClick || onToggleCollapse}
+          className="flex items-center gap-3 overflow-hidden text-left focus-visible:outline-none group cursor-pointer min-w-0"
+          title={
+            onBrandClick
+              ? t('Về Trang chủ (Dashboard)', 'Go to Dashboard')
+              : isCollapsed
+                ? t('Mở rộng thanh menu', 'Expand sidebar')
+                : t('Thu gọn thanh menu', 'Collapse sidebar')
+          }
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg shrink-0 transition-transform group-hover:scale-105">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg shrink-0 transition-transform duration-200 group-hover:scale-105">
             {brandLogo || brandName[0]}
           </div>
           {!isCollapsed && (
@@ -76,8 +86,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="rounded-md p-1.5 text-text-muted hover:bg-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-            aria-label="Collapse sidebar"
+            className="rounded-md p-1.5 text-text-muted hover:bg-secondary hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0"
+            aria-label={t('Thu gọn thanh menu', 'Collapse sidebar')}
+            title={t('Thu gọn thanh menu', 'Collapse sidebar')}
           >
             <ChevronLeft className="h-4 w-4 stroke-[1.75]" />
           </button>
@@ -103,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={item.onClick}
                   title={isCollapsed ? item.label : undefined}
                   className={cn(
-                    'relative flex w-full items-center gap-3 py-2 text-xs font-medium transition-all duration-200 active:scale-[0.98] cursor-pointer',
+                    'relative flex w-full items-center gap-3 py-2 text-xs font-medium transition-all duration-150 ease-out active:scale-[0.98] cursor-pointer',
                     isActive
                       ? 'bg-accent text-accent-foreground font-semibold shadow-xs'
                       : 'text-text-secondary hover:bg-secondary/60 hover:text-text-primary',
@@ -123,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <>
                       <span className="flex-1 text-left truncate">{item.label}</span>
                       {item.badge !== undefined && (
-                        <span className="px-1.5 py-0.2 text-[10px] font-semibold rounded-full bg-secondary text-text-muted">
+                        <span className="px-1.5 py-0.2 text-[10px] font-semibold rounded-full bg-secondary text-text-muted shrink-0">
                           {item.badge}
                         </span>
                       )}
@@ -165,8 +176,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="rounded-md p-2 text-text-muted hover:bg-secondary hover:text-text-primary transition-colors"
-            aria-label="Expand sidebar"
+            className="rounded-md p-2 text-text-muted hover:bg-secondary hover:text-text-primary transition-colors cursor-pointer"
+            aria-label={t('Mở rộng thanh menu', 'Expand sidebar')}
+            title={t('Mở rộng thanh menu', 'Expand sidebar')}
           >
             <ChevronRight className="h-4 w-4 stroke-[1.75]" />
           </button>
@@ -175,4 +187,3 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </aside>
   );
 };
-

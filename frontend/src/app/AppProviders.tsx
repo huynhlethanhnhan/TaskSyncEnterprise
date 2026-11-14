@@ -2,6 +2,7 @@ import * as React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '../providers/ThemeProvider';
 import { AuthProvider } from '../providers/AuthProvider';
+import { SettingsProvider } from '../providers/SettingsProvider';
 import { ToastProvider } from '../providers/ToastProvider';
 
 const queryClient = new QueryClient({
@@ -19,7 +20,9 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <SettingsProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </SettingsProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

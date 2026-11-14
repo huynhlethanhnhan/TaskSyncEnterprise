@@ -108,6 +108,9 @@ export interface EmployeeItem {
   job_title?: string | null;
   employment_status?: string;
   is_active: boolean;
+  is_online?: boolean;
+  last_login?: string | null;
+  last_logout?: string | null;
   avatar_url?: string | null;
   created_at?: string;
   upcoming_vacations?: Array<{
@@ -224,6 +227,23 @@ export const tasksApi = {
     const res = await api.get('/tasks', { params });
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
   },
+  search: async (params: {
+    keyword?: string;
+    project_id?: number;
+    department_id?: number;
+    team_id?: number;
+    sprint_id?: number;
+    topic_id?: number;
+    assigned_to?: number;
+    status?: string;
+    priority?: string;
+    overdue_only?: boolean;
+    skip?: number;
+    limit?: number;
+  }): Promise<TaskItem[]> => {
+    const res = await api.get('/tasks/search', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
   getMyTasks: async (): Promise<TaskItem[]> => {
     const res = await api.get('/tasks/my-tasks');
     return Array.isArray(res.data) ? res.data : res.data?.data || [];
@@ -273,6 +293,68 @@ export const employeesApi = {
   },
   delete: async (id: number): Promise<void> => {
     await api.delete(`/employees/${id}`);
+  },
+  getPasswordResetRequests: async (): Promise<PasswordResetRequestItem[]> => {
+    const res = await api.get('/employees/password-reset-requests');
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  dismissPasswordResetRequest: async (employeeId: number): Promise<void> => {
+    await api.delete(`/employees/password-reset-requests/${employeeId}`);
+  },
+  resetPassword: async (
+    employeeId: number,
+    payload: AdminResetPasswordPayload,
+  ): Promise<AdminResetPasswordResponse> => {
+    const res = await api.post(`/employees/${employeeId}/reset-password`, payload);
+    return res.data?.data || res.data;
+  },
+};
+
+export interface PasswordResetRequestItem {
+  employee_id: number;
+  employee_code: string;
+  full_name: string;
+  email: string;
+  department_name?: string | null;
+  avatar_url?: string | null;
+  note?: string | null;
+  requested_at?: string | null;
+  notification_id: number;
+}
+
+export interface AdminResetPasswordPayload {
+  new_password?: string | null;
+  force_change_on_login?: boolean;
+  notify_via_email?: boolean;
+}
+
+export interface AdminResetPasswordResponse {
+  employee_id: number;
+  employee_code: string;
+  full_name: string;
+  email: string;
+  temporary_password: string;
+  reset_link: string;
+  force_change_on_login: boolean;
+  email_sent: boolean;
+  message: string;
+}
+
+export const authApi = {
+  forgotPassword: async (
+    email: string,
+    note?: string,
+  ): Promise<{ message: string; admin_notified: boolean; email_sent: boolean }> => {
+    const res = await api.post('/auth/forgot-password', { email, note: note || undefined });
+    return res.data?.data || res.data;
+  },
+  resetPassword: async (payload: {
+    token: string;
+    new_password: string;
+    confirm_password?: string;
+  }): Promise<{ message: string }> => {
+    const res = await api.post('/auth/reset-password', payload);
+    return res.data?.data || res.data;
   },
 };
 
@@ -776,5 +858,475 @@ export const filesApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return res.data;
+  },
+};
+
+// ── HRM Subsystem Interfaces & APIs ───────────────────────────────────────────
+
+export interface LeaveBalanceItem {
+  id: number;
+  employee_id: number;
+  leave_year: number;
+  annual_entitlement: number | string;
+  carried_over_days: number | string;
+  used_days: number | string;
+  pending_days: number | string;
+  remaining_days: number;
+  updated_at?: string | null;
+}
+
+export interface LeaveBalanceAdjustPayload {
+  leave_year: number;
+  annual_entitlement: number;
+  carried_over_days?: number;
+}
+
+export interface EmploymentContractItem {
+  id: number;
+  employee_id: number;
+  contract_code: string;
+  contract_type: 'Probation' | 'Fixed-Term' | 'Indefinite' | 'Part-Time' | 'Contractor' | string;
+  base_salary: number | string;
+  allowance: number | string;
+  currency: string;
+  start_date: string;
+  end_date?: string | null;
+  status: 'Draft' | 'Active' | 'Expired' | 'Terminated' | string;
+  is_deleted?: boolean;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface EmploymentContractCreatePayload {
+  employee_id: number;
+  contract_code: string;
+  contract_type: string;
+  base_salary: number;
+  allowance?: number;
+  currency?: string;
+  start_date: string;
+  end_date?: string | null;
+  status?: string;
+}
+
+export interface EmploymentContractUpdatePayload {
+  contract_type?: string;
+  base_salary?: number;
+  allowance?: number;
+  currency?: string;
+  start_date?: string;
+  end_date?: string | null;
+  status?: string;
+}
+
+export interface AttendanceLogItem {
+  id: number;
+  employee_id: number;
+  work_date: string;
+  check_in?: string | null;
+  check_out?: string | null;
+  work_hours: number | string;
+  overtime_hours: number | string;
+  status: string;
+  note?: string | null;
+  created_at: string;
+}
+
+export interface OvertimeRequestItem {
+  id: number;
+  employee_id: number;
+  project_id?: number | null;
+  work_date: string;
+  hours: number | string;
+  reason?: string | null;
+  status: 'Pending' | 'Manager Approved' | 'HR Approved' | 'Rejected' | 'Withdrawn' | string;
+  team_leader_note?: string | null;
+  approved_by?: number | null;
+  approved_at?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface OvertimeRequestCreatePayload {
+  project_id?: number | null;
+  work_date: string;
+  hours: number;
+  reason?: string;
+}
+
+export interface LeaveTaskConflictItem {
+  employee_id: number;
+  employee_name: string;
+  task_id: number;
+  task_title: string;
+  task_deadline: string;
+  vacation_id: number;
+  vacation_status: string;
+  leave_start_date: string;
+  leave_end_date: string;
+}
+
+export interface HRMOverviewItem {
+  employee_id: number;
+  full_name: string;
+  role_id: number;
+  employment_status: string;
+  is_team_leader: boolean;
+  led_team_ids: number[];
+  leave_balance: LeaveBalanceItem;
+  active_contract?: EmploymentContractItem | null;
+  attendance_days_this_month: number;
+  total_work_hours_this_month: number;
+  total_overtime_hours_this_month: number;
+  pending_leave_requests: number;
+  pending_overtime_requests: number;
+  leave_task_conflicts: LeaveTaskConflictItem[];
+}
+
+export interface BackupHistoryItem {
+  id: number;
+  backup_type: string;
+  database_name: string;
+  backup_path?: string | null;
+  status: string;
+  performed_by?: number | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface BackupHistoryCreatePayload {
+  backup_type: 'FULL' | 'DIFFERENTIAL' | 'LOG' | 'SNAPSHOT' | 'LOGICAL_ROLLBACK';
+  database_name: string;
+  backup_path?: string;
+  status: 'SUCCESS' | 'VERIFIED' | 'FAILED' | 'RESTORED';
+  notes?: string;
+}
+
+export interface UserPreferenceSettings {
+  employee_id?: number;
+  theme: string;
+  language: string;
+  timezone: string;
+  date_format: string;
+  page_size: number;
+  compact_mode: boolean;
+  in_app_notifications: boolean;
+  email_notifications: boolean;
+  task_assigned_notify: boolean;
+  task_deadline_notify: boolean;
+  sprint_status_notify: boolean;
+  project_update_notify: boolean;
+}
+
+export interface SystemRuntimeSettings {
+  system_name: string;
+  default_sprint_capacity: number;
+  default_task_page_size: number;
+  deadline_reminder_days: number;
+  allow_employee_status_update: boolean;
+  maintenance_mode: boolean;
+}
+
+export const settingsApi = {
+  getMe: async (): Promise<UserPreferenceSettings> => {
+    const res = await api.get('/settings/me');
+    return res.data?.data || res.data;
+  },
+  updateMe: async (payload: Partial<UserPreferenceSettings>): Promise<UserPreferenceSettings> => {
+    const res = await api.patch('/settings/me', payload);
+    return res.data?.data || res.data;
+  },
+  getRuntime: async (): Promise<SystemRuntimeSettings> => {
+    const res = await api.get('/settings/runtime');
+    return res.data?.data || res.data;
+  },
+  getSystem: async (): Promise<SystemRuntimeSettings> => {
+    const res = await api.get('/settings/system');
+    return res.data?.data || res.data;
+  },
+  updateSystem: async (payload: Partial<SystemRuntimeSettings>): Promise<SystemRuntimeSettings> => {
+    const res = await api.patch('/settings/system', payload);
+    return res.data?.data || res.data;
+  },
+};
+
+export interface PayrollItem {
+  id: number;
+  employee_id: number;
+  contract_id?: number | null;
+  pay_period: string;
+  standard_work_days: number | string;
+  actual_work_days: number | string;
+  paid_leave_days: number | string;
+  overtime_hours: number | string;
+  base_salary: number | string;
+  allowance: number | string;
+  overtime_pay: number | string;
+  bonus: number | string;
+  deduction: number | string;
+  net_salary: number | string;
+  currency: string;
+  status: 'Draft' | 'Confirmed' | 'Paid' | string;
+  note?: string | null;
+  paid_at?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface PayrollCalculatePayload {
+  pay_period: string;
+  employee_id?: number;
+  standard_work_days?: number;
+  overtime_multiplier?: number;
+}
+
+export interface PayrollUpdatePayload {
+  actual_work_days?: number;
+  paid_leave_days?: number;
+  overtime_hours?: number;
+  overtime_pay?: number;
+  bonus?: number;
+  deduction?: number;
+  note?: string;
+}
+
+export interface AttendanceUpdatePayload {
+  check_in?: string;
+  check_out?: string;
+  work_hours?: number;
+  overtime_hours?: number;
+  status?: 'Present' | 'Remote' | 'Late' | 'Half-Day' | 'Leave' | 'Absent' | 'Holiday';
+  note?: string;
+}
+
+export interface CandidateItem {
+  id: number;
+  full_name: string;
+  email: string;
+  phone?: string | null;
+  applied_position: string;
+  department_id?: number | null;
+  expected_salary?: number | string | null;
+  stage: 'Applied' | 'Screening' | 'Interview' | 'Offer' | 'Hired' | 'Rejected' | string;
+  interview_date?: string | null;
+  source?: string | null;
+  notes?: string | null;
+  converted_employee_id?: number | null;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface CandidateCreatePayload {
+  full_name: string;
+  email: string;
+  phone?: string;
+  applied_position: string;
+  department_id?: number | null;
+  expected_salary?: number | null;
+  stage?: string;
+  interview_date?: string | null;
+  source?: string;
+  notes?: string;
+}
+
+export interface CandidateOnboardPayload {
+  department_id?: number | null;
+  team_id?: number | null;
+  job_title?: string;
+  password?: string;
+  create_contract?: boolean;
+  contract_type?: 'Probation' | 'Fixed-Term' | 'Indefinite' | 'Part-Time' | 'Contractor';
+  base_salary?: number;
+  allowance?: number;
+  currency?: string;
+  start_date?: string;
+}
+
+export const hrmApi = {
+  getOverview: async (): Promise<HRMOverviewItem> => {
+    const res = await api.get('/hrm/me/overview');
+    return res.data?.data || res.data;
+  },
+  getLeaveTaskConflicts: async (params?: {
+    employee_id?: number;
+    project_id?: number;
+  }): Promise<LeaveTaskConflictItem[]> => {
+    const res = await api.get('/hrm/leave-task-conflicts', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  getMyLeaveBalance: async (leave_year?: number): Promise<LeaveBalanceItem> => {
+    const res = await api.get('/hrm/leave-balances/me', {
+      params: leave_year ? { leave_year } : undefined,
+    });
+    return res.data?.data || res.data;
+  },
+  listLeaveBalances: async (params?: {
+    leave_year?: number;
+    employee_id?: number;
+  }): Promise<LeaveBalanceItem[]> => {
+    const res = await api.get('/hrm/leave-balances', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  getEmployeeLeaveBalance: async (employeeId: number, leave_year?: number): Promise<LeaveBalanceItem> => {
+    const res = await api.get(`/hrm/leave-balances/${employeeId}`, {
+      params: leave_year ? { leave_year } : undefined,
+    });
+    return res.data?.data || res.data;
+  },
+  adjustLeaveBalance: async (
+    employeeId: number,
+    payload: LeaveBalanceAdjustPayload,
+  ): Promise<LeaveBalanceItem> => {
+    const res = await api.put(`/hrm/leave-balances/${employeeId}`, payload);
+    return res.data?.data || res.data;
+  },
+  listContracts: async (params?: {
+    employee_id?: number;
+    status_filter?: string;
+  }): Promise<EmploymentContractItem[]> => {
+    const res = await api.get('/hrm/contracts', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  createContract: async (payload: EmploymentContractCreatePayload): Promise<EmploymentContractItem> => {
+    const res = await api.post('/hrm/contracts', payload);
+    return res.data?.data || res.data;
+  },
+  updateContract: async (
+    contractId: number,
+    payload: EmploymentContractUpdatePayload,
+  ): Promise<EmploymentContractItem> => {
+    const res = await api.put(`/hrm/contracts/${contractId}`, payload);
+    return res.data?.data || res.data;
+  },
+  deleteContract: async (contractId: number): Promise<void> => {
+    await api.delete(`/hrm/contracts/${contractId}`);
+  },
+  checkIn: async (payload?: {
+    work_date?: string;
+    check_in?: string;
+    status?: 'Present' | 'Remote';
+    note?: string;
+  }): Promise<AttendanceLogItem> => {
+    const res = await api.post('/hrm/attendance/check-in', payload || {});
+    return res.data?.data || res.data;
+  },
+  checkOut: async (payload?: {
+    work_date?: string;
+    check_out?: string;
+    note?: string;
+  }): Promise<AttendanceLogItem> => {
+    const res = await api.post('/hrm/attendance/check-out', payload || {});
+    return res.data?.data || res.data;
+  },
+  listAttendance: async (params?: {
+    employee_id?: number;
+    work_date_from?: string;
+    work_date_to?: string;
+    limit?: number;
+  }): Promise<AttendanceLogItem[]> => {
+    const res = await api.get('/hrm/attendance', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  updateAttendance: async (
+    attendanceId: number,
+    payload: AttendanceUpdatePayload,
+  ): Promise<AttendanceLogItem> => {
+    const res = await api.put(`/hrm/attendance/${attendanceId}`, payload);
+    return res.data?.data || res.data;
+  },
+  listOvertime: async (params?: {
+    status_filter?: string;
+    employee_id?: number;
+  }): Promise<OvertimeRequestItem[]> => {
+    const res = await api.get('/hrm/overtime', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  createOvertime: async (payload: OvertimeRequestCreatePayload): Promise<OvertimeRequestItem> => {
+    const res = await api.post('/hrm/overtime', payload);
+    return res.data?.data || res.data;
+  },
+  updateOvertime: async (
+    overtimeId: number,
+    payload: Partial<OvertimeRequestCreatePayload>,
+  ): Promise<OvertimeRequestItem> => {
+    const res = await api.put(`/hrm/overtime/${overtimeId}`, payload);
+    return res.data?.data || res.data;
+  },
+  addOvertimeLeaderNote: async (
+    overtimeId: number,
+    team_leader_note: string,
+  ): Promise<OvertimeRequestItem> => {
+    const res = await api.patch(`/hrm/overtime/${overtimeId}/leader-note`, { team_leader_note });
+    return res.data?.data || res.data;
+  },
+  updateOvertimeStatus: async (
+    overtimeId: number,
+    status: string,
+    note?: string,
+  ): Promise<OvertimeRequestItem> => {
+    const res = await api.patch(`/hrm/overtime/${overtimeId}/status`, { status, note });
+    return res.data?.data || res.data;
+  },
+  deleteOvertime: async (overtimeId: number): Promise<void> => {
+    await api.delete(`/hrm/overtime/${overtimeId}`);
+  },
+  listBackups: async (limit = 50): Promise<BackupHistoryItem[]> => {
+    const res = await api.get('/hrm/backups', { params: { limit } });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  createBackup: async (payload: BackupHistoryCreatePayload): Promise<BackupHistoryItem> => {
+    const res = await api.post('/hrm/backups', payload);
+    return res.data?.data || res.data;
+  },
+  listPayrolls: async (params?: {
+    pay_period?: string;
+    employee_id?: number;
+  }): Promise<PayrollItem[]> => {
+    const res = await api.get('/hrm/payrolls', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  calculatePayrolls: async (payload: PayrollCalculatePayload): Promise<PayrollItem[]> => {
+    const res = await api.post('/hrm/payrolls/calculate', payload);
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  updatePayroll: async (
+    payrollId: number,
+    payload: PayrollUpdatePayload,
+  ): Promise<PayrollItem> => {
+    const res = await api.put(`/hrm/payrolls/${payrollId}`, payload);
+    return res.data?.data || res.data;
+  },
+  updatePayrollStatus: async (
+    payrollId: number,
+    status: string,
+    note?: string,
+  ): Promise<PayrollItem> => {
+    const res = await api.patch(`/hrm/payrolls/${payrollId}/status`, { status, note });
+    return res.data?.data || res.data;
+  },
+  listCandidates: async (params?: { stage?: string }): Promise<CandidateItem[]> => {
+    const res = await api.get('/hrm/candidates', { params });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+  createCandidate: async (payload: CandidateCreatePayload): Promise<CandidateItem> => {
+    const res = await api.post('/hrm/candidates', payload);
+    return res.data?.data || res.data;
+  },
+  updateCandidate: async (
+    candidateId: number,
+    payload: Partial<CandidateCreatePayload>,
+  ): Promise<CandidateItem> => {
+    const res = await api.put(`/hrm/candidates/${candidateId}`, payload);
+    return res.data?.data || res.data;
+  },
+  deleteCandidate: async (candidateId: number): Promise<void> => {
+    await api.delete(`/hrm/candidates/${candidateId}`);
+  },
+  onboardCandidate: async (
+    candidateId: number,
+    payload: CandidateOnboardPayload,
+  ): Promise<CandidateItem> => {
+    const res = await api.post(`/hrm/candidates/${candidateId}/onboard`, payload);
+    return res.data?.data || res.data;
   },
 };

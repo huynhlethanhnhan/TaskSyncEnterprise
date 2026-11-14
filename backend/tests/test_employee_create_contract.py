@@ -170,3 +170,66 @@ def test_missing_required_fields_returns_422(client, db):
         headers=headers,
     )
     assert resp.status_code == 422, resp.json()
+
+
+def test_create_employee_in_teamless_department_and_reject_invalid_role(client, db):
+    """Creating employee in a department with no teams (`team_id=None`) succeeds; invalid `role_id` returns 409 instead of 500."""
+    admin_role, emp_role, _, _ = _ensure_setup(db)
+    emp_role_id = emp_role.id
+    teamless_dept = Department(
+        name="Phòng Test demo",
+        department_code=f"DEMO-{uuid.uuid4().hex[:6]}",
+        is_active=True,
+    )
+    db.add(teamless_dept)
+    db.commit()
+    db.refresh(teamless_dept)
+    dept_id = teamless_dept.id
+
+    token = _admin_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    email = f"nvt-{uuid.uuid4().hex[:6]}@enterprise.com"
+    ok_resp = client.post(
+        "/api/v1/employees",
+        json={
+            "full_name": "Nhan vien test 1",
+            "email": email,
+            "password": "Admin@Task2026!",
+            "role_id": emp_role_id,
+            "department_id": dept_id,
+            "team_id": None,
+        },
+        headers=headers,
+    )
+    assert ok_resp.status_code == 201, ok_resp.json()
+    assert ok_resp.json()["department_id"] == dept_id
+    assert ok_resp.json()["team_id"] is None
+
+    bad_role_resp = client.post(
+        "/api/v1/employees",
+        json={
+            "full_name": "Invalid Role Employee",
+            "email": f"badrole-{uuid.uuid4().hex[:6]}@enterprise.com",
+            "password": "Admin@Task2026!",
+            "role_id": 4,
+            "department_id": dept_id,
+            "team_id": None,
+        },
+        headers=headers,
+    )
+    assert bad_role_resp.status_code == 409, bad_role_resp.json()
+
+    dup_email_resp = client.post(
+        "/api/v1/employees",
+        json={
+            "full_name": "Duplicate Email Employee",
+            "email": email,
+            "password": "Admin@Task2026!",
+            "role_id": emp_role_id,
+            "department_id": dept_id,
+            "team_id": None,
+        },
+        headers=headers,
+    )
+    assert dup_email_resp.status_code == 409, dup_email_resp.json()

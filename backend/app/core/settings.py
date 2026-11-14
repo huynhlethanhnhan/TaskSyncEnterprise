@@ -151,6 +151,16 @@ class Settings(BaseSettings):
         ),
     )
 
+    SEED_ADMIN_PASSWORD: SecretStr = Field(
+        default="Admin@Task2026!",
+        description=(
+            "Purpose: Initial development/demo password used by seed and reset scripts (hashed with bcrypt before storage).\n"
+            "Default: 'Admin@Task2026!'\n"
+            "Production Recommendation: Override via SEED_ADMIN_PASSWORD environment secret before running any bootstrap.\n"
+            "Security Consideration: Never log or expose this value in plaintext."
+        ),
+    )
+
     # =========================================================================
     # 💾 3. DATABASE SETTINGS (MS SQL SERVER)
     # =========================================================================

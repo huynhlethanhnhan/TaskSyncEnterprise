@@ -8,17 +8,34 @@ test('permission helper maps correct flags based on roles', () => {
   const adminPerms = getPermissionsForUser({ role: 'admin', role_id: 1 });
   assert.equal(adminPerms.canCreateEmployee, true);
   assert.equal(adminPerms.canViewAuditLogs, true);
+  assert.equal(adminPerms.canManageHrm, true);
+  assert.equal(adminPerms.canManageBackups, true);
 
   // Manager permissions check
   const managerPerms = getPermissionsForUser({ role: 'manager', role_id: 2 });
   assert.equal(managerPerms.canCreateEmployee, false);
   assert.equal(managerPerms.canCreateProject, true);
+  assert.equal(managerPerms.canManageHrm, true);
+  assert.equal(managerPerms.canManageBackups, false);
+
+  // Acting Team Leader permissions check
+  const teamLeaderPerms = getPermissionsForUser({
+    role: 'employee',
+    role_id: 3,
+    is_team_leader: true,
+  });
+  assert.equal(teamLeaderPerms.canCreateTask, true);
+  assert.equal(teamLeaderPerms.canManageHrm, false);
+  assert.equal(teamLeaderPerms.canManageBackups, false);
+  assert.equal(teamLeaderPerms.isTeamLeader, true);
 
   // Employee/Staff permissions check
   const employeePerms = getPermissionsForUser({ role: 'employee', role_id: 3 });
   assert.equal(employeePerms.canCreateEmployee, false);
   assert.equal(employeePerms.canViewAuditLogs, false);
   assert.equal(employeePerms.canCreateProject, false);
+  assert.equal(employeePerms.canManageHrm, false);
+  assert.equal(employeePerms.canManageBackups, false);
 });
 
 test('CSV safe escaper neutralizes Excel formula injections', () => {

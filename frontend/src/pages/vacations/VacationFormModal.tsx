@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { Select } from "../../components/ui/Select";
+import { useSettings } from "../../providers/SettingsProvider";
 
 export interface VacationFormData {
   type: string;
@@ -20,6 +22,7 @@ export default function VacationFormModal({
   onSave,
   initialData,
 }: VacationFormModalProps): React.ReactElement | null {
+  const { t } = useSettings();
   const [state, setState] = useState<VacationFormData>({
     type: initialData?.type || "Annual Leave",
     start_date: initialData?.start_date || "",
@@ -44,10 +47,12 @@ export default function VacationFormModal({
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-text-primary">
-              {initialData ? "Cập nhật yêu cầu nghỉ" : "Yêu cầu nghỉ phép mới"}
+              {initialData
+                ? t("Cập nhật yêu cầu nghỉ", "Update Leave Request")
+                : t("Yêu cầu nghỉ phép mới", "New Leave Request")}
             </h2>
             <p className="mt-1 text-sm text-text-muted">
-              Chọn loại và khoảng thời gian nghỉ phép.
+              {t("Chọn loại và khoảng thời gian nghỉ phép.", "Select leave type and date range.")}
             </p>
           </div>
           <button onClick={onClose} className="text-text-muted hover:text-text-primary cursor-pointer">
@@ -64,23 +69,24 @@ export default function VacationFormModal({
         >
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.24em] text-text-muted">
-              Loại nghỉ
+              {t("Loại nghỉ", "Leave Type")}
             </label>
-            <select
+            <Select
+              aria-label={t("Loại nghỉ", "Leave Type")}
               value={state.type}
               onChange={(e) =>
                 setState((prev) => ({ ...prev, type: e.target.value }))
               }
-              className="w-full rounded-3xl border border-border bg-background px-4 py-3 text-sm text-text-primary outline-none cursor-pointer"
-            >
-              <option>Annual Leave</option>
-              <option>Sick Leave</option>
-              <option>Personal Leave</option>
-            </select>
+              options={[
+                { value: "Annual Leave", label: t("Nghỉ phép năm", "Annual Leave") },
+                { value: "Sick Leave", label: t("Nghỉ ốm", "Sick Leave") },
+                { value: "Personal Leave", label: t("Nghỉ việc riêng", "Personal Leave") },
+              ]}
+            />
           </div>
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.24em] text-text-muted">
-              Ngày bắt đầu
+              {t("Ngày bắt đầu", "Start Date")}
             </label>
             <input
               type="date"
@@ -93,7 +99,7 @@ export default function VacationFormModal({
           </div>
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-[0.24em] text-text-muted">
-              Ngày kết thúc
+              {t("Ngày kết thúc", "End Date")}
             </label>
             <input
               type="date"
@@ -106,7 +112,7 @@ export default function VacationFormModal({
           </div>
           <div className="space-y-2 lg:col-span-2">
             <label className="text-xs font-semibold uppercase tracking-[0.24em] text-text-muted">
-              Lý do
+              {t("Lý do", "Reason")}
             </label>
             <textarea
               value={state.reason}
@@ -123,13 +129,13 @@ export default function VacationFormModal({
               onClick={onClose}
               className="rounded-3xl border border-border bg-accent px-5 py-3 text-sm font-semibold text-text-primary hover:bg-accent/80 cursor-pointer"
             >
-              Hủy
+              {t("Hủy", "Cancel")}
             </button>
             <button
               type="submit"
               className="rounded-3xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 cursor-pointer"
             >
-              Gửi yêu cầu
+              {t("Gửi yêu cầu", "Submit Request")}
             </button>
           </div>
         </form>

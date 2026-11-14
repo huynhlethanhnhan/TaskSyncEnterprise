@@ -1,6 +1,6 @@
 # 📂 FILE: app/models/vacation.py
 from datetime import date, datetime
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Unicode, text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Unicode, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, TYPE_CHECKING
 
@@ -28,6 +28,13 @@ class Vacation(Base):
         ForeignKey("employees.id"), nullable=True
     )
     approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("0"), default=False
+    )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    deleted_by_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("employees.id"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=text("SYSUTCDATETIME()")
     )

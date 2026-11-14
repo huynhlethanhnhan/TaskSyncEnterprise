@@ -9,6 +9,7 @@ from app.database import Base
 
 class TaskAssignment(Base):
     __tablename__ = "task_assignments"
+    __table_args__ = {"implicit_returning": False}
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

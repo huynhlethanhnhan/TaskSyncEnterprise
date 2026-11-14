@@ -29,7 +29,7 @@ export const Tabs: React.FC<TabsProps> = ({
     <div
       role="tablist"
       className={cn(
-        'flex items-center gap-1 select-none overflow-x-auto scrollbar-none',
+        'flex items-center gap-1 select-none flex-wrap',
         variant === 'line' && 'border-b border-border/80 pb-px',
         variant === 'pills' && 'bg-muted p-1 rounded-lg w-fit',
         className

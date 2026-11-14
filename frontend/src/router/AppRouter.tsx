@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import LoginPage from "../pages/auth/LoginPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
+import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { UnauthorizedPage } from "../pages/auth/UnauthorizedPage";
 import { NotFoundPage } from "../pages/auth/NotFoundPage";
 import { ComponentShowcasePage } from "../pages/dev/ComponentShowcasePage";
@@ -20,6 +21,7 @@ import EmployeeDetailPage from "../pages/employees/EmployeeDetailPage";
 import NotificationsPage from "../pages/notifications/NotificationsPage";
 import VacationPage from "../pages/vacations/VacationPage";
 import VacationDetailPage from "../pages/vacations/VacationDetailPage";
+import HRMHubPage from "../pages/hrm/HRMHubPage";
 import SettingsPage from "../pages/settings/SettingsPage";
 import ProfilePage from "../pages/profile/ProfilePage";
 import AuditLogPage from "../pages/audit/AuditLogPage";
@@ -41,6 +43,7 @@ export default function AppRouter(): React.ReactElement {
         {/* Public Authentication Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route path="/404" element={<NotFoundPage />} />
 
@@ -180,6 +183,17 @@ export default function AppRouter(): React.ReactElement {
             <ProtectedRoute>
               <ApplicationShell>
                 <VacationDetailPage />
+              </ApplicationShell>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/hrm"
+          element={
+            <ProtectedRoute>
+              <ApplicationShell>
+                <HRMHubPage />
               </ApplicationShell>
             </ProtectedRoute>
           }

@@ -55,14 +55,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
 
-  const setTheme = (newTheme: ThemeMode) => {
+  const setTheme = React.useCallback((newTheme: ThemeMode) => {
     try {
       localStorage.setItem('tasksync_theme', newTheme);
     } catch {
       // Ignore storage errors
     }
     setThemeState(newTheme);
-  };
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, isDarkMode: isDark }}>

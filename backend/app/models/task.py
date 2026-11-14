@@ -19,6 +19,7 @@ from app.database import Base
 
 class Task(Base):
     __tablename__ = "tasks"
+    __table_args__ = {"implicit_returning": False}
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

@@ -54,29 +54,31 @@ export const Avatar: React.FC<AvatarProps> = ({
   return (
     <div
       className={cn(
-        'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-accent font-semibold text-accent-foreground border border-border/50 transition-all aspect-square',
+        'relative inline-flex shrink-0 select-none items-center justify-center rounded-full aspect-square',
         !hasCustomSize && sizeClasses[size],
         className
       )}
       {...props}
     >
-      {mediaUrl && !imageError ? (
-        <img
-          src={mediaUrl}
-          alt={alt || name || 'Avatar'}
-          onError={() => setImageError(true)}
-          className="h-full w-full object-cover object-center rounded-full"
-        />
-      ) : (
-        <span className="flex items-center justify-center w-full h-full text-center leading-none">
-          {getInitials(name)}
-        </span>
-      )}
+      <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-accent font-semibold text-accent-foreground border border-border/50 transition-all">
+        {mediaUrl && !imageError ? (
+          <img
+            src={mediaUrl}
+            alt={alt || name || 'Avatar'}
+            onError={() => setImageError(true)}
+            className="h-full w-full object-cover object-center rounded-full"
+          />
+        ) : (
+          <span className="flex items-center justify-center w-full h-full text-center leading-none">
+            {getInitials(name)}
+          </span>
+        )}
+      </div>
 
       {status && (
         <span
           className={cn(
-            'absolute bottom-0 right-0 rounded-full ring-background',
+            'absolute -bottom-0.5 -right-0.5 z-10 rounded-full ring-2 ring-surface shadow-xs',
             statusSizeClasses[size],
             status === 'online' && 'bg-emerald-500',
             status === 'offline' && 'bg-slate-400',

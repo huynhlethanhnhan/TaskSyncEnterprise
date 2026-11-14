@@ -20,10 +20,18 @@ from app.seeds.seed_notifications import seed_notifications
 from app.seeds.seed_vacations import seed_vacations
 from app.seeds.seed_settings import seed_settings
 from app.seeds.seed_topics import seed_topics
+from app.seeds.seed_hrm import ensure_hrm_and_upcoming_demo_data
 
 # Order of tables to reset respecting Foreign Key constraints
 TABLES_TO_RESET = [
     "audit_logs",
+    "backup_history_logs",
+    "payroll_records",
+    "recruitment_candidates",
+    "overtime_requests",
+    "attendance_logs",
+    "employment_contracts",
+    "leave_balances",
     "notification_preferences",
     "notification_logs",
     "notifications",
@@ -151,6 +159,10 @@ def run_seed_pipeline(db: Session) -> dict[str, int]:
     num_prefs = seed_settings(db, employees)
     print(f"  [OK] Seeded Settings & User Preferences: {num_prefs}")
 
+    # 11. Seed HRM Contracts, Attendance, OT, Recruitment, Payroll & Upcoming Deadlines/Leaves
+    hrm_stats = ensure_hrm_and_upcoming_demo_data(db)
+    print(f"  [OK] Seeded HRM & Upcoming Work Data: {hrm_stats}")
+
     summary = {
         "Roles": 3,
         "Departments": len(departments),
@@ -164,6 +176,9 @@ def run_seed_pipeline(db: Session) -> dict[str, int]:
         "Notifications": num_notifs,
         "Vacations": num_vacations,
         "Settings": num_prefs,
+        "Contracts": hrm_stats.get("contracts_added", 0),
+        "Payrolls": hrm_stats.get("payrolls_recalculated", 0),
+        "Candidates": hrm_stats.get("candidates_added", 0),
     }
     return summary
 
@@ -212,7 +227,7 @@ def main():
             for key, val in summary.items():
                 print(f"  * {key:<20}: {val:>5}")
             print("=" * 55)
-            print("  Test Accounts (Development Password: TaskSync@2026):")
+            print("  Demo Accounts Seeded (password configured via SEED_ADMIN_PASSWORD env):")
             print("    - Admin   : admin001@enterprise.com")
             print("    - Manager : manager001@enterprise.com")
             print("    - Employee: employee001@enterprise.com")

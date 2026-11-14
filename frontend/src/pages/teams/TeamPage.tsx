@@ -5,7 +5,9 @@ import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/common/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Badge } from '../../components/common/Badge';
+import { Select } from '../../components/ui/Select';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { EntityActions } from '../../components/common/EntityActions';
 import { Drawer } from '../../components/common/Drawer';
 import { Avatar } from '../../components/common/Avatar';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
@@ -15,12 +17,14 @@ import { useDepartments } from '../../hooks/useDepartments';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { extractApiError } from '../../utils/errorHelpers';
 import { useNavigate } from 'react-router';
 
 const TeamPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { t } = useSettings();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || Number(user?.role_id) === 1;
 
@@ -139,7 +143,7 @@ const TeamPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="space-y-6 font-sans">
-        <PageHeader title="Quản lý Nhóm (Teams)" description="Đang tải dữ liệu cơ cấu nhóm..." />
+        <PageHeader title={t('Quản lý Nhóm (Teams)', 'Team Management')} description={t('Đang tải dữ liệu cơ cấu nhóm...', 'Loading teams data...')} />
         <SkeletonCard />
       </div>
     );
@@ -149,13 +153,13 @@ const TeamPage: React.FC = () => {
     <div className="space-y-6 font-sans pb-12">
       {/* Page Header */}
       <PageHeader
-        title="Quản lý Nhóm (Teams)"
-        description="Quản lý cơ cấu đội nhóm của phòng ban và phân chia nhân sự dự án"
+        title={t('Quản lý Nhóm (Teams)', 'Team Management')}
+        description={t('Quản lý cơ cấu đội nhóm của phòng ban và phân chia nhân sự dự án', 'Manage department teams and member assignments')}
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: 'Administration', href: '#' },
-              { label: 'Teams' },
+              { label: t('Quản trị', 'Administration'), href: '#' },
+              { label: t('Nhóm', 'Teams') },
             ]}
           />
         }
@@ -167,7 +171,7 @@ const TeamPage: React.FC = () => {
               leftIcon={<Plus className="h-4 w-4" />}
               onClick={handleOpenCreate}
             >
-              Tạo nhóm mới
+              {t('Tạo nhóm mới', 'New Team')}
             </Button>
           )
         }
@@ -180,25 +184,25 @@ const TeamPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <Input
               type="text"
-              placeholder="Tìm theo tên hoặc mã nhóm..."
+              placeholder={t('Tìm theo tên hoặc mã nhóm...', 'Search by team name or code...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
-          <div className="w-full sm:w-60">
-            <select
+          <div className="w-full sm:w-64">
+            <Select
+              aria-label={t('Lọc theo phòng ban', 'Filter by department')}
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className="flex h-10 w-full appearance-none rounded-md border border-input bg-surface px-3 py-2 text-sm text-text-primary transition-all duration-200 outline-none hover:border-slate-400 cursor-pointer"
-            >
-              <option value="all">Tất cả Phòng ban</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: 'all', label: t('Tất cả Phòng ban', 'All Departments') },
+                ...departments.map((dept) => ({
+                  value: String(dept.id),
+                  label: dept.name,
+                })),
+              ]}
+            />
           </div>
         </CardContent>
       </Card>
@@ -206,108 +210,82 @@ const TeamPage: React.FC = () => {
       {/* Teams Grid */}
       {filteredTeams.length === 0 ? (
         <Card className="p-12 text-center text-text-muted text-xs border-dashed border-2">
-          Không tìm thấy nhóm nào trùng khớp.
+          {t('Không tìm thấy nhóm nào trùng khớp.', 'No matching teams found.')}
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="card-grid-fluid">
           {filteredTeams.map((team) => {
             const dept = departments.find((d) => d.id === team.department_id);
 
             return (
               <Card key={team.id} className="relative flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-800 transition">
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <Tag className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span className="text-[10px] font-bold text-text-muted font-mono uppercase tracking-wider">{team.team_code}</span>
+                        <span className="text-[10px] font-bold text-text-muted font-mono uppercase tracking-wider truncate">{team.team_code}</span>
                       </div>
-                      <CardTitle className="text-sm font-bold text-text-primary mt-1">{team.name}</CardTitle>
+                      <CardTitle className="text-sm font-bold text-text-primary mt-1 truncate" title={team.name}>
+                        {team.name}
+                      </CardTitle>
                     </div>
-                    <Badge variant={team.is_active ? 'success' : 'outline'} size="sm">
-                      {team.is_active ? 'Hoạt động' : 'Tạm dừng'}
-                    </Badge>
+                    <StatusBadge isActive={team.is_active} className="shrink-0" />
                   </div>
                 </CardHeader>
 
                 <CardContent className="space-y-4 pt-1 flex-1">
                   <p className="text-xs text-text-secondary leading-relaxed line-clamp-2">
-                    {team.description || 'Chưa cập nhật mô tả cho nhóm này.'}
+                    {team.description || t('Chưa cập nhật mô tả cho nhóm này.', 'No description provided for this team.')}
                   </p>
 
                   <div className="space-y-2 text-[10px] text-text-secondary border-t border-border/60 pt-3">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <Building2 className="h-3.5 w-3.5 text-text-muted shrink-0" />
-                      <span><strong>Phòng ban:</strong> {dept?.name || 'Không xác định'}</span>
+                      <span className="truncate" title={dept?.name || t('Không xác định', 'Unknown')}>
+                        <strong>{t('Phòng ban:', 'Department:')}</strong> {dept?.name || t('Không xác định', 'Unknown')}
+                      </span>
                     </div>
 
-                    <div className="flex items-center justify-between gap-1.5 pt-1">
-                      <span className="flex items-center gap-1 font-semibold text-text-primary">
+                    <div className="flex items-center justify-between gap-1.5 pt-1 min-w-0">
+                      <span className="flex items-center gap-1 font-semibold text-text-primary shrink-0">
                         <UserCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-                        Trưởng nhóm:
+                        {t('Trưởng nhóm:', 'Team Leader:')}
                       </span>
                       {team.leader_name ? (
-                        <div className="flex items-center gap-1.5 bg-secondary/60 px-2 py-0.5 rounded-full text-[10px]">
+                        <div className="flex items-center gap-1.5 bg-secondary/60 px-2 py-0.5 rounded-full text-[10px] min-w-0 max-w-[175px]">
                           <Avatar
                             name={team.leader_name}
                             src={team.leader_avatar_url}
                             size="sm"
                           />
-                          <span className="font-bold text-text-primary">
+                          <span className="font-bold text-text-primary truncate" title={team.leader_name}>
                             {team.leader_name}
                           </span>
                         </div>
                       ) : (
                         <span className="text-text-muted italic">
-                          Chưa chỉ định
+                          {t('Chưa chỉ định', 'Unassigned')}
                         </span>
                       )}
                     </div>
 
                     <div>
                       <span>
-                        <strong>Nhân sự thuộc nhóm:</strong>
+                        <strong>{t('Nhân sự thuộc nhóm:', 'Members:')}</strong>
                         {' '}
-                        {team.member_count ?? 0} thành viên</span>
+                        {team.member_count ?? 0} {t('thành viên', 'members')}</span>
                     </div>
                   </div>
                 </CardContent>
 
-                <CardContent className="border-t border-border/60 p-3 bg-accent/10">
-
-                  <div className="flex justify-end gap-2">
-
-                      <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/teams/${team.id}`)}
-                      >
-                          Chi tiết
-                      </Button>
-
-                      {isAdmin && (
-                          <>
-                              <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenEdit(team)}
-                              >
-                                  Sửa
-                              </Button>
-
-                              <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive"
-                                  onClick={() => setDeletingTeamId(team.id)}
-                              >
-                                  Xóa
-                              </Button>
-                          </>
-                      )}
-
-                  </div>
-
+                <CardContent className="border-t border-border/60 px-4 py-3 sm:px-6 bg-accent/10">
+                  <EntityActions
+                    align="end"
+                    onView={() => navigate(`/teams/${team.id}`)}
+                    onEdit={isAdmin ? () => handleOpenEdit(team) : undefined}
+                    onDelete={isAdmin ? () => setDeletingTeamId(team.id) : undefined}
+                  />
                 </CardContent>
               </Card>
             );
@@ -322,17 +300,17 @@ const TeamPage: React.FC = () => {
           <Card className="relative w-full max-w-sm border border-border shadow-2xl p-6 space-y-4">
             <div className="flex items-center gap-3">
               <ShieldAlert className="h-6 w-6 text-rose-500 shrink-0" />
-              <h3 className="text-sm font-bold text-text-primary">Xác nhận xóa Nhóm?</h3>
+              <h3 className="text-sm font-bold text-text-primary">{t('Xác nhận xóa Nhóm?', 'Confirm Team Deletion?')}</h3>
             </div>
             <p className="text-xs text-text-secondary leading-normal">
-              Thao tác này sẽ đánh dấu nhóm là ngừng hoạt động (soft-delete). Bạn có thực sự muốn tiếp tục?
+              {t('Thao tác này sẽ đánh dấu nhóm là ngừng hoạt động (soft-delete). Bạn có thực sự muốn tiếp tục?', 'This action marks the team as inactive (soft-delete). Are you sure you want to continue?')}
             </p>
             <div className="flex items-center justify-end gap-2 pt-2">
               <Button variant="ghost" size="sm" onClick={() => setDeletingTeamId(null)}>
-                Hủy
+                {t('Hủy', 'Cancel')}
               </Button>
               <Button variant="danger" size="sm" onClick={() => deletingTeamId !== null && handleDelete(deletingTeamId)}>
-                Xóa nhóm
+                {t('Xóa nhóm', 'Delete Team')}
               </Button>
             </div>
           </Card>
@@ -343,14 +321,14 @@ const TeamPage: React.FC = () => {
       <Drawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title={editingTeam ? 'Cập nhật thông tin Nhóm' : 'Khởi tạo Nhóm mới'}
+        title={editingTeam ? t('Cập nhật thông tin Nhóm', 'Update Team Info') : t('Khởi tạo Nhóm mới', 'Create New Team')}
       >
         <form onSubmit={handleSave} className="space-y-6 pt-4">
           <div className="space-y-1">
-            <label className="text-xs font-bold text-text-secondary">Tên nhóm</label>
+            <label className="text-xs font-bold text-text-secondary">{t('Tên nhóm', 'Team Name')}</label>
             <Input
               type="text"
-              placeholder="VD: Core Engine Dev, HR Operations"
+              placeholder={t('VD: Core Engine Dev, HR Operations', 'e.g., Core Engine Dev, HR Operations')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -358,10 +336,10 @@ const TeamPage: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-text-secondary">Mã nhóm (Team Code)</label>
+            <label className="text-xs font-bold text-text-secondary">{t('Mã nhóm (Team Code)', 'Team Code')}</label>
             <Input
               type="text"
-              placeholder="VD: ENG-CORE, HR-OPS"
+              placeholder={t('VD: ENG-CORE, HR-OPS', 'e.g., ENG-CORE, HR-OPS')}
               value={code}
               onChange={(e) => setCode(e.target.value)}
               required
@@ -370,55 +348,55 @@ const TeamPage: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-text-secondary">Phòng ban quản lý</label>
-            <select
-              value={departmentId}
+            <label className="text-xs font-bold text-text-secondary">{t('Phòng ban quản lý', 'Parent Department')}</label>
+            <Select
+              aria-label={t('Phòng ban quản lý', 'Parent Department')}
+              value={String(departmentId || '')}
               onChange={(e) => setDepartmentId(e.target.value)}
               required
-              className="flex h-10 w-full appearance-none rounded-md border border-input bg-surface px-3 py-2 text-sm text-text-primary transition-all duration-200 outline-none hover:border-slate-400 cursor-pointer"
-            >
-              <option value="" disabled>-- Chọn phòng ban quản lý --</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: t('-- Chọn phòng ban quản lý --', '-- Select parent department --'), disabled: true },
+                ...departments.map((dept) => ({
+                  value: String(dept.id),
+                  label: dept.name,
+                })),
+              ]}
+            />
           </div>
 
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-text-secondary">Trưởng nhóm (Team Lead)</label>
+              <label className="text-xs font-bold text-text-secondary">{t('Trưởng nhóm (Team Lead)', 'Team Lead')}</label>
               {departmentId && (
                 <span className="text-[10px] text-primary font-medium">
-                  Lọc theo {departments.find((d) => String(d.id) === String(departmentId))?.name}
+                  {t('Lọc theo', 'Filtered by')} {departments.find((d) => String(d.id) === String(departmentId))?.name}
                 </span>
               )}
             </div>
-            <select
-              value={leaderId}
+            <Select
+              aria-label={t('Trưởng nhóm (Team Lead)', 'Team Lead')}
+              value={String(leaderId || '')}
               onChange={(e) => setLeaderId(e.target.value)}
-              className="flex h-10 w-full appearance-none rounded-md border border-input bg-surface px-3 py-2 text-sm text-text-primary transition-all duration-200 outline-none hover:border-slate-400 cursor-pointer"
-            >
-              <option value="">-- Chưa chỉ định Trưởng nhóm --</option>
-              {(() => {
-                const candidates = departmentId
-                  ? employees.filter((e) => String(e.department_id) === String(departmentId))
-                  : employees;
-                const list = candidates.length > 0 ? candidates : employees;
-                return list.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.full_name} ({emp.job_title || 'Thành viên'})
-                  </option>
-                ));
-              })()}
-            </select>
+              options={[
+                { value: '', label: t('-- Chưa chỉ định Trưởng nhóm --', '-- Unassigned Team Lead --') },
+                ...(() => {
+                  const candidates = departmentId
+                    ? employees.filter((e) => String(e.department_id) === String(departmentId))
+                    : employees;
+                  const list = candidates.length > 0 ? candidates : employees;
+                  return list.map((emp) => ({
+                    value: String(emp.id),
+                    label: `${emp.full_name} (${emp.job_title || t('Thành viên', 'Member')})`,
+                  }));
+                })(),
+              ]}
+            />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-text-secondary">Mô tả chi tiết</label>
+            <label className="text-xs font-bold text-text-secondary">{t('Mô tả chi tiết', 'Description')}</label>
             <textarea
-              placeholder="Nhập chức năng chính hoặc mô tả về hoạt động của nhóm..."
+              placeholder={t('Nhập chức năng chính hoặc mô tả về hoạt động của nhóm...', 'Enter primary responsibilities or team description...')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full min-h-80px rounded-xl border border-input bg-background/50 px-3 py-2 text-xs text-text-primary outline-none focus:border-primary transition"
@@ -434,16 +412,16 @@ const TeamPage: React.FC = () => {
               className="h-4 w-4 rounded border-input bg-background text-primary focus:ring-primary"
             />
             <label htmlFor="team-active-checkbox" className="text-xs text-text-secondary font-semibold cursor-pointer select-none">
-              Trạng thái hoạt động
+              {t('Trạng thái hoạt động', 'Active Status')}
             </label>
           </div>
 
           <div className="border-t border-border pt-6 flex items-center justify-end gap-2">
             <Button variant="ghost" type="button" onClick={() => setIsDrawerOpen(false)}>
-              Hủy
+              {t('Hủy', 'Cancel')}
             </Button>
             <Button variant="primary" type="submit" isLoading={createTeam.isPending || updateTeam.isPending}>
-              Lưu thay đổi
+              {t('Lưu thay đổi', 'Save Changes')}
             </Button>
           </div>
         </form>

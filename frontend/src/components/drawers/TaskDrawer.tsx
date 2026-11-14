@@ -37,6 +37,7 @@ import {
 import { Avatar } from '../common/Avatar';
 import { Badge } from '../common/Badge';
 import { getDeadlineDisplay } from '../../utils/deadline';
+import { useSettings } from '../../providers/SettingsProvider';
 
 interface TaskDrawerProps {
   isOpen: boolean;
@@ -63,6 +64,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   onDelete,
 }) => {
   const toast = useToast();
+  const { t, statusLabel, formatDate, isEnglish } = useSettings();
   const queryClient = useQueryClient();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { user: currentUser } = useAuth();
@@ -103,7 +105,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       refetchChecklists();
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch {
-      toast.error('Lỗi khi thêm checklist');
+      toast.error(t('Lỗi khi thêm checklist', 'Error adding checklist'));
     }
   };
 
@@ -114,7 +116,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       refetchChecklists();
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch {
-      toast.error('Lỗi khi cập nhật checklist');
+      toast.error(t('Lỗi khi cập nhật checklist', 'Error updating checklist'));
     }
   };
 
@@ -125,7 +127,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       refetchChecklists();
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch {
-      toast.error('Lỗi khi xóa checklist');
+      toast.error(t('Lỗi khi xóa checklist', 'Error deleting checklist'));
     }
   };
 
@@ -136,7 +138,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       setCommentContent('');
       refetchComments();
     } catch {
-      toast.error('Lỗi khi gửi bình luận');
+      toast.error(t('Lỗi khi gửi bình luận', 'Error posting comment'));
     }
   };
 
@@ -146,7 +148,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       await commentsApi.delete(task.id, commentId);
       refetchComments();
     } catch {
-      toast.error('Lỗi khi xóa bình luận');
+      toast.error(t('Lỗi khi xóa bình luận', 'Error deleting comment'));
     }
   };
 
@@ -191,12 +193,12 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   }, [projectMembers]);
 
   const assigneePlaceholder = !projectId
-    ? '-- Chọn Dự án trước --'
+    ? t('-- Chọn Dự án trước --', '-- Select Project First --')
     : isLoadingAssignees
-      ? '-- Đang tải Người thực hiện --'
+      ? t('-- Đang tải Người thực hiện --', '-- Loading Assignees --')
       : projectMembers.length === 0
-        ? '-- Không có Người thực hiện phù hợp --'
-        : '-- Chọn Người thực hiện --';
+        ? t('-- Không có Người thực hiện phù hợp --', '-- No Matching Assignees --')
+        : t('-- Chọn Người thực hiện --', '-- Select Assignee --');
 
   const isAssigneeDisabled = !canEdit || !projectId || isLoadingAssignees;
 
@@ -243,24 +245,60 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
         const memberList = latestMembers || projectMembers;
         const isValid = memberList.some((m) => Number(m.id) === Number(assignedTo));
         if (!isValid) {
-          toast.error('Lỗi phân công', 'Nhân viên được chọn chưa phải thành viên của dự án.');
+          toast.error(t('Lỗi phân công', 'Assignment Error'), t('Nhân viên được chọn chưa phải thành viên của dự án.', 'Selected employee is not a member of this project.'));
           return;
         }
       }
 
-      await onSave({
-        title: title.trim(),
-        name: title.trim(),
-        description: description.trim() || null,
-        status,
-        priority,
-        project_id: projectId ? Number(projectId) : null,
-        assigned_to: assignedTo ? Number(assignedTo) : null,
-        sprint_id: sprintId ? Number(sprintId) : null,
-        topic_id: topicId ? Number(topicId) : null,
-        deadline: deadline || null,
-        story_points: storyPoints === 0 ? null : storyPoints,
-      });
+      if (task) {
+        const normalizedTitle = title.trim();
+        const originalTitle = (task.title || task.name || '').trim();
+        const normalizedDesc = description.trim() || null;
+        const originalDesc = task.description?.trim() || null;
+        const nextProjectId = projectId ? Number(projectId) : null;
+        const nextAssignedTo = assignedTo ? Number(assignedTo) : null;
+        const nextSprintId = sprintId ? Number(sprintId) : null;
+        const nextTopicId = topicId ? Number(topicId) : null;
+        const nextDeadline = deadline || null;
+        const originalDeadline = task.deadline ? task.deadline.substring(0, 10) : null;
+        const nextStoryPoints = storyPoints === 0 ? null : storyPoints;
+        const originalStoryPoints = task.story_points ?? null;
+
+        const payload: Partial<TaskItem> = {};
+        if (normalizedTitle !== originalTitle) {
+          payload.title = normalizedTitle;
+          payload.name = normalizedTitle;
+        }
+        if (normalizedDesc !== originalDesc) payload.description = normalizedDesc;
+        if (status !== (task.status || 'To Do')) payload.status = status;
+        if (priority !== (task.priority || 'Medium')) payload.priority = priority;
+        if (nextProjectId !== (task.project_id ?? null)) payload.project_id = nextProjectId;
+        if (nextAssignedTo !== (task.assigned_to ?? null)) payload.assigned_to = nextAssignedTo;
+        if (nextSprintId !== (task.sprint_id ?? null)) payload.sprint_id = nextSprintId;
+        if (nextTopicId !== (task.topic_id ?? null)) payload.topic_id = nextTopicId;
+        if (nextDeadline !== originalDeadline) payload.deadline = nextDeadline;
+        if (nextStoryPoints !== originalStoryPoints) payload.story_points = nextStoryPoints;
+
+        if (Object.keys(payload).length === 0) {
+          payload.title = normalizedTitle;
+        }
+
+        await onSave(payload);
+      } else {
+        await onSave({
+          title: title.trim(),
+          name: title.trim(),
+          description: description.trim() || null,
+          status,
+          priority,
+          project_id: projectId ? Number(projectId) : null,
+          assigned_to: assignedTo ? Number(assignedTo) : null,
+          sprint_id: sprintId ? Number(sprintId) : null,
+          topic_id: topicId ? Number(topicId) : null,
+          deadline: deadline || null,
+          story_points: storyPoints === 0 ? null : storyPoints,
+        });
+      }
     } else if (isAssignedToCurrentUser && task) {
       await onSave({
         status,
@@ -288,12 +326,12 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
           attachments: [...(current?.attachments || task.attachments || []), newAttachment],
         }));
       }
-      toast.success('Tải tài liệu lên thành công', `Đã đính kèm tệp "${file.name}" vào công việc.`);
+      toast.success(t('Tải tài liệu lên thành công', 'File Uploaded'), t(`Đã đính kèm tệp "${file.name}" vào công việc.`, `Attached "${file.name}" to task.`));
       await refetchDetail();
       await queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch (err: any) {
-      const errMsg = err.response?.data?.detail || 'Không thể tải tệp lên.';
-      toast.error('Lỗi tải tệp lên', errMsg);
+      const errMsg = err.response?.data?.detail || t('Không thể tải tệp lên.', 'Unable to upload file.');
+      toast.error(t('Lỗi tải tệp lên', 'Upload Error'), errMsg);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -313,16 +351,16 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Tải tệp thành công!');
+      toast.success(t('Tải tệp thành công!', 'File downloaded!'));
     } catch {
-      toast.error('Lỗi tải tệp', 'Không thể tải xuống tệp tin này.');
+      toast.error(t('Lỗi tải tệp', 'Download Error'), t('Không thể tải xuống tệp tin này.', 'Unable to download this file.'));
     }
   };
 
   // Attachment Delete Handler
   const handleDeleteAttachment = async (attachmentId: number) => {
     if (!task) return;
-    if (!window.confirm('Xác nhận xóa tài liệu đính kèm này?')) return;
+    if (!window.confirm(t('Xác nhận xóa tài liệu đính kèm này?', 'Confirm deleting this attachment?'))) return;
 
     try {
       await api.delete(`/tasks/${task.id}/attachments/${attachmentId}`);
@@ -332,11 +370,11 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
           (attachment) => attachment.id !== attachmentId
         ),
       }));
-      toast.success('Xóa tài liệu thành công');
+      toast.success(t('Xóa tài liệu thành công', 'Attachment deleted'));
       await refetchDetail();
       await queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch {
-      toast.error('Lỗi khi xóa tài liệu');
+      toast.error(t('Lỗi khi xóa tài liệu', 'Error deleting attachment'));
     }
   };
 
@@ -347,8 +385,8 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? 'Chi tiết & Cập nhật Công việc' : 'Tạo Công việc Mới'}
-      description="Quản lý thông tin công việc, checklist, bình luận và đính kèm tài liệu."
+      title={isEditMode ? t('Chi tiết & Cập nhật Công việc', 'Task Details & Update') : t('Tạo Công việc Mới', 'Create New Task')}
+      description={t('Quản lý thông tin công việc, checklist, bình luận và đính kèm tài liệu.', 'Manage task information, checklists, comments, and file attachments.')}
       position="right"
       size={isEditMode ? 'lg' : 'md'}
       footer={
@@ -362,17 +400,17 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 type="button"
                 onClick={() => onDelete(task)}
               >
-                Xóa công việc
+                {t('Xóa công việc', 'Delete Task')}
               </Button>
             )}
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" size="sm" onClick={onClose} type="button">
-              Hủy bỏ
+              {t('Hủy bỏ', 'Cancel')}
             </Button>
             {(canEdit || (isEditMode && isAssignedToCurrentUser)) && (
               <Button variant="primary" size="sm" onClick={handleSubmit} isLoading={isLoading}>
-                {isEditMode ? 'Lưu thay đổi' : 'Tạo Mới'}
+                {isEditMode ? t('Lưu thay đổi', 'Save Changes') : t('Tạo Mới', 'Create Task')}
               </Button>
             )}
           </div>
@@ -393,14 +431,23 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-amber-800 dark:text-amber-300">
-                      Công việc thuộc Sprint: {currentSprint?.name || activeTask?.sprint_name || 'Sprint dự án'}
+                      {t('Công việc thuộc Sprint:', 'Sprint Task:')} {currentSprint?.name || activeTask?.sprint_name || t('Sprint dự án', 'Project Sprint')}
                     </span>
                     <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                       Scrum Lifecycle
                     </span>
                   </div>
                   <p className="text-[11px] leading-relaxed text-amber-800/90 dark:text-amber-300/90">
-                    ⚠️ <strong>Cảnh báo quản lý:</strong> Công việc này nằm trong phạm vi chu kỳ Sprint. Việc cập nhật trạng thái hoặc điểm Story Points sẽ trực tiếp tác động tới <strong>Sprint Burndown Chart</strong>, <strong>Velocity</strong> và tự động đồng bộ thời gian thực với tiến độ Dự án.
+                    ⚠️{' '}
+                    {isEnglish ? (
+                      <>
+                        <strong>Management Notice:</strong> This task is part of an active Sprint cycle. Updating its status or Story Points directly affects the <strong>Sprint Burndown Chart</strong>, <strong>Velocity</strong>, and syncs project progress in real time.
+                      </>
+                    ) : (
+                      <>
+                        <strong>Cảnh báo quản lý:</strong> Công việc này nằm trong phạm vi chu kỳ Sprint. Việc cập nhật trạng thái hoặc điểm Story Points sẽ trực tiếp tác động tới <strong>Sprint Burndown Chart</strong>, <strong>Velocity</strong> và tự động đồng bộ thời gian thực với tiến độ Dự án.
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -414,14 +461,17 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-indigo-800 dark:text-indigo-300">
-                      Chuyển đổi từ Product Backlog
+                      {t('Chuyển đổi từ Product Backlog', 'Converted from Product Backlog')}
                     </span>
                     <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
                       Backlog Item
                     </span>
                   </div>
                   <p className="text-[11px] leading-relaxed text-indigo-800/90 dark:text-indigo-300/90">
-                    📦 Công việc này bắt nguồn từ danh mục Product Backlog. Khi hoàn thành toàn bộ công việc, Backlog Item sẽ được đánh dấu hoàn tất và giải phóng vào tiến độ hoàn thành của dự án.
+                    📦 {t(
+                      'Công việc này bắt nguồn từ danh mục Product Backlog. Khi hoàn thành toàn bộ công việc, Backlog Item sẽ được đánh dấu hoàn tất và giải phóng vào tiến độ hoàn thành của dự án.',
+                      'This task originated from the Product Backlog. Once completed, the linked Backlog Item is marked Done and contributes to overall project progress.'
+                    )}
                   </p>
                 </div>
               </div>
@@ -435,14 +485,23 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                    Công việc Riêng lẻ (Standalone Task)
+                    {t('Công việc Riêng lẻ (Standalone Task)', 'Standalone Task')}
                   </span>
                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                    Độc lập
+                    {t('Độc lập', 'Standalone')}
                   </span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-emerald-800/90 dark:text-emerald-300/90">
-                  ⚡ Công việc này nằm độc lập ngoài chu kỳ Sprint. Khi hoàn thành, tiến độ tổng thể của <strong>Dự án</strong> và <strong>KPI Phòng ban / Team</strong> sẽ tăng/giảm trực tiếp theo tỷ lệ thực tế.
+                  ⚡{' '}
+                  {isEnglish ? (
+                    <>
+                      This task operates outside a Sprint cycle. Completing it directly updates overall <strong>Project</strong> completion and <strong>Department / Team KPI</strong> metrics.
+                    </>
+                  ) : (
+                    <>
+                      Công việc này nằm độc lập ngoài chu kỳ Sprint. Khi hoàn thành, tiến độ tổng thể của <strong>Dự án</strong> và <strong>KPI Phòng ban / Team</strong> sẽ tăng/giảm trực tiếp theo tỷ lệ thực tế.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -457,8 +516,8 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
               {/* Form Input fields */}
               <div className="space-y-4">
                 <Input
-                  label="Tên Công việc *"
-                  placeholder="Ví dụ: Triển khai API Authentication Redis"
+                  label={t('Tên Công việc *', 'Task Title *')}
+                  placeholder={t('Ví dụ: Triển khai API Authentication Redis', 'e.g. Implement Redis Authentication API')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   disabled={!canEdit}
@@ -466,8 +525,8 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 />
 
                 <Textarea
-                  label="Mô tả Chi tiết"
-                  placeholder="Yêu cầu công việc..."
+                  label={t('Mô tả Chi tiết', 'Detailed Description')}
+                  placeholder={t('Yêu cầu công việc...', 'Task requirements...')}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   disabled={!canEdit}
@@ -500,7 +559,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                         type="button"
                         onClick={() => handleDeleteChecklist(item.id)}
                         className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-500 cursor-pointer"
-                        title="Xóa"
+                        title={t('Xóa', 'Delete')}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -508,7 +567,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                   ))}
                   <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
                     <Input
-                      placeholder="Thêm mục checklist mới..."
+                      placeholder={t('Thêm mục checklist mới...', 'Add new checklist item...')}
                       value={newChecklistTitle}
                       onChange={(e) => setNewChecklistTitle(e.target.value)}
                       className="flex-1"
@@ -525,7 +584,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-text-primary flex items-center gap-1.5 uppercase tracking-wide">
                     <Paperclip className="h-4 w-4 text-primary" />
-                    Tài liệu đính kèm ({activeTask?.attachments?.length || 0})
+                    {t('Tài liệu đính kèm', 'Attachments')} ({activeTask?.attachments?.length || 0})
                   </h4>
                   <div>
                     <input
@@ -543,7 +602,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                       onClick={() => fileInputRef.current?.click()}
                       isLoading={isUploading}
                     >
-                      Tải tệp lên
+                      {t('Tải tệp lên', 'Upload File')}
                     </Button>
                   </div>
                 </div>
@@ -566,7 +625,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                             type="button"
                             onClick={() => handleDownloadAttachment(att.id, att.file_name)}
                             className="p-1 rounded-lg hover:bg-secondary text-primary cursor-pointer"
-                            title="Tải về"
+                            title={t('Tải về', 'Download')}
                           >
                             <Upload className="h-3.5 w-3.5 rotate-180" />
                           </button>
@@ -574,7 +633,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                             type="button"
                             onClick={() => handleDeleteAttachment(att.id)}
                             className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-500 cursor-pointer"
-                            title="Xóa"
+                            title={t('Xóa', 'Delete')}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -584,7 +643,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                   </div>
                 ) : (
                   <p className="text-[11px] text-text-muted text-center py-6">
-                    Chưa đính kèm tài liệu nào cho công việc này.
+                    {t('Chưa đính kèm tài liệu nào cho công việc này.', 'No files attached to this task yet.')}
                   </p>
                 )}
               </div>
@@ -593,7 +652,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
               <div className="border border-border rounded-xl p-4 bg-surface space-y-4">
                 <h4 className="text-xs font-bold text-text-primary flex items-center gap-1.5 uppercase tracking-wide">
                   <MessageSquare className="h-4 w-4 text-primary" />
-                  Bình luận & Thảo luận ({comments.length})
+                  {t('Bình luận & Thảo luận', 'Comments & Discussion')} ({comments.length})
                 </h4>
 
                 <div className="space-y-4">
@@ -616,11 +675,11 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                                   {comment.author?.full_name}
                                 </span>
                                 <span className="text-[10px] text-text-muted shrink-0">
-                                  {new Date(comment.created_at).toLocaleString('vi-VN')}
+                                  {formatDate(comment.created_at, 'full')}
                                 </span>
                               </div>
                               <p className="text-[10px] text-text-muted mt-0.5 italic">
-                                {comment.author?.job_title || 'Thành viên'}
+                                {comment.author?.job_title || t('Thành viên', 'Member')}
                               </p>
                               <div className="text-text-secondary mt-1 bg-secondary/20 p-2.5 rounded-lg border border-border/10 leading-relaxed break-words">
                                 {comment.content}
@@ -631,7 +690,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                                 type="button"
                                 onClick={() => handleDeleteComment(comment.id)}
                                 className="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-500 shrink-0 self-start cursor-pointer"
-                                title="Xóa bình luận"
+                                title={t('Xóa bình luận', 'Delete comment')}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -641,14 +700,14 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                       })
                     ) : (
                       <p className="text-[11px] text-text-muted text-center py-6">
-                        Chưa có bình luận nào cho công việc này.
+                        {t('Chưa có bình luận nào cho công việc này.', 'No comments yet on this task.')}
                       </p>
                     )}
                   </div>
                   
                   <div className="flex gap-2 pt-2 border-t border-border/40">
                     <Input
-                      placeholder="Viết bình luận mới..."
+                      placeholder={t('Viết bình luận mới...', 'Write a comment...')}
                       value={commentContent}
                       onChange={(e) => setCommentContent(e.target.value)}
                       className="flex-1"
@@ -660,7 +719,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                       }}
                     />
                     <Button type="button" variant="primary" size="sm" className="shrink-0" onClick={handleAddComment}>
-                      Gửi
+                      {t('Gửi', 'Send')}
                     </Button>
                   </div>
                 </div>
@@ -671,48 +730,51 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
             <div className="space-y-4">
               <div className="border border-border rounded-xl p-4 bg-surface space-y-4">
                 <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider border-b border-border pb-2">
-                  Thuộc tính & Metadata
+                  {t('Thuộc tính & Metadata', 'Attributes & Metadata')}
                 </h3>
 
                 <Select
-                  label="Trạng thái"
+                  label={t('Trạng thái', 'Status')}
                   value={status}
                   disabled={!canUpdateStatus}
                   onChange={(e) => setStatus(e.target.value)}
                   options={[
-                    { value: 'To Do', label: 'To Do' },
-                    { value: 'In Progress', label: 'In Progress' },
-                    { value: 'Done', label: 'Done' },
+                    ...(task?.status && !['To Do', 'In Progress', 'Done'].includes(task.status)
+                      ? [{ value: task.status, label: statusLabel(task.status) }]
+                      : []),
+                    { value: 'To Do', label: statusLabel('To Do') },
+                    { value: 'In Progress', label: statusLabel('In Progress') },
+                    { value: 'Done', label: statusLabel('Done') },
                   ]}
                 />
 
                 <Select
-                  label="Độ ưu tiên"
+                  label={t('Độ ưu tiên', 'Priority')}
                   value={priority}
                   disabled={!canEdit}
                   onChange={(e) => setPriority(e.target.value)}
                   options={[
-                    { value: 'High', label: 'Cao (High)' },
-                    { value: 'Medium', label: 'Trung bình (Medium)' },
-                    { value: 'Low', label: 'Thấp (Low)' },
+                    { value: 'High', label: statusLabel('High') },
+                    { value: 'Medium', label: statusLabel('Medium') },
+                    { value: 'Low', label: statusLabel('Low') },
                   ]}
                 />
 
                 <Select
                   data-testid="task-project-select"
-                  label="Thuộc Dự án"
+                  label={t('Thuộc Dự án', 'Project')}
                   value={String(projectId)}
                   disabled={!canEdit}
                   onChange={(e) => handleProjectChange(e.target.value ? Number(e.target.value) : '')}
                   options={[
-                    { value: '', label: '-- Chọn Dự án --' },
+                    { value: '', label: t('-- Chọn Dự án --', '-- Select Project --') },
                     ...projects.map((p) => ({ value: String(p.id), label: p.name })),
                   ]}
                 />
 
                 <Select
                   data-testid="task-assignee-select"
-                  label="Người Thực hiện"
+                  label={t('Người Thực hiện', 'Assignee')}
                   value={String(assignedTo)}
                   disabled={isAssigneeDisabled}
                   onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : '')}
@@ -724,30 +786,32 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 {assignedTo && projectMembers.find(m => m.id === Number(assignedTo))?.upcoming_vacations?.length ? (
                   <div className="text-xs text-rose-600 mt-1 flex flex-col gap-1 font-medium bg-rose-50 p-2 rounded-md border border-rose-100">
                     {projectMembers.find(m => m.id === Number(assignedTo))?.upcoming_vacations?.map((v, i) => (
-                      <span key={i}>⚠️ Cảnh báo: Nhân viên có đơn nghỉ phép từ {new Date(v.start_date).toLocaleDateString('vi-VN')} đến {new Date(v.end_date).toLocaleDateString('vi-VN')}</span>
+                      <span key={i}>
+                        ⚠️ {t('Cảnh báo: Nhân viên có đơn nghỉ phép từ', 'Warning: Employee has approved leave from')} {formatDate(v.start_date)} {t('đến', 'to')} {formatDate(v.end_date)}
+                      </span>
                     ))}
                   </div>
                 ) : null}
 
                 <Select
                   data-testid="task-sprint-select"
-                  label="Gán vào Sprint"
+                  label={t('Gán vào Sprint', 'Assign to Sprint')}
                   value={String(sprintId)}
                   disabled={!canEdit}
                   onChange={(e) => setSprintId(e.target.value ? Number(e.target.value) : '')}
                   options={[
-                    { value: '', label: '-- Không thuộc Sprint --' },
-                    ...projectSprints.map((s) => ({ value: String(s.id), label: `${s.name} (${s.status})` })),
+                    { value: '', label: t('-- Không thuộc Sprint --', '-- No Sprint --') },
+                    ...projectSprints.map((s) => ({ value: String(s.id), label: `${s.name} (${statusLabel(s.status)})` })),
                   ]}
                 />
 
                 <Select
-                  label="Thuộc Epic / Chủ đề"
+                  label={t('Thuộc Epic / Chủ đề', 'Epic / Topic')}
                   value={String(topicId)}
                   disabled={!canEdit}
                   onChange={(e) => setTopicId(e.target.value ? Number(e.target.value) : '')}
                   options={[
-                    { value: '', label: '-- Không thuộc Epic --' },
+                    { value: '', label: t('-- Không thuộc Epic --', '-- No Epic --') },
                     ...projectTopics.map((t) => ({ value: String(t.id), label: t.title })),
                   ]}
                 />
@@ -755,17 +819,23 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 {canEdit ? (
                   <>
                     <Input
-                      label="Thời hạn (Deadline)"
+                      label={t('Thời hạn (Deadline)', 'Deadline')}
                       type="date"
                       value={deadline}
                       onChange={(e) => setDeadline(e.target.value)}
                     />
 
-                    <Input
-                      label="Story Points (Jira Estimation)"
-                      type="number"
-                      value={String(storyPoints)}
+                    <Select
+                      label={t('Story Points (Jira Estimation)', 'Story Points')}
+                      value={String(storyPoints || 0)}
                       onChange={(e) => setStoryPoints(Number(e.target.value))}
+                      options={[
+                        { value: '0', label: t('-- Chưa ước lượng (0 SP) --', '-- Unestimated (0 SP) --') },
+                        ...(storyPoints > 0 && ![1, 2, 3, 5, 8, 13].includes(storyPoints)
+                          ? [{ value: String(storyPoints), label: `${storyPoints} SP` }]
+                          : []),
+                        ...[1, 2, 3, 5, 8, 13].map((pt) => ({ value: String(pt), label: `${pt} SP` })),
+                      ]}
                     />
                   </>
                 ) : (
@@ -773,12 +843,12 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block mb-1">Story Points</span>
                       <div className="text-xs font-bold text-text-primary bg-secondary/30 px-3 py-2 rounded-lg border border-border/40">
-                        {storyPoints > 0 ? `Story Point: ${storyPoints}` : 'Not estimated'}
+                        {storyPoints > 0 ? `Story Point: ${storyPoints}` : t('Chưa ước lượng', 'Not estimated')}
                       </div>
                     </div>
 
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block mb-1">Thời hạn (Deadline)</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted block mb-1">{t('Thời hạn (Deadline)', 'Deadline')}</span>
                       <div className="flex items-center justify-between gap-2 bg-secondary/30 px-3 py-2 rounded-lg border border-border/40">
                         <span className="text-xs font-bold text-text-primary">
                           {deadlineInfo.formattedDeadline}
@@ -796,10 +866,10 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
 
               {/* Quick Info summary */}
               <div className="text-[10px] text-text-muted space-y-1 p-3 border border-border/60 rounded-xl bg-accent/20">
-                <div className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> <span>ID Công việc: #{task.id}</span></div>
-                <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> <span>Tạo lúc: {new Date(task.created_at || '').toLocaleString('vi-VN')}</span></div>
+                <div className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> <span>{t('ID Công việc:', 'Task ID:')} #{task.id}</span></div>
+                <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> <span>{t('Tạo lúc:', 'Created:')} {formatDate(task.created_at, 'full')}</span></div>
                 {task.creator_name && (
-                  <div className="flex items-center gap-1"><User className="h-3 w-3" /> <span>Tạo bởi: {task.creator_name}</span></div>
+                  <div className="flex items-center gap-1"><User className="h-3 w-3" /> <span>{t('Tạo bởi:', 'Created by:')} {task.creator_name}</span></div>
                 )}
               </div>
             </div>
@@ -808,16 +878,16 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
           /* Simplified Layout for Creating Mode */
           <div className="space-y-4">
             <Input
-              label="Tên Công việc *"
-              placeholder="Ví dụ: Triển khai API Authentication Redis"
+              label={t('Tên Công việc *', 'Task Title *')}
+              placeholder={t('Ví dụ: Triển khai API Authentication Redis', 'e.g. Implement Redis Authentication API')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
             />
 
             <Textarea
-              label="Mô tả Chi tiết"
-              placeholder="Yêu cầu công việc..."
+              label={t('Mô tả Chi tiết', 'Detailed Description')}
+              placeholder={t('Yêu cầu công việc...', 'Task requirements...')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
@@ -825,42 +895,42 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
 
             <div className="grid grid-cols-2 gap-4">
               <Select
-                label="Trạng thái"
+                label={t('Trạng thái', 'Status')}
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 options={[
-                  { value: 'To Do', label: 'Cần làm (To Do)' },
-                  { value: 'In Progress', label: 'Đang làm (In Progress)' },
-                  { value: 'Done', label: 'Hoàn thành (Done)' },
+                  { value: 'To Do', label: statusLabel('To Do') },
+                  { value: 'In Progress', label: statusLabel('In Progress') },
+                  { value: 'Done', label: statusLabel('Done') },
                 ]}
               />
 
               <Select
-                label="Độ ưu tiên"
+                label={t('Độ ưu tiên', 'Priority')}
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
                 options={[
-                  { value: 'High', label: 'Cao (High)' },
-                  { value: 'Medium', label: 'Trung bình (Medium)' },
-                  { value: 'Low', label: 'Thấp (Low)' },
+                  { value: 'High', label: statusLabel('High') },
+                  { value: 'Medium', label: statusLabel('Medium') },
+                  { value: 'Low', label: statusLabel('Low') },
                 ]}
               />
             </div>
 
             <Select
               data-testid="task-project-select"
-              label="Thuộc Dự án"
+              label={t('Thuộc Dự án', 'Project')}
               value={String(projectId)}
               onChange={(e) => handleProjectChange(e.target.value ? Number(e.target.value) : '')}
               options={[
-                { value: '', label: '-- Chọn Dự án --' },
+                { value: '', label: t('-- Chọn Dự án --', '-- Select Project --') },
                 ...projects.map((p) => ({ value: String(p.id), label: p.name })),
               ]}
             />
 
             <Select
               data-testid="task-assignee-select"
-              label="Người Thực hiện"
+              label={t('Người Thực hiện', 'Assignee')}
               value={String(assignedTo)}
               disabled={isAssigneeDisabled}
               onChange={(e) => setAssignedTo(e.target.value ? Number(e.target.value) : '')}
@@ -872,7 +942,9 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                 {assignedTo && projectMembers.find(m => m.id === Number(assignedTo))?.upcoming_vacations?.length ? (
                   <div className="text-xs text-rose-600 mt-1 flex flex-col gap-1 font-medium bg-rose-50 p-2 rounded-md border border-rose-100">
                     {projectMembers.find(m => m.id === Number(assignedTo))?.upcoming_vacations?.map((v, i) => (
-                      <span key={i}>⚠️ Cảnh báo: Nhân viên có đơn nghỉ phép từ {new Date(v.start_date).toLocaleDateString('vi-VN')} đến {new Date(v.end_date).toLocaleDateString('vi-VN')}</span>
+                      <span key={i}>
+                        ⚠️ {t('Cảnh báo: Nhân viên có đơn nghỉ phép từ', 'Warning: Employee has approved leave from')} {formatDate(v.start_date)} {t('đến', 'to')} {formatDate(v.end_date)}
+                      </span>
                     ))}
                   </div>
                 ) : null}
@@ -880,21 +952,21 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
             <div className="grid grid-cols-2 gap-4">
             <Select
               data-testid="task-sprint-select"
-              label="Gán vào Sprint"
+              label={t('Gán vào Sprint', 'Assign to Sprint')}
                 value={String(sprintId)}
                 onChange={(e) => setSprintId(e.target.value ? Number(e.target.value) : '')}
                 options={[
-                  { value: '', label: '-- Không thuộc Sprint --' },
-                  ...projectSprints.map((s) => ({ value: String(s.id), label: `${s.name} (${s.status})` })),
+                  { value: '', label: t('-- Không thuộc Sprint --', '-- No Sprint --') },
+                  ...projectSprints.map((s) => ({ value: String(s.id), label: `${s.name} (${statusLabel(s.status)})` })),
                 ]}
               />
 
               <Select
-                label="Thuộc Epic / Chủ đề"
+                label={t('Thuộc Epic / Chủ đề', 'Epic / Topic')}
                 value={String(topicId)}
                 onChange={(e) => setTopicId(e.target.value ? Number(e.target.value) : '')}
                 options={[
-                  { value: '', label: '-- Không thuộc Epic --' },
+                  { value: '', label: t('-- Không thuộc Epic --', '-- No Epic --') },
                   ...projectTopics.map((t) => ({ value: String(t.id), label: t.title })),
                 ]}
               />
@@ -902,16 +974,19 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
 
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="Thời hạn (Deadline)"
+                label={t('Thời hạn (Deadline)', 'Deadline')}
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
               />
-              <Input
+              <Select
                 label="Story Points"
-                type="number"
-                value={String(storyPoints)}
+                value={String(storyPoints || 0)}
                 onChange={(e) => setStoryPoints(Number(e.target.value))}
+                options={[
+                  { value: '0', label: t('-- Chưa ước lượng (0 SP) --', '-- Unestimated (0 SP) --') },
+                  ...[1, 2, 3, 5, 8, 13].map((pt) => ({ value: String(pt), label: `${pt} SP` })),
+                ]}
               />
             </div>
           </div>

@@ -17,6 +17,7 @@ DRY_RUN="false"
 
 usage() {
     echo "Usage: $0 [options]"
+    echo "  --container <name>       SQL Server container name (default: tasksync-sqlserver-prod)"
     echo "  --bundle <path>          Path to backup bundle directory"
     echo "  --base-bundle <path>     Optional full base backup bundle for differential restore"
     echo "  --target-db <name>       Target database name (default: TaskSyncEnterprise_restore_test)"
@@ -29,6 +30,7 @@ usage() {
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --container) CONTAINER_NAME="$2"; shift 2 ;;
         --bundle) BUNDLE_DIR="$2"; shift 2 ;;
         --base-bundle) BASE_BUNDLE_DIR="$2"; shift 2 ;;
         --target-db) TARGET_DB="$2"; shift 2 ;;
@@ -75,10 +77,10 @@ trap cleanup_single_user EXIT ERR INT TERM
 
 # Run inspection to get metadata
 INSPECTION_JSON=$(python "$SCRIPT_DIR/inspect_database_backup.py" --bundle "$BUNDLE_DIR")
-BAK_FILE_PATH=$(echo "$INSPECTION_JSON" | grep -o '"bak_file_path": "[^"]*"' | cut -d'"' -f4)
-BACKUP_TYPE=$(echo "$INSPECTION_JSON" | grep -o '"backup_type": "[^"]*"' | cut -d'"' -f4)
-BAK_FILENAME=$(basename "$BAK_FILE_PATH")
-CONTAINER_BAK_PATH="/var/opt/mssql/backup/$BAK_FILENAME"
+REL_PATH=$(echo "$INSPECTION_JSON" | python -c 'import json,sys; print(json.load(sys.stdin)["relative_path"])')
+BACKUP_TYPE=$(echo "$INSPECTION_JSON" | python -c 'import json,sys; print(json.load(sys.stdin)["backup_type"])')
+BUNDLE_BASENAME=$(basename "$BUNDLE_DIR")
+CONTAINER_BAK_PATH="/var/opt/mssql/backup/${BUNDLE_BASENAME}/${REL_PATH}"
 
 log_info "Inspecting database backup file list dynamically..."
 FILELIST_RAW=$(docker exec -e SQLCMDPASSWORD="${MSSQL_SA_PASSWORD:-}" "$CONTAINER_NAME" \
@@ -113,9 +115,9 @@ if [ "$BACKUP_TYPE" = "differential" ]; then
     fi
     log_info "Step 1/2: Restoring Full Base Backup with NORECOVERY..."
     BASE_INSPECTION=$(python "$SCRIPT_DIR/inspect_database_backup.py" --bundle "$BASE_BUNDLE_DIR")
-    BASE_BAK_PATH=$(echo "$BASE_INSPECTION" | grep -o '"bak_file_path": "[^"]*"' | cut -d'"' -f4)
-    BASE_FILENAME=$(basename "$BASE_BAK_PATH")
-    BASE_CONTAINER_BAK_PATH="/var/opt/mssql/backup/$BASE_FILENAME"
+    BASE_REL_PATH=$(echo "$BASE_INSPECTION" | python -c 'import json,sys; print(json.load(sys.stdin)["relative_path"])')
+    BASE_BUNDLE_BASENAME=$(basename "$BASE_BUNDLE_DIR")
+    BASE_CONTAINER_BAK_PATH="/var/opt/mssql/backup/${BASE_BUNDLE_BASENAME}/${BASE_REL_PATH}"
 
     RESTORE_BASE_SQL="RESTORE DATABASE [$TARGET_DB] FROM DISK = N'$BASE_CONTAINER_BAK_PATH' WITH $WITH_CLAUSES, NORECOVERY;"
     docker exec -e SQLCMDPASSWORD="${MSSQL_SA_PASSWORD:-}" "$CONTAINER_NAME" \

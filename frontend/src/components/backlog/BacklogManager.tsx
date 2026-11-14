@@ -7,8 +7,10 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
 import { Badge } from '../common/Badge';
+import { StatusBadge } from '../common/StatusBadge';
 import { useToast } from '../../providers/ToastProvider';
 import { useAuth } from '../../providers/AuthProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { AlertCircle, Play, Trash2, CheckCircle2, Plus } from 'lucide-react';
 
 interface BacklogManagerProps {
@@ -18,6 +20,7 @@ interface BacklogManagerProps {
 export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => {
   const toast = useToast();
   const { user } = useAuth();
+  const { t, statusLabel } = useSettings();
 
   const role = (user?.role || '').toLowerCase();
   const roleId = Number(user?.role_id);
@@ -57,9 +60,9 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
       });
       setTopicId(epic.id);
       setEpicTitle('');
-      toast.success('Đã tạo Epic', 'Epic mới đã được liên kết với đúng dự án.');
+      toast.success(t('Đã tạo Epic', 'Epic Created'), t('Epic mới đã được liên kết với đúng dự án.', 'New Epic has been linked to this project.'));
     } catch (err: any) {
-      toast.error('Lỗi tạo Epic', err.response?.data?.detail || 'Không thể tạo Epic cho dự án.');
+      toast.error(t('Lỗi tạo Epic', 'Epic Error'), err.response?.data?.detail || t('Không thể tạo Epic cho dự án.', 'Unable to create Epic for this project.'));
     }
   };
 
@@ -67,7 +70,7 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
     e.preventDefault();
     const normalizedTitle = title.trim();
     if (!normalizedTitle) {
-      toast.error('Thiếu tiêu đề', 'Vui lòng nhập tiêu đề cho hạng mục backlog.');
+      toast.error(t('Thiếu tiêu đề', 'Missing Title'), t('Vui lòng nhập tiêu đề cho hạng mục backlog.', 'Please enter a title for the backlog item.'));
       return;
     }
     const normalizedPriority = priority?.trim() || 'Medium';
@@ -89,38 +92,38 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
       setStoryPoints('');
       setSprintId('');
       setTopicId('');
-      toast.success('Thành công', 'Đã thêm một hạng mục mới vào Product Backlog.');
+      toast.success(t('Thành công', 'Success'), t('Đã thêm một hạng mục mới vào Product Backlog.', 'Added a new item to the Product Backlog.'));
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const message = typeof detail === 'string'
         ? detail
         : Array.isArray(detail)
           ? detail.map((item: any) => item?.msg || item?.loc?.join('.')).filter(Boolean).join('\n')
-          : err?.response?.data?.message || 'Không thể tạo backlog item.';
-      toast.error('Lỗi tạo Backlog', message);
+          : err?.response?.data?.message || t('Không thể tạo backlog item.', 'Unable to create backlog item.');
+      toast.error(t('Lỗi tạo Backlog', 'Backlog Error'), message);
     }
   };
 
   const handleConvert = async (id: number) => {
     try {
       await convertMutation.mutateAsync({ id });
-      toast.success('Chuyển đổi thành công', 'Hạng mục backlog đã được chuyển thành Task công việc.');
+      toast.success(t('Chuyển đổi thành công', 'Converted'), t('Hạng mục backlog đã được chuyển thành Task công việc.', 'Backlog item has been converted to a Task.'));
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể chuyển đổi hạng mục.';
-      toast.error('Lỗi chuyển đổi', message);
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || t('Không thể chuyển đổi hạng mục.', 'Unable to convert item.');
+      toast.error(t('Lỗi chuyển đổi', 'Conversion Error'), message);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Xác nhận xóa hạng mục backlog này?')) return;
+    if (!window.confirm(t('Xác nhận xóa hạng mục backlog này?', 'Confirm deleting this backlog item?'))) return;
     try {
       await deleteMutation.mutateAsync({ id, projectId });
-      toast.success('Đã xóa', 'Hạng mục backlog đã được loại bỏ.');
+      toast.success(t('Đã xóa', 'Deleted'), t('Hạng mục backlog đã được loại bỏ.', 'Backlog item removed.'));
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể xóa hạng mục này.';
-      toast.error('Lỗi xóa', message);
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || t('Không thể xóa hạng mục này.', 'Unable to delete item.');
+      toast.error(t('Lỗi xóa', 'Delete Error'), message);
     }
   };
 
@@ -130,64 +133,57 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
     const newPriority = priorities[nextIdx];
     try {
       await updateMutation.mutateAsync({ id, payload: { priority: newPriority } });
-      toast.success('Đã cập nhật độ ưu tiên');
+      toast.success(t('Đã cập nhật độ ưu tiên', 'Priority updated'));
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể cập nhật độ ưu tiên.';
-      toast.error('Lỗi cập nhật', message);
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || t('Không thể cập nhật độ ưu tiên.', 'Unable to update priority.');
+      toast.error(t('Lỗi cập nhật', 'Update Error'), message);
     }
   };
 
   const handleUpdateStoryPoints = async (id: number, currentSp: number) => {
-    const newSpStr = window.prompt('Nhập Story Points mới:', String(currentSp));
+    const newSpStr = window.prompt(t('Nhập Story Points mới:', 'Enter new Story Points:'), String(currentSp));
     if (newSpStr === null) return;
     const newSp = Number(newSpStr);
     if (isNaN(newSp) || newSp < 0) {
-      toast.error('Lỗi nhập liệu', 'Vui lòng nhập một số dương.');
+      toast.error(t('Lỗi nhập liệu', 'Invalid Input'), t('Vui lòng nhập một số dương.', 'Please enter a non-negative number.'));
       return;
     }
     try {
       await updateMutation.mutateAsync({ id, payload: { story_points: newSp } });
-      toast.success('Đã cập nhật Story Points');
+      toast.success(t('Đã cập nhật Story Points', 'Story Points updated'));
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể cập nhật story points.';
-      toast.error('Lỗi cập nhật', message);
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || t('Không thể cập nhật story points.', 'Unable to update story points.');
+      toast.error(t('Lỗi cập nhật', 'Update Error'), message);
     }
   };
 
   const handleQuickSprintAssign = async (id: number, targetSprintId: number | null) => {
     try {
       await updateMutation.mutateAsync({ id, payload: { sprint_id: targetSprintId } });
-      toast.success('Thành công', 'Đã cập nhật Sprint cho hạng mục backlog.');
+      toast.success(t('Thành công', 'Success'), t('Đã cập nhật Sprint cho hạng mục backlog.', 'Updated Sprint for backlog item.'));
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể cập nhật Sprint.';
-      toast.error('Lỗi cập nhật Sprint', message);
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || t('Không thể cập nhật Sprint.', 'Unable to update Sprint.');
+      toast.error(t('Lỗi cập nhật Sprint', 'Sprint Update Error'), message);
     }
   };
 
   const handleQuickEpicAssign = async (id: number, targetEpicId: number | null) => {
     try {
       await updateMutation.mutateAsync({ id, payload: { topic_id: targetEpicId } });
-      toast.success('Thành công', 'Đã cập nhật Epic cho hạng mục backlog.');
+      toast.success(t('Thành công', 'Success'), t('Đã cập nhật Epic cho hạng mục backlog.', 'Updated Epic for backlog item.'));
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || 'Không thể cập nhật Epic.';
-      toast.error('Lỗi cập nhật Epic', message);
+      const message = typeof detail === 'string' ? detail : err?.response?.data?.message || t('Không thể cập nhật Epic.', 'Unable to update Epic.');
+      toast.error(t('Lỗi cập nhật Epic', 'Epic Update Error'), message);
     }
   };
 
   if (isLoading) {
-    return <div className="text-center py-8 text-xs text-text-muted">Đang tải Product Backlog...</div>;
+    return <div className="text-center py-8 text-xs text-text-muted">{t('Đang tải Product Backlog...', 'Loading Product Backlog...')}</div>;
   }
-
-  const priorityBadges: Record<string, 'primary' | 'warning' | 'danger' | 'success'> = {
-    Low: 'primary',
-    Medium: 'success',
-    High: 'warning',
-    Critical: 'danger',
-  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
@@ -196,8 +192,10 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
           Project → Epic → User Story / Product Backlog → Task → Sprint
         </p>
         <p className="mt-1 text-[11px] text-text-muted">
-          Epic là nhóm tính năng lớn của Project; mỗi hạng mục Backlog là một User Story.
-          Khi đủ rõ, User Story được chuyển thành Task và Task được lập kế hoạch vào Sprint.
+          {t(
+            'Epic là nhóm tính năng lớn của Project; mỗi hạng mục Backlog là một User Story. Khi đủ rõ, User Story được chuyển thành Task và Task được lập kế hoạch vào Sprint.',
+            'An Epic groups large features within a Project; each Backlog item is a User Story. Once refined, it is converted into a Task and planned into a Sprint.'
+          )}
         </p>
       </div>
       {/* Add form (Only for Managers or Admins) */}
@@ -205,36 +203,36 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-bold flex items-center gap-1.5 uppercase">
-              Thêm Hạng mục Backlog
+              {t('Thêm Hạng mục Backlog', 'Add Backlog Item')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isManagerOrAdmin ? (
               <form onSubmit={handleCreate} className="space-y-4">
                 <Input
-                  label="Tiêu đề *"
-                  placeholder="Yêu cầu / Tính năng cần phát triển"
+                  label={t('Tiêu đề *', 'Title *')}
+                  placeholder={t('Yêu cầu / Tính năng cần phát triển', 'Feature or requirement to develop')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
                 />
                 <Textarea
-                  label="Mô tả"
-                  placeholder="Mô tả chi tiết / User Story..."
+                  label={t('Mô tả', 'Description')}
+                  placeholder={t('Mô tả chi tiết / User Story...', 'Detailed description / User Story...')}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <Select
-                    label="Độ ưu tiên"
+                    label={t('Độ ưu tiên', 'Priority')}
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
                     options={[
-                      { value: 'Low', label: 'Low' },
-                      { value: 'Medium', label: 'Medium' },
-                      { value: 'High', label: 'High' },
-                      { value: 'Critical', label: 'Critical' },
+                      { value: 'Low', label: statusLabel('Low') },
+                      { value: 'Medium', label: statusLabel('Medium') },
+                      { value: 'High', label: statusLabel('High') },
+                      { value: 'Critical', label: statusLabel('Critical') },
                     ]}
                   />
                   <Input
@@ -249,31 +247,31 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <Select
-                    label="Gán vào Sprint"
+                    label={t('Gán vào Sprint', 'Assign Sprint')}
                     value={String(sprintId)}
                     onChange={(e) => setSprintId(e.target.value ? Number(e.target.value) : '')}
                     options={[
-                      { value: '', label: '-- Không gán --' },
+                      { value: '', label: t('-- Không gán --', '-- Unassigned --') },
                       ...plannedSprints.map((s) => ({ value: String(s.id), label: s.name })),
                     ]}
                   />
                   <Select
-                    label="Thuộc Epic / Chủ đề"
+                    label={t('Thuộc Epic / Chủ đề', 'Epic / Topic')}
                     value={String(topicId)}
                     onChange={(e) => setTopicId(e.target.value ? Number(e.target.value) : '')}
                     options={[
-                      { value: '', label: '-- Không gán --' },
+                      { value: '', label: t('-- Không gán --', '-- Unassigned --') },
                       ...topics.map((t) => ({ value: String(t.id), label: t.title })),
                     ]}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-text-secondary">
-                    Tạo nhanh Epic cho dự án
+                    {t('Tạo nhanh Epic cho dự án', 'Quick Create Epic')}
                   </label>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Tên Epic mới"
+                      placeholder={t('Tên Epic mới', 'New Epic title')}
                       value={epicTitle}
                       onChange={(e) => setEpicTitle(e.target.value)}
                     />
@@ -286,12 +284,15 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                       isLoading={createTopicMutation.isPending}
                       disabled={!epicTitle.trim()}
                     >
-                      Tạo
+                      {t('Tạo', 'Create')}
                     </Button>
                   </div>
                   {topics.length === 0 && (
                     <p className="text-[10px] text-text-muted">
-                      Dự án chưa có Epic. Tạo Epic ở đây để dùng ngay cho Backlog và Task.
+                      {t(
+                        'Dự án chưa có Epic. Tạo Epic ở đây để dùng ngay cho Backlog và Task.',
+                        'No Epics in this project yet. Create one here for Backlog and Tasks.'
+                      )}
                     </p>
                   )}
                 </div>
@@ -302,13 +303,18 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                   className="w-full"
                   isLoading={createMutation.isPending}
                 >
-                  Thêm vào Backlog
+                  {t('Thêm vào Backlog', 'Add to Backlog')}
                 </Button>
               </form>
             ) : (
               <div className="flex gap-2 p-3 bg-secondary/20 rounded-xl border border-border text-xs text-text-muted">
                 <AlertCircle className="h-4 w-4 text-primary shrink-0" />
-                <span>Chỉ quản lý dự án (Project Manager) hoặc quản trị viên (Admin) mới có quyền chỉnh sửa Product Backlog.</span>
+                <span>
+                  {t(
+                    'Chỉ quản lý dự án (Project Manager) hoặc quản trị viên (Admin) mới có quyền chỉnh sửa Product Backlog.',
+                    'Only Project Managers or Administrators can edit the Product Backlog.'
+                  )}
+                </span>
               </div>
             )}
           </CardContent>
@@ -320,13 +326,13 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 pb-4">
             <CardTitle className="text-sm font-bold uppercase">
-              Danh sách Backlog ({backlogItems.length})
+              {t('Danh sách Backlog', 'Backlog List')} ({backlogItems.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             {backlogItems.length === 0 ? (
               <div className="text-center py-12 text-xs text-text-muted">
-                Backlog trống. Hãy thêm các tính năng hoặc User Stories mới.
+                {t('Backlog trống. Hãy thêm các tính năng hoặc User Stories mới.', 'Backlog is empty. Add new features or User Stories.')}
               </div>
             ) : (
               <div className="space-y-3.5">
@@ -337,9 +343,12 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                   >
                     <div className="space-y-1.5 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant={priorityBadges[item.priority] || 'primary'} className="cursor-pointer select-none" onClick={() => isManagerOrAdmin && handleUpdatePriority(item.id, item.priority)}>
-                          {item.priority}
-                        </Badge>
+                        <span
+                          className="cursor-pointer select-none inline-flex"
+                          onClick={() => isManagerOrAdmin && handleUpdatePriority(item.id, item.priority)}
+                        >
+                          <StatusBadge status={item.priority} />
+                        </span>
                         <Badge variant="default" className="cursor-pointer select-none font-bold" onClick={() => isManagerOrAdmin && handleUpdateStoryPoints(item.id, item.story_points)}>
                           SP: {item.story_points}
                         </Badge>
@@ -349,7 +358,7 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-text-muted border-dashed">
-                            Chưa gán Sprint
+                            {t('Chưa gán Sprint', 'Unassigned Sprint')}
                           </Badge>
                         )}
                         {item.topic_id ? (
@@ -358,18 +367,18 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                           </span>
                         ) : (
                           <Badge variant="outline" className="text-text-muted border-dashed">
-                            Chưa gán Epic
+                            {t('Chưa gán Epic', 'Unassigned Epic')}
                           </Badge>
                         )}
                         {item.status === 'Converted' && (
                           <Badge variant="success" className="flex items-center gap-1">
                             <CheckCircle2 className="h-3 w-3" />
-                            Đã chuyển thành Task
+                            {t('Đã chuyển thành Task', 'Converted to Task')}
                           </Badge>
                         )}
                         {item.status === 'Planned' && (
                           <Badge variant="warning">
-                            Đã lên lịch Sprint
+                            {t('Đã lên lịch Sprint', 'Scheduled in Sprint')}
                           </Badge>
                         )}
                       </div>
@@ -385,16 +394,16 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                           value={item.sprint_id || ''}
                           onChange={(e) => handleQuickSprintAssign(item.id, e.target.value ? Number(e.target.value) : null)}
                           className="w-full min-w-0 max-w-full text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium sm:w-44 sm:flex-none"
-                          title="Gán nhanh Sprint"
+                          title={t('Gán nhanh Sprint', 'Quick assign Sprint')}
                         >
-                          <option value="">-- Gán Sprint --</option>
+                          <option value="">{t('-- Gán Sprint --', '-- Assign Sprint --')}</option>
                           {plannedSprints.map((s) => (
                             <option key={s.id} value={s.id}>
                               {s.name}
                             </option>
                           ))}
                           {plannedSprints.length === 0 && (
-                            <option value="" disabled>Chưa có Sprint Planned</option>
+                            <option value="" disabled>{t('Chưa có Sprint Planned', 'No Planned Sprints')}</option>
                           )}
                         </select>
 
@@ -402,9 +411,9 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                           value={item.topic_id || ''}
                           onChange={(e) => handleQuickEpicAssign(item.id, e.target.value ? Number(e.target.value) : null)}
                           className="w-full min-w-0 max-w-full text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary font-medium sm:w-56 sm:flex-1"
-                          title="Gán nhanh Epic"
+                          title={t('Gán nhanh Epic', 'Quick assign Epic')}
                         >
-                          <option value="">-- Gán Epic --</option>
+                          <option value="">{t('-- Gán Epic --', '-- Assign Epic --')}</option>
                           {topics.map((t) => (
                             <option key={t.id} value={t.id}>
                               {t.title}
@@ -420,14 +429,14 @@ export const BacklogManager: React.FC<BacklogManagerProps> = ({ projectId }) => 
                             onClick={() => handleConvert(item.id)}
                             isLoading={convertMutation.isPending}
                           >
-                            Tạo Task
+                            {t('Tạo Task', 'Convert to Task')}
                           </Button>
                         )}
                         <button
                           type="button"
                           onClick={() => handleDelete(item.id)}
-                          className="p-2 rounded-lg border border-border hover:border-rose-300 dark:hover:border-rose-950/40 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 cursor-pointer"
-                          title="Xóa hạng mục"
+                          className="p-2 rounded-lg text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-colors"
+                          title={t('Xóa hạng mục', 'Delete item')}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>

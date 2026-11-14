@@ -9,6 +9,7 @@ import { Input } from '../../components/ui/Input';
 import { auditApi } from '../../api/auditApi';
 import { exportToCsv } from '../../utils/csv';
 import { useAuth } from '../../providers/AuthProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 
 const ACTION_BADGE_VARIANTS: Record<string, 'success' | 'primary' | 'warning' | 'danger' | 'outline'> = {
   LOGIN: 'success',
@@ -20,6 +21,7 @@ const ACTION_BADGE_VARIANTS: Record<string, 'success' | 'primary' | 'warning' | 
 
 const AuditLogPage: React.FC = () => {
   const { user } = useAuth();
+  const { t, formatDate } = useSettings();
   const roleStr = (user?.role || '').toLowerCase();
   const roleId = Number(user?.role_id);
   const isAdmin = roleStr === 'admin' || roleId === 1;
@@ -99,11 +101,11 @@ const AuditLogPage: React.FC = () => {
 
   // Secure CSV Export
   const handleExport = () => {
-    const headers = ['User Email', 'Hành động', 'Thời gian'];
+    const headers = ['User Email', t('Hành động', 'Action'), t('Thời gian', 'Timestamp')];
     const rows = filteredLogs.map((log) => [
       log.employee_email || 'unknown',
       log.action || 'OTHER',
-      log.timestamp ? new Date(log.timestamp).toLocaleString('vi-VN') : '—',
+      log.timestamp ? formatDate(log.timestamp, 'full') : '—',
     ]);
     exportToCsv('AuditLogs_SecurityExport.csv', headers, rows);
   };
@@ -111,8 +113,8 @@ const AuditLogPage: React.FC = () => {
   if (!isAdmin) {
     return (
       <div className="p-8 text-center space-y-4">
-        <h2 className="text-lg font-bold text-text-primary">Truy cập bị từ chối</h2>
-        <p className="text-xs text-text-muted">Bạn không có quyền truy cập vào trang Nhật ký hệ thống.</p>
+        <h2 className="text-lg font-bold text-text-primary">{t('Truy cập bị từ chối', 'Access Denied')}</h2>
+        <p className="text-xs text-text-muted">{t('Bạn không có quyền truy cập vào trang Nhật ký hệ thống.', 'You do not have permission to view Audit Logs.')}</p>
       </div>
     );
   }
@@ -134,20 +136,20 @@ const AuditLogPage: React.FC = () => {
     <div className="space-y-6 font-sans pb-12">
       {/* Header */}
       <PageHeader
-        title="Nhật ký Hệ thống (Audit Logs)"
-        description="Giám sát lịch sử hoạt động, phiên đăng nhập và các sự kiện bảo mật"
+        title={t('Nhật ký Hệ thống (Audit Logs)', 'System Audit Logs')}
+        description={t('Giám sát lịch sử hoạt động, phiên đăng nhập và các sự kiện bảo mật', 'Monitor activity history, login sessions, and security events')}
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: 'Administration', href: '#' },
-              { label: 'Audit Logs' },
+              { label: t('Quản trị', 'Administration'), href: '#' },
+              { label: t('Nhật ký Hệ thống', 'Audit Logs') },
             ]}
           />
         }
         actions={
           filteredLogs.length > 0 && (
             <Button variant="outline" size="sm" leftIcon={<Download className="h-4 w-4" />} onClick={handleExport}>
-              Xuất nhật ký (CSV)
+              {t('Xuất nhật ký (CSV)', 'Export CSV')}
             </Button>
           )
         }
@@ -156,11 +158,11 @@ const AuditLogPage: React.FC = () => {
       {/* Summary Stats cards */}
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-5">
         {[
-          { key: 'total', label: 'Tổng số hành động', count: actionSummary.total || 0, variant: 'primary' },
-          { key: 'LOGIN', label: 'Đăng nhập', count: actionSummary.LOGIN || 0, variant: 'success' },
-          { key: 'CREATE', label: 'Tạo mới', count: actionSummary.CREATE || 0, variant: 'info' },
-          { key: 'UPDATE', label: 'Cập nhật', count: actionSummary.UPDATE || 0, variant: 'warning' },
-          { key: 'DELETE', label: 'Xóa', count: actionSummary.DELETE || 0, variant: 'danger' },
+          { key: 'total', label: t('Tổng số hành động', 'Total Events'), count: actionSummary.total || 0, variant: 'primary' },
+          { key: 'LOGIN', label: t('Đăng nhập', 'Logins'), count: actionSummary.LOGIN || 0, variant: 'success' },
+          { key: 'CREATE', label: t('Tạo mới', 'Created'), count: actionSummary.CREATE || 0, variant: 'info' },
+          { key: 'UPDATE', label: t('Cập nhật', 'Updated'), count: actionSummary.UPDATE || 0, variant: 'warning' },
+          { key: 'DELETE', label: t('Xóa', 'Deleted'), count: actionSummary.DELETE || 0, variant: 'danger' },
         ].map((item) => (
           <Card key={item.key}>
             <CardContent className="p-4 flex flex-col justify-between">
@@ -183,7 +185,7 @@ const AuditLogPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <Input
               type="text"
-              placeholder="Tìm theo email hoặc hành động..."
+              placeholder={t('Tìm theo email hoặc hành động...', 'Search by email or action...')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
@@ -198,7 +200,7 @@ const AuditLogPage: React.FC = () => {
           <CardHeader className="border-b border-border/60">
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-2">
               <FileText className="h-4 w-4 text-emerald-500" />
-              Lịch sử đăng nhập & Điểm danh
+              {t('Lịch sử đăng nhập & Điểm danh', 'Login & Session History')}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -206,9 +208,9 @@ const AuditLogPage: React.FC = () => {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-accent/40 text-text-secondary border-b border-border">
-                    <th className="p-3 font-semibold">User Email</th>
-                    <th className="p-3 font-semibold">Số lần đăng nhập</th>
-                    <th className="p-3 font-semibold">Thời gian lần cuối</th>
+                    <th className="p-3 font-semibold">{t('Email Người dùng', 'User Email')}</th>
+                    <th className="p-3 font-semibold">{t('Số lần đăng nhập', 'Login Count')}</th>
+                    <th className="p-3 font-semibold">{t('Thời gian lần cuối', 'Last Login')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -217,11 +219,11 @@ const AuditLogPage: React.FC = () => {
                       <td className="p-3 font-semibold text-text-primary">{u.email}</td>
                       <td className="p-3">
                         <Badge variant="success" size="sm">
-                          {u.loginCount} lần
+                          {u.loginCount} {t('lần', 'times')}
                         </Badge>
                       </td>
                       <td className="p-3 text-text-secondary">
-                        {u.lastLogin ? u.lastLogin.toLocaleString('vi-VN') : '—'}
+                        {u.lastLogin ? formatDate(u.lastLogin.toISOString(), 'full') : '—'}
                       </td>
                     </tr>
                   ))}
@@ -236,22 +238,22 @@ const AuditLogPage: React.FC = () => {
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-border/60">
           <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary">
-            Chi tiết nhật ký hoạt động ({filteredLogs.length})
+            {t('Chi tiết nhật ký hoạt động', 'Activity Log Details')} ({filteredLogs.length})
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {filteredLogs.length === 0 ? (
             <div className="p-12 text-center text-text-muted text-xs">
-              Chưa có ghi chép nhật ký nào.
+              {t('Chưa có ghi chép nhật ký nào.', 'No audit logs recorded.')}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-accent/40 text-text-secondary border-b border-border">
-                    <th className="p-3 font-semibold">Nhân viên</th>
-                    <th className="p-3 font-semibold w-32">Hành động</th>
-                    <th className="p-3 font-semibold">Thời gian ghi nhận</th>
+                    <th className="p-3 font-semibold">{t('Nhân viên', 'Employee')}</th>
+                    <th className="p-3 font-semibold w-32">{t('Hành động', 'Action')}</th>
+                    <th className="p-3 font-semibold">{t('Thời gian ghi nhận', 'Recorded At')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -264,7 +266,7 @@ const AuditLogPage: React.FC = () => {
                         </Badge>
                       </td>
                       <td className="p-3 text-text-secondary">
-                        {log.timestamp ? new Date(log.timestamp).toLocaleString('vi-VN') : '—'}
+                        {log.timestamp ? formatDate(log.timestamp, 'full') : '—'}
                       </td>
                     </tr>
                   ))}

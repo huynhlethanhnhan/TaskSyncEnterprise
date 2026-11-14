@@ -90,6 +90,47 @@ def get_tasks(
 
 
 @router.get(
+    "/search",
+    response_model=list[TaskResponse],
+    dependencies=[Depends(RequireEmployee)],
+)
+def search_tasks(
+    keyword: str | None = None,
+    project_id: int | None = None,
+    department_id: int | None = None,
+    team_id: int | None = None,
+    sprint_id: int | None = None,
+    topic_id: int | None = None,
+    assigned_to: int | None = None,
+    status: str | None = None,
+    priority: str | None = None,
+    overdue_only: bool = False,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
+    if project_id is not None:
+        require_project_access(db, project_id, current_user)
+    return crud_task.search_tasks(
+        db,
+        current_user,
+        keyword=keyword,
+        project_id=project_id,
+        department_id=department_id,
+        team_id=team_id,
+        sprint_id=sprint_id,
+        topic_id=topic_id,
+        assigned_to=assigned_to,
+        status=status,
+        priority=priority,
+        overdue_only=overdue_only,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.get(
     "/{task_id:int}",
     response_model=TaskResponse,
     dependencies=[Depends(RequireEmployee)],

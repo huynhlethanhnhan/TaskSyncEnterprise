@@ -165,8 +165,9 @@ def reset_demo_data():
         else:
             # Delete all employees
             db.execute(text("DELETE FROM dbo.employees"))
-            # Insert single Admin user
-            hashed_pwd = get_password_hash("TaskSync@2026")
+            # Insert single Admin user (password loaded from settings / env)
+            from app.core.settings import settings
+            hashed_pwd = get_password_hash(settings.SEED_ADMIN_PASSWORD.get_secret_value())
             db.execute(
                 text("""
                     INSERT INTO dbo.employees (

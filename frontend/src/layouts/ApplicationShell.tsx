@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router';
+import { useIsFetching } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   Briefcase,
@@ -12,7 +13,6 @@ import {
   ShieldAlert,
   User,
   Component,
-  Menu,
   Layers,
   RefreshCw,
   MessageSquare,
@@ -27,6 +27,7 @@ import { Navbar } from '../components/layout/Navbar';
 import { Drawer } from '../components/common/Drawer';
 import { useTheme } from '../providers/ThemeProvider';
 import { useAuth } from '../providers/AuthProvider';
+import { useSettings } from '../providers/SettingsProvider';
 import { useToast } from '../providers/ToastProvider';
 import { GlobalSearchModal } from '../components/search/GlobalSearchModal';
 import { useNotifications, useNotificationRealtime } from '../hooks/useNotifications';
@@ -38,8 +39,17 @@ export interface ApplicationShellProps {
 export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isDarkMode, setTheme, theme } = useTheme();
+  const { isDarkMode } = useTheme();
   const { user, logout } = useAuth();
+  const { runtime, updatePrefs, t } = useSettings();
+  const isFetchingCount = useIsFetching();
+  const [isRouteTransitioning, setIsRouteTransitioning] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsRouteTransitioning(true);
+    const timer = window.setTimeout(() => setIsRouteTransitioning(false), 320);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname, location.search]);
   const toast = useToast();
   const { data: notifications = [] } = useNotifications();
   useNotificationRealtime();
@@ -86,123 +96,131 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
   const isAdminOrManager = isAdmin || isManager;
   const isTeamLeader = Boolean(user?.is_team_leader && user?.team_id);
 
+  const sidebarBrand = runtime.system_name || 'TaskSync';
+
   const sidebarSections: SidebarSection[] = [
     {
-      title: 'Overview',
+      title: t('Tổng quan', 'Overview'),
       items: [
         {
           key: '/dashboard',
-          label: 'Dashboard',
+          label: t('Bảng điều khiển', 'Dashboard'),
           icon: <LayoutDashboard className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/dashboard'); setMobileDrawerOpen(false); },
         },
         {
           key: '/my-work',
-          label: 'My Work',
+          label: t('Việc của tôi', 'My Work'),
           icon: <CheckSquare className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/my-work'); setMobileDrawerOpen(false); },
         },
       ],
     },
     {
-      title: 'Work Management',
+      title: t('Quản lý Công việc', 'Work Management'),
       items: [
         {
           key: '/projects',
-          label: 'Projects',
+          label: t('Dự án', 'Projects'),
           icon: <Briefcase className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/projects'); setMobileDrawerOpen(false); },
         },
         {
           key: '/tasks',
-          label: 'Tasks List',
+          label: t('Danh sách Công việc', 'Tasks List'),
           icon: <CheckSquare className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/tasks?view=kanban'); setMobileDrawerOpen(false); },
         },
         {
           key: '/backlog',
-          label: 'Product Backlog',
+          label: t('Kho công việc (Backlog)', 'Product Backlog'),
           icon: <Layers className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/backlog'); setMobileDrawerOpen(false); },
         },
         {
           key: '/sprints',
-          label: 'Sprints',
+          label: t('Chu kỳ (Sprints)', 'Sprints'),
           icon: <RefreshCw className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/sprints'); setMobileDrawerOpen(false); },
         },
         {
           key: '/calendar',
-          label: 'Calendar',
+          label: t('Lịch biểu', 'Calendar'),
           icon: <Calendar className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/calendar'); setMobileDrawerOpen(false); },
         },
       ],
     },
     {
-      title: 'Collaboration',
+      title: t('Cộng tác', 'Collaboration'),
       items: [
         {
           key: '/topics',
-          label: 'Topics',
+          label: t('Thảo luận', 'Topics'),
           icon: <MessageSquare className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/topics'); setMobileDrawerOpen(false); },
         },
         {
           key: '/feedback',
-          label: 'Feedback',
+          label: t('Góp ý', 'Feedback'),
           icon: <HeartHandshake className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/feedback'); setMobileDrawerOpen(false); },
         },
         {
           key: '/files',
-          label: 'Files',
+          label: t('Tài liệu', 'Files'),
           icon: <FolderOpen className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/files'); setMobileDrawerOpen(false); },
         },
         {
           key: '/notifications',
-          label: 'Notifications',
+          label: t('Thông báo', 'Notifications'),
           icon: <Bell className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/notifications'); setMobileDrawerOpen(false); },
         },
       ],
     },
     {
-      title: 'Employee Self-Service',
+      title: t('Nhân sự & Tự phục vụ', 'Employee Self-Service'),
       items: [
         {
           key: '/vacations',
-          label: 'My Vacation',
+          label: t('Nghỉ phép', 'My Vacation'),
           icon: <Clock className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/vacations'); setMobileDrawerOpen(false); },
+        },
+        {
+          key: '/hrm',
+          label: t('HRM & Chấm công / Lương', 'HRM & Attendance'),
+          icon: <Users className="h-4.5 w-4.5" />,
+          onClick: () => { navigate('/hrm'); setMobileDrawerOpen(false); },
         },
       ],
     },
     {
-      title: 'Reports',
+      title: t('Báo cáo', 'Reports'),
       items: [
         {
           key: '/reports',
-          label: 'Performance Reports',
+          label: t('Báo cáo Hiệu suất', 'Performance Reports'),
           icon: <BarChart3 className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/reports'); setMobileDrawerOpen(false); },
         },
       ],
     },
     {
-      title: 'Administration',
+      title: t('Quản trị Hệ thống', 'Administration'),
       items: [
         ...(isAdminOrManager ? [{
           key: '/employees',
-          label: 'Employees',
+          label: t('Nhân sự', 'Employees'),
           icon: <Users className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/employees'); setMobileDrawerOpen(false); },
         }] : []),
         ...(isAdminOrManager ? [
           {
             key: '/departments',
-            label: 'Departments',
+            label: t('Phòng ban', 'Departments'),
             icon: <Building2 className="h-4.5 w-4.5" />,
             onClick: () => { navigate('/departments'); setMobileDrawerOpen(false); },
           },
@@ -215,7 +233,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
         }] : []),
         ...(isAdminOrManager ? [{
           key: '/teams',
-          label: 'Teams',
+          label: t('Nhóm', 'Teams'),
           icon: <Network className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/teams'); setMobileDrawerOpen(false); },
         }] : []),
@@ -227,19 +245,19 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
         },
         ...(isAdmin ? [{
           key: '/audit',
-          label: 'Audit Logs',
+          label: t('Nhật ký Hệ thống', 'Audit Logs'),
           icon: <ShieldAlert className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/audit'); setMobileDrawerOpen(false); },
         }] : []),
         {
           key: '/profile',
-          label: 'My Profile',
+          label: t('Hồ sơ cá nhân', 'My Profile'),
           icon: <User className="h-4.5 w-4.5" />,
           onClick: () => { navigate('/profile'); setMobileDrawerOpen(false); },
         },
         ...(import.meta.env.DEV ? [{
           key: '/dev/components',
-          label: 'UI Showcase',
+          label: t('Thư viện UI', 'UI Showcase'),
           icon: <Component className="h-4.5 w-4.5" />,
           badge: 'DEV',
           onClick: () => { navigate('/dev/components'); setMobileDrawerOpen(false); },
@@ -265,7 +283,8 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
       {/* Desktop Sidebar (hidden on mobile viewports < 1024px) */}
       <div className="hidden lg:block shrink-0">
         <Sidebar
-          brandName="TaskSync"
+          brandName={sidebarBrand}
+          onBrandClick={() => navigate('/dashboard')}
           sections={sidebarSections}
           activeKey={activeKey}
           isCollapsed={sidebarCollapsed}
@@ -281,10 +300,11 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
         onClose={() => setMobileDrawerOpen(false)}
         position="left"
         size="sm"
-        title="TaskSync Navigation"
+        title={sidebarBrand}
       >
         <Sidebar
-          brandName="TaskSync"
+          brandName={sidebarBrand}
+          onBrandClick={() => { navigate('/dashboard'); setMobileDrawerOpen(false); }}
           sections={sidebarSections}
           activeKey={activeKey}
           isCollapsed={false}
@@ -297,37 +317,52 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({ children }) 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navbar Header */}
-        <div className="flex items-center relative z-header sticky top-0">
-          {/* Mobile hamburger menu trigger */}
-          <button
-            type="button"
-            onClick={() => setMobileDrawerOpen(true)}
-            className="lg:hidden ml-3 p-2 text-text-secondary hover:bg-secondary rounded-md"
-            aria-label="Open mobile menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+        <div className="sticky top-0 z-header w-full bg-surface/95 backdrop-blur-md border-b border-border">
+          <Navbar
+            user={user || undefined}
+            unreadNotificationsCount={unreadNotificationsCount}
+            onOpenMobileMenu={() => setMobileDrawerOpen(true)}
+            onOpenSearch={() => setIsSearchModalOpen(true)}
+            onOpenNotifications={() => navigate('/notifications')}
+            isDarkMode={isDarkMode}
+            onToggleTheme={() => {
+              const nextTheme = isDarkMode ? 'light' : 'dark';
+              void updatePrefs({ theme: nextTheme }).catch(() => {
+                toast.error(t('Không thể lưu giao diện', 'Failed to persist theme'));
+              });
+            }}
+            onProfileClick={() => navigate('/profile')}
+            onLogout={() => {
+              logout();
+              toast.success(t('Đã đăng xuất tài khoản', 'Signed out successfully'));
+              navigate('/login');
+            }}
+          />
 
-          <div className="flex-1 min-w-0">
-            <Navbar
-              user={user || undefined}
-              unreadNotificationsCount={unreadNotificationsCount}
-              onOpenSearch={() => setIsSearchModalOpen(true)}
-              onOpenNotifications={() => navigate('/notifications')}
-              isDarkMode={isDarkMode}
-              onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              onProfileClick={() => navigate('/profile')}
-              onLogout={() => {
-                logout();
-                toast.success('Đã đăng xuất tài khoản');
-                navigate('/login');
-              }}
-            />
-          </div>
+          {/* Global Navigation & Query Sync Progress Bar */}
+          {(isRouteTransitioning || isFetchingCount > 0) && (
+            <div
+              role="progressbar"
+              aria-label={t('Đang đồng bộ dữ liệu trang', 'Syncing page data')}
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary/15 overflow-hidden"
+            >
+              <div className="h-full w-1/2 bg-primary animate-pulse rounded-r-full" />
+            </div>
+          )}
         </div>
 
         {/* Viewport Outlet Container */}
-        <main id="main-content" className="flex-1 w-full p-4 sm:p-5 lg:px-6 lg:py-5">
+        <main id="main-content" className="flex-1 w-full p-4 sm:p-5 lg:px-6 lg:py-5 overflow-x-hidden">
+          {runtime.maintenance_mode && (
+            <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 px-4 py-2.5 text-xs font-medium text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2">
+              <span>
+                {t(
+                  'Hệ thống đang ở Chế độ Bảo trì (Maintenance Mode) — Một số thao tác thay đổi dữ liệu có thể bị hạn chế.',
+                  'System is in Maintenance Mode — some write operations may be restricted.',
+                )}
+              </span>
+            </div>
+          )}
           {children || <Outlet />}
         </main>
 

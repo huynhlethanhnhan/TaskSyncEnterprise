@@ -186,5 +186,128 @@ BEGIN
 END;
 GO
 
-PRINT N'Chèn dữ liệu mẫu khởi tạo thành công!';
+-- ============================================================================
+-- 9. BỔ SUNG DỮ LIỆU ĐA DẠNG PHỤC VỤ TRUY VẤN 3 BẢNG & MỞ RỘNG HRM
+-- ============================================================================
+
+-- 9.1. Dự án thứ 2 (để kiểm chứng điều kiện lọc trên bảng projects)
+DECLARE @DeptProdId INT = (SELECT TOP 1 id FROM dbo.departments WHERE department_code = N'DEPT-PROD');
+DECLARE @CreatorId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'manager.demo@tasksync.com');
+
+IF @DeptProdId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.projects WHERE project_code = N'PRJ-HRM-PHASE2')
+    INSERT INTO dbo.projects (
+        project_code, name, description, status, priority,
+        department_id, team_id, created_by, is_deleted
+    )
+    VALUES (
+        N'PRJ-HRM-PHASE2', N'HRM & Payroll Integration Phase 2',
+        N'Phân hệ mở rộng quản lý hợp đồng, chấm công và quỹ phép năm',
+        N'Planning', N'Medium', @DeptProdId, NULL, @CreatorId, 0
+    );
+GO
+
+-- 9.2. Chủ đề thảo luận (Discussion Topics), Backlog Items & Sprint Snapshots
+DECLARE @ProjectId INT = (SELECT TOP 1 id FROM dbo.projects WHERE project_code = N'PRJ-TASKSYNC-DEMO');
+DECLARE @Sprint1Id INT = (SELECT TOP 1 id FROM dbo.sprints WHERE project_id = @ProjectId AND name = N'Sprint 01 — Database Optimization');
+DECLARE @Sprint2Id INT = (SELECT TOP 1 id FROM dbo.sprints WHERE project_id = @ProjectId AND name = N'Sprint 02 — API Integration & Caching');
+DECLARE @CreatorId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'manager.demo@tasksync.com');
+
+IF @ProjectId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.discussion_topics WHERE project_id = @ProjectId AND title = N'Chuẩn hóa Rule và Trigger trên SQL Server')
+    INSERT INTO dbo.discussion_topics (project_id, title, content, created_by, is_deleted)
+    VALUES (@ProjectId, N'Chuẩn hóa Rule và Trigger trên SQL Server', N'Thảo luận thiết kế Database-First và đồng bộ ORM', @CreatorId, 0);
+
+IF @ProjectId IS NOT NULL AND @Sprint2Id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.backlog_items WHERE project_id = @ProjectId AND title = N'Tích hợp API đồng bộ chấm công HRM')
+    INSERT INTO dbo.backlog_items (project_id, sprint_id, title, description, priority, status, story_points, is_deleted)
+    VALUES (@ProjectId, @Sprint2Id, N'Tích hợp API đồng bộ chấm công HRM', N'Đồng bộ dữ liệu attendance_logs về dashboard quản lý', N'High', N'Backlog', 8, 0);
+
+IF @Sprint1Id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.sprint_snapshots WHERE sprint_id = @Sprint1Id AND snapshot_date = CAST(DATEADD(day, -1, SYSUTCDATETIME()) AS DATE))
+    INSERT INTO dbo.sprint_snapshots (sprint_id, snapshot_date, remaining_story_points, completed_story_points, remaining_tasks, completed_tasks)
+    VALUES
+        (@Sprint1Id, CAST(DATEADD(day, -2, SYSUTCDATETIME()) AS DATE), 23, 0, 4, 0),
+        (@Sprint1Id, CAST(DATEADD(day, -1, SYSUTCDATETIME()) AS DATE), 18, 5, 3, 1);
+GO
+
+-- 9.3. Dữ liệu HRM: Quỹ phép năm (Leave Balances)
+DECLARE @Year INT = YEAR(SYSUTCDATETIME());
+DECLARE @EmpAdminId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'admin.demo@tasksync.com');
+DECLARE @EmpMgrId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'manager.demo@tasksync.com');
+DECLARE @EmpDevId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'dev.demo@tasksync.com');
+DECLARE @EmpDsgId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'designer.demo@tasksync.com');
+
+IF @EmpAdminId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.leave_balances WHERE employee_id = @EmpAdminId AND leave_year = @Year)
+    INSERT INTO dbo.leave_balances (employee_id, leave_year, annual_entitlement, carried_over_days, used_days, pending_days)
+    VALUES (@EmpAdminId, @Year, 12.00, 2.00, 0.00, 0.00);
+
+IF @EmpMgrId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.leave_balances WHERE employee_id = @EmpMgrId AND leave_year = @Year)
+    INSERT INTO dbo.leave_balances (employee_id, leave_year, annual_entitlement, carried_over_days, used_days, pending_days)
+    VALUES (@EmpMgrId, @Year, 15.00, 1.00, 0.00, 0.00);
+
+IF @EmpDevId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.leave_balances WHERE employee_id = @EmpDevId AND leave_year = @Year)
+    INSERT INTO dbo.leave_balances (employee_id, leave_year, annual_entitlement, carried_over_days, used_days, pending_days)
+    VALUES (@EmpDevId, @Year, 12.00, 0.00, 0.00, 0.00);
+
+IF @EmpDsgId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.leave_balances WHERE employee_id = @EmpDsgId AND leave_year = @Year)
+    INSERT INTO dbo.leave_balances (employee_id, leave_year, annual_entitlement, carried_over_days, used_days, pending_days)
+    VALUES (@EmpDsgId, @Year, 12.00, 0.00, 0.00, 0.00);
+GO
+
+-- 9.4. Dữ liệu HRM: Hợp đồng lao động (Employment Contracts)
+DECLARE @EmpMgrId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'manager.demo@tasksync.com');
+DECLARE @EmpDevId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'dev.demo@tasksync.com');
+DECLARE @EmpDsgId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'designer.demo@tasksync.com');
+
+IF @EmpMgrId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.employment_contracts WHERE contract_code = N'HDLD-2026-001')
+    INSERT INTO dbo.employment_contracts (employee_id, contract_code, contract_type, base_salary, allowance, currency, start_date, status)
+    VALUES (@EmpMgrId, N'HDLD-2026-001', N'Indefinite', 35000000.00, 3000000.00, N'VND', '2024-01-01', N'Active');
+
+IF @EmpDevId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.employment_contracts WHERE contract_code = N'HDLD-2026-002')
+    INSERT INTO dbo.employment_contracts (employee_id, contract_code, contract_type, base_salary, allowance, currency, start_date, status)
+    VALUES (@EmpDevId, N'HDLD-2026-002', N'Indefinite', 28000000.00, 2000000.00, N'VND', '2025-03-01', N'Active');
+
+IF @EmpDsgId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.employment_contracts WHERE contract_code = N'HDLD-2026-003')
+    INSERT INTO dbo.employment_contracts (employee_id, contract_code, contract_type, base_salary, allowance, currency, start_date, end_date, status)
+    VALUES (@EmpDsgId, N'HDLD-2026-003', N'Fixed-Term', 20000000.00, 1500000.00, N'VND', '2026-01-01', '2026-12-31', N'Active');
+GO
+
+-- 9.5. Dữ liệu HRM: Đơn nghỉ phép (Vacations) — kích hoạt Trigger kiểm tra trùng lịch & quỹ phép
+DECLARE @EmpMgrId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'manager.demo@tasksync.com');
+DECLARE @EmpDevId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'dev.demo@tasksync.com');
+DECLARE @EmpDsgId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'designer.demo@tasksync.com');
+
+IF @EmpDevId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.vacations WHERE requested_by = @EmpDevId AND reason = N'Nghỉ phép năm giải quyết việc gia đình')
+    INSERT INTO dbo.vacations (type, start_date, end_date, reason, status, requested_by)
+    VALUES (N'Annual Leave', DATEADD(day, 10, CAST(SYSUTCDATETIME() AS DATE)), DATEADD(day, 11, CAST(SYSUTCDATETIME() AS DATE)), N'Nghỉ phép năm giải quyết việc gia đình', N'Pending', @EmpDevId);
+
+IF @EmpDevId IS NOT NULL AND @EmpMgrId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.vacations WHERE requested_by = @EmpDevId AND reason = N'Khám sức khỏe định kỳ')
+    INSERT INTO dbo.vacations (type, start_date, end_date, reason, status, requested_by, approved_by, approved_at)
+    VALUES (N'Annual Leave', DATEADD(day, -15, CAST(SYSUTCDATETIME() AS DATE)), DATEADD(day, -15, CAST(SYSUTCDATETIME() AS DATE)), N'Khám sức khỏe định kỳ', N'HR Approved', @EmpDevId, @EmpMgrId, SYSUTCDATETIME());
+
+IF @EmpDsgId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.vacations WHERE requested_by = @EmpDsgId AND reason = N'Nghỉ phép cá nhân')
+    INSERT INTO dbo.vacations (type, start_date, end_date, reason, status, requested_by)
+    VALUES (N'Annual Leave', DATEADD(day, 5, CAST(SYSUTCDATETIME() AS DATE)), DATEADD(day, 6, CAST(SYSUTCDATETIME() AS DATE)), N'Nghỉ phép cá nhân', N'Manager Approved', @EmpDsgId);
+GO
+
+-- 9.6. Dữ liệu HRM: Chấm công (Attendance Logs)
+DECLARE @EmpDevId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'dev.demo@tasksync.com');
+DECLARE @Today DATE = CAST(SYSUTCDATETIME() AS DATE);
+
+IF @EmpDevId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.attendance_logs WHERE employee_id = @EmpDevId AND work_date = @Today)
+    INSERT INTO dbo.attendance_logs (employee_id, work_date, check_in, check_out, work_hours, overtime_hours, status, note)
+    VALUES (@EmpDevId, @Today, '08:30:00', '17:45:00', 8.00, 0.25, N'Present', N'Làm việc đúng giờ tại văn phòng');
+GO
+
+-- 9.7. Dữ liệu Thông báo mẫu (Notifications)
+DECLARE @EmpDevId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'dev.demo@tasksync.com');
+DECLARE @EmpMgrId INT = (SELECT TOP 1 id FROM dbo.employees WHERE email = N'manager.demo@tasksync.com');
+
+IF @EmpDevId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.notifications WHERE event_id = N'SEED_TASK_ASSIGNED_01')
+    INSERT INTO dbo.notifications (employee_id, event_id, type, title, message, priority, status, channel)
+    VALUES (@EmpDevId, N'SEED_TASK_ASSIGNED_01', N'TASK_ASSIGNED', N'Bạn được giao công việc mới', N'Vui lòng kiểm tra Sprint 01 — Database Optimization.', N'NORMAL', N'PENDING', N'IN_APP');
+
+IF @EmpMgrId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.notifications WHERE event_id = N'SEED_LEAVE_PENDING_01')
+    INSERT INTO dbo.notifications (employee_id, event_id, type, title, message, priority, status, channel)
+    VALUES (@EmpMgrId, N'SEED_LEAVE_PENDING_01', N'LEAVE_REQUEST', N'Có đơn xin nghỉ phép chờ duyệt', N'Nhân viên Lê Văn Kỹ Sư đã gửi đơn xin nghỉ phép năm.', N'HIGH', N'PENDING', N'IN_APP');
+GO
+
+PRINT N'Chèn dữ liệu mẫu khởi tạo (Work Management + HRM) thành công!';
 GO

@@ -16,11 +16,12 @@ import {
 } from 'recharts';
 import api from '../../api/axios';
 import { useToast } from '../../providers/ToastProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { SprintBurndownChart } from '../../components/sprints/SprintBurndownChart';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/common/Card';
-import { Badge } from '../../components/common/Badge';
+import { StatusBadge } from '../../components/common/StatusBadge';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
@@ -34,6 +35,7 @@ const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 const ReportsPage: React.FC = () => {
   const toast = useToast();
+  const { t, statusLabel, formatDate } = useSettings();
   const [activeTab, setActiveTab] = React.useState<'projects' | 'tasks' | 'workload' | 'vacations' | 'agile'>('projects');
 
   const handleExportExcel = async () => {
@@ -57,9 +59,12 @@ const ReportsPage: React.FC = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Xuất báo cáo Excel thành công!');
+      toast.success(t('Xuất báo cáo Excel thành công!', 'Excel report exported successfully!'));
     } catch {
-      toast.error('Lỗi khi xuất báo cáo', 'Không thể tải xuống tệp báo cáo Excel.');
+      toast.error(
+        t('Lỗi khi xuất báo cáo', 'Failed to export report'),
+        t('Không thể tải xuống tệp báo cáo Excel.', 'Unable to download the Excel report file.'),
+      );
     }
   };
 
@@ -86,11 +91,11 @@ const ReportsPage: React.FC = () => {
     const atRisk = projects.filter((p) => p.status === 'Suspended').length;
 
     const list = projects.map((p) => {
-      const projTasks = tasks.filter((t) => t.project_id === p.id);
+      const projTasks = tasks.filter((taskItem) => taskItem.project_id === p.id);
       const totalTasks = projTasks.length;
-      const completedTasks = projTasks.filter((t) => t.status === 'Done').length;
+      const completedTasks = projTasks.filter((taskItem) => taskItem.status === 'Done').length;
       const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-      const overdueTasks = projTasks.filter((t) => t.status !== 'Done' && t.deadline && new Date(t.deadline) < new Date()).length;
+      const overdueTasks = projTasks.filter((taskItem) => taskItem.status !== 'Done' && taskItem.deadline && new Date(taskItem.deadline) < new Date()).length;
 
       return {
         ...p,
@@ -107,34 +112,34 @@ const ReportsPage: React.FC = () => {
   // 2. Tasks Statistics & Computations
   const taskStats = React.useMemo(() => {
     const total = tasks.length;
-    const todo = tasks.filter((t) => t.status === 'To Do').length;
-    const inProgress = tasks.filter((t) => t.status === 'In Progress').length;
-    const done = tasks.filter((t) => t.status === 'Done').length;
-    const overdue = tasks.filter((t) => t.status !== 'Done' && t.deadline && new Date(t.deadline) < new Date()).length;
+    const todo = tasks.filter((taskItem) => taskItem.status === 'To Do').length;
+    const inProgress = tasks.filter((taskItem) => taskItem.status === 'In Progress').length;
+    const done = tasks.filter((taskItem) => taskItem.status === 'Done').length;
+    const overdue = tasks.filter((taskItem) => taskItem.status !== 'Done' && taskItem.deadline && new Date(taskItem.deadline) < new Date()).length;
 
     const statusChartData = [
-      { name: 'To Do', value: todo },
-      { name: 'In Progress', value: inProgress },
-      { name: 'Done', value: done },
+      { name: statusLabel('To Do'), value: todo },
+      { name: statusLabel('In Progress'), value: inProgress },
+      { name: statusLabel('Done'), value: done },
     ];
 
     const priorityChartData = [
-      { name: 'Low', value: tasks.filter((t) => t.priority === 'Low').length },
-      { name: 'Medium', value: tasks.filter((t) => t.priority === 'Medium').length },
-      { name: 'High', value: tasks.filter((t) => t.priority === 'High').length },
-      { name: 'Urgent', value: tasks.filter((t) => t.priority === 'Urgent').length },
+      { name: statusLabel('Low'), value: tasks.filter((taskItem) => taskItem.priority === 'Low').length },
+      { name: statusLabel('Medium'), value: tasks.filter((taskItem) => taskItem.priority === 'Medium').length },
+      { name: statusLabel('High'), value: tasks.filter((taskItem) => taskItem.priority === 'High').length },
+      { name: statusLabel('Urgent'), value: tasks.filter((taskItem) => taskItem.priority === 'Urgent').length },
     ];
 
     return { total, todo, inProgress, done, overdue, statusChartData, priorityChartData };
-  }, [tasks]);
+  }, [tasks, statusLabel]);
 
   // 3. Workload Statistics & Computations
   const workloadStats = React.useMemo(() => {
     return employees.map((emp) => {
-      const empTasks = tasks.filter((t) => t.assigned_to === emp.id);
-      const activeTasks = empTasks.filter((t) => t.status !== 'Done').length;
-      const overdueTasks = empTasks.filter((t) => t.status !== 'Done' && t.deadline && new Date(t.deadline) < new Date()).length;
-      const highPriorityTasks = empTasks.filter((t) => t.priority === 'High' || t.priority === 'Urgent').length;
+      const empTasks = tasks.filter((taskItem) => taskItem.assigned_to === emp.id);
+      const activeTasks = empTasks.filter((taskItem) => taskItem.status !== 'Done').length;
+      const overdueTasks = empTasks.filter((taskItem) => taskItem.status !== 'Done' && taskItem.deadline && new Date(taskItem.deadline) < new Date()).length;
+      const highPriorityTasks = empTasks.filter((taskItem) => taskItem.priority === 'High' || taskItem.priority === 'Urgent').length;
 
       return {
         name: emp.full_name,
@@ -156,11 +161,18 @@ const ReportsPage: React.FC = () => {
 
   // Exports
   const handleProjectExport = () => {
-    const headers = ['Project Name', 'Project Code', 'Status', 'Tasks Count', 'Completion Rate (%)', 'Overdue Tasks'];
+    const headers = [
+      t('Tên Dự án', 'Project Name'),
+      t('Mã code', 'Project Code'),
+      t('Trạng thái', 'Status'),
+      t('Tổng số Task', 'Tasks Count'),
+      t('Tỷ lệ hoàn thành (%)', 'Completion Rate (%)'),
+      t('Task quá hạn', 'Overdue Tasks'),
+    ];
     const rows = projectStats.list.map((p) => [
       p.name,
       p.project_code || '—',
-      p.status,
+      statusLabel(p.status),
       p.totalTasks,
       p.progress,
       p.overdueTasks,
@@ -169,19 +181,30 @@ const ReportsPage: React.FC = () => {
   };
 
   const handleTaskExport = () => {
-    const headers = ['Task Title', 'Status', 'Priority', 'Project ID', 'Deadline'];
-    const rows = tasks.map((t) => [
-      t.title || t.name,
-      t.status,
-      t.priority,
-      t.project_id || '—',
-      t.deadline ? new Date(t.deadline).toLocaleDateString('vi-VN') : '—',
+    const headers = [
+      t('Tên công việc', 'Task Title'),
+      t('Trạng thái', 'Status'),
+      t('Độ ưu tiên', 'Priority'),
+      t('Mã dự án', 'Project ID'),
+      t('Hạn chót', 'Deadline'),
+    ];
+    const rows = tasks.map((taskItem) => [
+      taskItem.title || taskItem.name,
+      statusLabel(taskItem.status),
+      statusLabel(taskItem.priority),
+      taskItem.project_id || '—',
+      taskItem.deadline ? formatDate(taskItem.deadline) : '—',
     ]);
     exportToCsv('TasksDistributionReport.csv', headers, rows);
   };
 
   const handleWorkloadExport = () => {
-    const headers = ['Employee Name', 'Active Tasks', 'Overdue Tasks', 'High Priority Tasks'];
+    const headers = [
+      t('Tên Nhân viên', 'Employee Name'),
+      t('Task đang làm', 'Active Tasks'),
+      t('Task vượt deadline', 'Overdue Tasks'),
+      t('Task khẩn cấp / Cao', 'High Priority Tasks'),
+    ];
     const rows = workloadStats.map((w) => [
       w.name,
       w.activeTasks,
@@ -194,7 +217,10 @@ const ReportsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6 font-sans pb-12">
-        <PageHeader title="Báo cáo & Phân tích (Reports)" description="Đang tải dữ liệu tổng hợp..." />
+        <PageHeader
+          title={t('Báo cáo & Phân tích', 'Reports & Analytics')}
+          description={t('Đang tải dữ liệu tổng hợp...', 'Loading aggregated analytics...')}
+        />
         <SkeletonCard />
       </div>
     );
@@ -204,13 +230,13 @@ const ReportsPage: React.FC = () => {
     <div className="space-y-6 font-sans pb-12">
       {/* Header */}
       <PageHeader
-        title="Báo cáo & Phân tích (Reports)"
-        description="Tổng hợp chỉ số hiệu suất doanh nghiệp, tiến độ dự án và phân tích khối lượng công việc"
+        title={t('Báo cáo & Phân tích', 'Reports & Analytics')}
+        description={t('Tổng hợp chỉ số hiệu suất doanh nghiệp, tiến độ dự án và phân tích khối lượng công việc', 'Enterprise performance KPIs, project progress, and team workload analysis')}
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: 'Overview', href: '/dashboard' },
-              { label: 'Reports' },
+              { label: t('Tổng quan', 'Overview'), href: '/dashboard' },
+              { label: t('Báo cáo', 'Reports') },
             ]}
           />
         }
@@ -221,11 +247,11 @@ const ReportsPage: React.FC = () => {
         <CardContent className="p-2 border-b border-border/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-accent/20">
           <div className="flex flex-wrap gap-1.5">
             {[
-              { id: 'projects', label: 'Báo cáo Dự án' },
-              { id: 'tasks', label: 'Báo cáo Công việc' },
-              { id: 'workload', label: 'Tải lượng Nhân sự' },
-              { id: 'vacations', label: 'Báo cáo Nghỉ phép' },
-              { id: 'agile', label: 'Phân tích Agile' },
+              { id: 'projects', label: t('Báo cáo Dự án', 'Project Reports') },
+              { id: 'tasks', label: t('Báo cáo Công việc', 'Task Reports') },
+              { id: 'workload', label: t('Tải lượng Nhân sự', 'Employee Workload') },
+              { id: 'vacations', label: t('Báo cáo Nghỉ phép', 'Leave Reports') },
+              { id: 'agile', label: t('Phân tích Agile', 'Agile Analytics') },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -244,9 +270,9 @@ const ReportsPage: React.FC = () => {
             size="sm"
             leftIcon={<Download className="h-3.5 w-3.5" />}
             onClick={handleExportExcel}
-            className="border-emerald-200 dark:border-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/10 text-emerald-600 hover:text-emerald-700 shrink-0 font-bold"
+            className="w-full sm:w-auto border-emerald-200 dark:border-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/10 text-emerald-600 hover:text-emerald-700 shrink-0 font-bold"
           >
-            Xuất Excel Quality Report
+            {t('Xuất Báo cáo Excel', 'Export Excel Report')}
           </Button>
         </CardContent>
       </Card>
@@ -259,25 +285,25 @@ const ReportsPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Tổng số Dự án</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{t('Tổng số Dự án', 'Total Projects')}</span>
                   <p className="text-2xl font-black text-text-primary mt-2">{projectStats.total}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Đang hoạt động (Active)</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{statusLabel('Active')}</span>
                   <p className="text-2xl font-black text-emerald-500 mt-2">{projectStats.active}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Đã hoàn thành</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{statusLabel('Completed')}</span>
                   <p className="text-2xl font-black text-sky-500 mt-2">{projectStats.completed}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Đang tạm dừng (Suspended)</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{statusLabel('Suspended')}</span>
                   <p className="text-2xl font-black text-amber-500 mt-2">{projectStats.atRisk}</p>
                 </CardContent>
               </Card>
@@ -286,10 +312,10 @@ const ReportsPage: React.FC = () => {
             <Card className="overflow-hidden">
               <CardHeader className="border-b border-border/60 flex flex-row items-center justify-between">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary">
-                  Hiệu suất hoàn thành danh mục dự án
+                  {t('Hiệu suất hoàn thành danh mục dự án', 'Project Portfolio Completion Performance')}
                 </CardTitle>
                 <Button variant="outline" size="sm" leftIcon={<Download className="h-3.5 w-3.5" />} onClick={handleProjectExport}>
-                  Xuất CSV
+                  {t('Xuất CSV', 'Export CSV')}
                 </Button>
               </CardHeader>
               <CardContent className="p-0">
@@ -297,12 +323,12 @@ const ReportsPage: React.FC = () => {
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-accent/40 text-text-secondary border-b border-border">
-                        <th className="p-3 font-semibold">Tên Dự án</th>
-                        <th className="p-3 font-semibold">Mã code</th>
-                        <th className="p-3 font-semibold">Trạng thái</th>
-                        <th className="p-3 font-semibold text-center">Tổng số Task</th>
-                        <th className="p-3 font-semibold text-center">Tỷ lệ hoàn thành</th>
-                        <th className="p-3 font-semibold text-center">Task quá hạn</th>
+                        <th className="p-3 font-semibold">{t('Tên Dự án', 'Project Name')}</th>
+                        <th className="p-3 font-semibold">{t('Mã code', 'Project Code')}</th>
+                        <th className="p-3 font-semibold">{t('Trạng thái', 'Status')}</th>
+                        <th className="p-3 font-semibold text-center">{t('Tổng số Task', 'Total Tasks')}</th>
+                        <th className="p-3 font-semibold text-center">{t('Tỷ lệ hoàn thành', 'Completion Rate')}</th>
+                        <th className="p-3 font-semibold text-center">{t('Task quá hạn', 'Overdue Tasks')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
@@ -311,9 +337,7 @@ const ReportsPage: React.FC = () => {
                           <td className="p-3 font-semibold text-text-primary">{p.name}</td>
                           <td className="p-3 text-text-secondary font-mono uppercase">{p.project_code || '—'}</td>
                           <td className="p-3">
-                            <Badge variant={p.status === 'Active' ? 'success' : p.status === 'Completed' ? 'primary' : 'warning'} size="sm">
-                              {p.status}
-                            </Badge>
+                            <StatusBadge status={p.status} size="sm" />
                           </td>
                           <td className="p-3 text-center text-text-secondary">{p.totalTasks}</td>
                           <td className="p-3 text-center">
@@ -326,9 +350,9 @@ const ReportsPage: React.FC = () => {
                           </td>
                           <td className="p-3 text-center">
                             {p.overdueTasks > 0 ? (
-                              <span className="text-rose-500 font-bold">{p.overdueTasks} task</span>
+                              <span className="text-rose-500 font-bold">{p.overdueTasks} {t('task', 'tasks')}</span>
                             ) : (
-                              <span className="text-emerald-500 font-semibold">✓ Đạt</span>
+                              <span className="text-emerald-500 font-semibold">✓ {t('Đạt', 'On Track')}</span>
                             )}
                           </td>
                         </tr>
@@ -347,25 +371,25 @@ const ReportsPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Tổng số công việc</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{t('Tổng số công việc', 'Total Tasks')}</span>
                   <p className="text-2xl font-black text-text-primary mt-2">{taskStats.total}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Đã hoàn thành</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{statusLabel('Done')}</span>
                   <p className="text-2xl font-black text-emerald-500 mt-2">{taskStats.done}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Đang tiến hành</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{statusLabel('In Progress')}</span>
                   <p className="text-2xl font-black text-sky-500 mt-2">{taskStats.inProgress}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Công việc Quá hạn</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{t('Công việc Quá hạn', 'Overdue Tasks')}</span>
                   <p className="text-2xl font-black text-rose-500 mt-2">{taskStats.overdue}</p>
                 </CardContent>
               </Card>
@@ -375,7 +399,7 @@ const ReportsPage: React.FC = () => {
               {/* Pie Chart: Status Breakdown */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary">Trạng thái Công việc</CardTitle>
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary">{t('Trạng thái Công việc', 'Task Status Breakdown')}</CardTitle>
                 </CardHeader>
                 <CardContent className="h-64 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
@@ -403,7 +427,7 @@ const ReportsPage: React.FC = () => {
               {/* Bar Chart: Priority Distribution */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary">Mức độ ưu tiên</CardTitle>
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary">{t('Mức độ ưu tiên', 'Priority Distribution')}</CardTitle>
                 </CardHeader>
                 <CardContent className="h-64 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
@@ -424,7 +448,7 @@ const ReportsPage: React.FC = () => {
 
             <div className="flex items-center justify-end">
               <Button variant="outline" size="sm" leftIcon={<Download className="h-3.5 w-3.5" />} onClick={handleTaskExport}>
-                Xuất danh sách công việc (CSV)
+                {t('Xuất danh sách công việc (CSV)', 'Export Task List (CSV)')}
               </Button>
             </div>
           </div>
@@ -436,10 +460,10 @@ const ReportsPage: React.FC = () => {
             <Card>
               <CardHeader className="border-b border-border/60 flex flex-row items-center justify-between">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary">
-                  Thống kê tải lượng công việc của nhân sự
+                  {t('Thống kê tải lượng công việc của nhân sự', 'Employee Workload Statistics')}
                 </CardTitle>
                 <Button variant="outline" size="sm" leftIcon={<Download className="h-3.5 w-3.5" />} onClick={handleWorkloadExport}>
-                  Xuất dữ liệu tải lượng (CSV)
+                  {t('Xuất dữ liệu tải lượng (CSV)', 'Export Workload Data (CSV)')}
                 </Button>
               </CardHeader>
               <CardContent className="p-0">
@@ -447,10 +471,10 @@ const ReportsPage: React.FC = () => {
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-accent/40 text-text-secondary border-b border-border">
-                        <th className="p-3 font-semibold">Tên Nhân viên</th>
-                        <th className="p-3 font-semibold text-center w-36">Task đang làm (Active)</th>
-                        <th className="p-3 font-semibold text-center w-36">Task khẩn cấp / Cao</th>
-                        <th className="p-3 font-semibold text-center w-36">Task vượt deadline</th>
+                        <th className="p-3 font-semibold">{t('Tên Nhân viên', 'Employee Name')}</th>
+                        <th className="p-3 font-semibold text-center w-36">{t('Task đang làm', 'Active Tasks')}</th>
+                        <th className="p-3 font-semibold text-center w-36">{t('Task khẩn cấp / Cao', 'High / Urgent Tasks')}</th>
+                        <th className="p-3 font-semibold text-center w-36">{t('Task vượt deadline', 'Overdue Tasks')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
@@ -460,16 +484,16 @@ const ReportsPage: React.FC = () => {
                           <td className="p-3 text-center text-text-secondary font-bold">{w.activeTasks}</td>
                           <td className="p-3 text-center">
                             {w.highPriorityTasks > 0 ? (
-                              <span className="text-amber-500 font-bold">{w.highPriorityTasks} task</span>
+                              <span className="text-amber-500 font-bold">{w.highPriorityTasks} {t('task', 'tasks')}</span>
                             ) : (
                               <span className="text-text-muted">—</span>
                             )}
                           </td>
                           <td className="p-3 text-center">
                             {w.overdueTasks > 0 ? (
-                              <span className="text-rose-500 font-bold">{w.overdueTasks} task</span>
+                              <span className="text-rose-500 font-bold">{w.overdueTasks} {t('task', 'tasks')}</span>
                             ) : (
-                              <span className="text-emerald-500 font-semibold">Không</span>
+                              <span className="text-emerald-500 font-semibold">{t('Không', 'None')}</span>
                             )}
                           </td>
                         </tr>
@@ -488,19 +512,19 @@ const ReportsPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Tổng đơn phép</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{t('Tổng đơn phép', 'Total Leave Requests')}</span>
                   <p className="text-2xl font-black text-text-primary mt-2">{vacationStats.total}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Đang chờ duyệt</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{statusLabel('Pending')}</span>
                   <p className="text-2xl font-black text-amber-500 mt-2">{vacationStats.pending}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <span className="text-[10px] uppercase font-bold text-text-muted">Đã duyệt (Approved)</span>
+                  <span className="text-[10px] uppercase font-bold text-text-muted">{statusLabel('Approved')}</span>
                   <p className="text-2xl font-black text-emerald-500 mt-2">{vacationStats.approved}</p>
                 </CardContent>
               </Card>
@@ -509,22 +533,22 @@ const ReportsPage: React.FC = () => {
             <Card className="overflow-hidden">
               <CardHeader className="border-b border-border/60">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary">
-                  Danh sách vắng mặt gần đây
+                  {t('Danh sách vắng mặt gần đây', 'Recent Leave Requests')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 {vacations.length === 0 ? (
-                  <p className="text-xs text-text-muted py-8 text-center">Không tìm thấy dữ liệu nghỉ phép.</p>
+                  <p className="text-xs text-text-muted py-8 text-center">{t('Không tìm thấy dữ liệu nghỉ phép.', 'No leave records found.')}</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="bg-accent/40 text-text-secondary border-b border-border">
-                          <th className="p-3 font-semibold">Nhân sự</th>
-                          <th className="p-3 font-semibold">Loại phép</th>
-                          <th className="p-3 font-semibold">Bắt đầu</th>
-                          <th className="p-3 font-semibold">Kết thúc</th>
-                          <th className="p-3 font-semibold">Trạng thái</th>
+                          <th className="p-3 font-semibold">{t('Nhân sự', 'Employee')}</th>
+                          <th className="p-3 font-semibold">{t('Loại phép', 'Leave Type')}</th>
+                          <th className="p-3 font-semibold">{t('Bắt đầu', 'Start Date')}</th>
+                          <th className="p-3 font-semibold">{t('Kết thúc', 'End Date')}</th>
+                          <th className="p-3 font-semibold">{t('Trạng thái', 'Status')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
@@ -532,14 +556,12 @@ const ReportsPage: React.FC = () => {
                           const emp = employees.find((e) => e.id === v.requested_by);
                           return (
                             <tr key={v.id} className="hover:bg-accent/20 transition-colors">
-                              <td className="p-3 font-semibold text-text-primary">{emp?.full_name || 'Nhân sự'}</td>
-                              <td className="p-3 text-text-secondary">{v.type}</td>
-                              <td className="p-3 text-text-secondary">{new Date(v.start_date).toLocaleDateString('vi-VN')}</td>
-                              <td className="p-3 text-text-secondary">{new Date(v.end_date).toLocaleDateString('vi-VN')}</td>
+                              <td className="p-3 font-semibold text-text-primary">{emp?.full_name || t('Nhân sự', 'Staff')}</td>
+                              <td className="p-3 text-text-secondary">{statusLabel(v.type)}</td>
+                              <td className="p-3 text-text-secondary">{formatDate(v.start_date)}</td>
+                              <td className="p-3 text-text-secondary">{formatDate(v.end_date)}</td>
                               <td className="p-3">
-                                <Badge variant={v.status === 'Approved' || v.status === 'HR Approved' ? 'success' : v.status === 'Pending' ? 'warning' : 'danger'} size="sm">
-                                  {v.status}
-                                </Badge>
+                                <StatusBadge status={v.status} size="sm" />
                               </td>
                             </tr>
                           );
@@ -563,6 +585,7 @@ const ReportsPage: React.FC = () => {
 };
 
 const AgileReportsSection: React.FC<{ projects: any[] }> = ({ projects }) => {
+  const { t } = useSettings();
   const [selectedProjectId, setSelectedProjectId] = React.useState<number | ''>('');
 
   React.useEffect(() => {
@@ -588,7 +611,7 @@ const AgileReportsSection: React.FC<{ projects: any[] }> = ({ projects }) => {
   }, [velocity]);
 
   if (projects.length === 0) {
-    return <div className="text-center py-6 text-text-muted">Không tìm thấy dự án nào.</div>;
+    return <div className="text-center py-6 text-text-muted">{t('Không tìm thấy dự án nào.', 'No projects found.')}</div>;
   }
 
   return (
@@ -596,8 +619,8 @@ const AgileReportsSection: React.FC<{ projects: any[] }> = ({ projects }) => {
       {/* Project Selector Box */}
       <div className="p-4 rounded-xl border border-border bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h4 className="font-bold text-text-primary text-sm">Lựa chọn dự án phân tích</h4>
-          <p className="text-text-muted mt-0.5 text-[11px]">Xem biểu đồ Burndown của Sprint hiện tại và biểu đồ Velocity lịch sử.</p>
+          <h4 className="font-bold text-text-primary text-sm">{t('Lựa chọn dự án phân tích', 'Select Project to Analyze')}</h4>
+          <p className="text-text-muted mt-0.5 text-[11px]">{t('Xem biểu đồ Burndown của Sprint hiện tại và biểu đồ Velocity lịch sử.', 'View current Sprint Burndown and historical Velocity charts.')}</p>
         </div>
         <div className="w-full sm:max-w-xs shrink-0">
           <Select
@@ -615,7 +638,7 @@ const AgileReportsSection: React.FC<{ projects: any[] }> = ({ projects }) => {
         ) : (
           <Card>
             <CardContent className="h-64 flex items-center justify-center text-xs text-text-muted">
-              Chưa có Sprint nào thuộc dự án này.
+              {t('Chưa có Sprint nào thuộc dự án này.', 'No sprints found for this project.')}
             </CardContent>
           </Card>
         )}
@@ -624,12 +647,12 @@ const AgileReportsSection: React.FC<{ projects: any[] }> = ({ projects }) => {
         <Card>
           <CardHeader>
             <CardTitle className="text-xs font-bold uppercase tracking-wider text-text-secondary">
-              Biểu đồ Velocity (Các Sprint đã qua)
+              {t('Biểu đồ Velocity (Các Sprint đã qua)', 'Velocity Chart (Completed Sprints)')}
             </CardTitle>
           </CardHeader>
           <CardContent className="h-64 flex items-center justify-center">
             {velocityData.length === 0 ? (
-              <div className="text-[11px] text-text-muted">Chưa ghi nhận lịch sử hoàn thành Sprint nào.</div>
+              <div className="text-[11px] text-text-muted">{t('Chưa ghi nhận lịch sử hoàn thành Sprint nào.', 'No completed sprint history recorded yet.')}</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={velocityData}>

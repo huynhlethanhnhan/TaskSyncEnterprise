@@ -39,7 +39,9 @@ from app.models.task_comment import TaskComment
 from app.models.team import Team
 from app.models.vacation import Vacation
 
-DEMO_PASSWORD = "TaskSync@2026"
+from app.core.settings import settings
+
+DEMO_PASSWORD = settings.SEED_ADMIN_PASSWORD.get_secret_value()
 
 
 def _validate_destructive_reset(

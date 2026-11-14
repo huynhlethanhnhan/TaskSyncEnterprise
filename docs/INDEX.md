@@ -10,6 +10,7 @@ Thư mục này là nguồn tài liệu kỹ thuật duy nhất của nhánh `de
 | Chạy code khi phát triển | [Môi trường develop](development/DEVELOPMENT_GUIDE.md) |
 | Chạy bằng Docker hoặc máy local | [Docker, SQL Server và localhost](deployment/DOCKER_DATABASE_GUIDE.md) |
 | Hiểu nghiệp vụ Project–Epic–Sprint–Task | [Mô hình nghiệp vụ](architecture/DOMAIN_MODEL.md) |
+| Xem báo cáo chi tiết CSDL & HRM | [Báo cáo tổng hợp CSDL](database/BAO_CAO_TONG_HOP_CSDL.md) |
 | Tạo dữ liệu kiểm thử | [Chiến lược Seed Data](database/SEED_DATA_STRATEGY.md) |
 | Xem kinh nghiệm kỹ thuật đã tích lũy | [Engineering Learnings](learning/ENGINEERING_LEARNINGS.md) |
 | Xem kết quả audit hiện tại | [Báo cáo tổng hợp](reports/CONSOLIDATED_AUDIT.md) |

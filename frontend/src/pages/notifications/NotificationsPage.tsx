@@ -6,6 +6,7 @@ import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardContent } from '../../components/common/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/common/Badge';
+import { IconActionButton } from '../../components/common/EntityActions';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/feedback/ErrorState';
@@ -16,12 +17,14 @@ import {
 } from '../../hooks/useNotifications';
 import { useTasks } from '../../hooks/useTasks';
 import { useToast } from '../../providers/ToastProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { RelativeTime } from '../../components/data-display/RelativeTime';
 import { cn } from '../../utils/cn';
 
 const NotificationsPage: React.FC = () => {
   const toast = useToast();
   const navigate = useNavigate();
+  const { t } = useSettings();
 
   const { data: notifications = [], isLoading, isError, refetch } = useNotifications();
   const { data: tasks = [] } = useTasks();
@@ -70,18 +73,18 @@ const NotificationsPage: React.FC = () => {
     e.stopPropagation();
     try {
       await markRead.mutateAsync(id);
-      toast.success('Đã đánh dấu thông báo là đã đọc');
+      toast.success(t('Đã đánh dấu thông báo là đã đọc', 'Notification marked as read'));
     } catch {
-      toast.error('Lỗi khi đánh dấu thông báo');
+      toast.error(t('Lỗi khi đánh dấu thông báo', 'Error marking notification'));
     }
   };
 
   const handleMarkAll = async () => {
     try {
       await markAllRead.mutateAsync();
-      toast.success('Đã đánh dấu tất cả thông báo là đã đọc');
+      toast.success(t('Đã đánh dấu tất cả thông báo là đã đọc', 'All notifications marked as read'));
     } catch {
-      toast.error('Lỗi khi cập nhật danh sách thông báo');
+      toast.error(t('Lỗi khi cập nhật danh sách thông báo', 'Error updating notifications'));
     }
   };
 
@@ -95,7 +98,24 @@ const NotificationsPage: React.FC = () => {
       const msg = item.message.toLowerCase();
       const title = item.title.toLowerCase();
 
-      if (title.includes('nghỉ phép') || msg.includes('nghỉ phép') || title.includes('vacation')) {
+      if (
+        item.type === 'PASSWORD_RESET_REQUEST' ||
+        title.includes('đặt lại mật khẩu') ||
+        title.includes('password reset')
+      ) {
+        let requesterId: number | null = null;
+        if (item.context_json) {
+          try {
+            const ctx = JSON.parse(item.context_json);
+            if (typeof ctx?.requester_id === 'number') {
+              requesterId = ctx.requester_id;
+            }
+          } catch {
+            // fallback to directory
+          }
+        }
+        navigate(requesterId ? `/employees/${requesterId}` : '/employees');
+      } else if (title.includes('nghỉ phép') || msg.includes('nghỉ phép') || title.includes('vacation')) {
         navigate('/vacations');
       } else {
         const matchedTask = tasks.find(t => msg.includes((t.title || t.name || '').toLowerCase()));
@@ -113,7 +133,7 @@ const NotificationsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="space-y-6 font-sans">
-        <PageHeader title="Thông báo Hệ thống" description="Đang tải hộp thư thông báo..." />
+        <PageHeader title={t('Thông báo Hệ thống', 'System Notifications')} description={t('Đang tải hộp thư thông báo...', 'Loading notifications inbox...')} />
         <SkeletonCard />
       </div>
     );
@@ -122,10 +142,10 @@ const NotificationsPage: React.FC = () => {
   if (isError) {
     return (
       <div className="space-y-6 font-sans">
-        <PageHeader title="Thông báo Hệ thống" description="Hộp thư thông báo" />
+        <PageHeader title={t('Thông báo Hệ thống', 'System Notifications')} description={t('Hộp thư thông báo', 'Notifications Inbox')} />
         <ErrorState
-          title="Không thể tải thông báo"
-          message="Đã xảy ra lỗi khi kết nối đến máy chủ backend."
+          title={t('Không thể tải thông báo', 'Unable to load notifications')}
+          message={t('Đã xảy ra lỗi khi kết nối đến máy chủ backend.', 'An error occurred while connecting to the server.')}
           onRetry={() => refetch()}
         />
       </div>
@@ -165,7 +185,7 @@ const NotificationsPage: React.FC = () => {
                     <h4 className="text-xs font-bold text-text-primary truncate">{item.title}</h4>
                     {!item.is_read && (
                       <Badge variant="danger" size="sm" showDot>
-                        Mới
+                        {t('Mới', 'New')}
                       </Badge>
                     )}
                   </div>
@@ -174,21 +194,19 @@ const NotificationsPage: React.FC = () => {
                     <RelativeTime value={item.created_at} />
                     <span className="h-1 w-1 rounded-full bg-border" />
                     <span className="flex items-center gap-0.5 hover:underline">
-                      Xem chi tiết <ExternalLink className="h-2.5 w-2.5" />
+                      {t('Xem chi tiết', 'View details')} <ExternalLink className="h-2.5 w-2.5" />
                     </span>
                   </div>
                 </div>
               </div>
 
               {!item.is_read && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  leftIcon={<Check className="h-3.5 w-3.5" />}
+                <IconActionButton
+                  tone="neutral"
+                  icon={<Check className="h-3.5 w-3.5" aria-hidden="true" />}
+                  label={t('Đánh dấu đã đọc', 'Mark as Read')}
                   onClick={(e) => handleMarkOne(e, item.id)}
-                >
-                  Đọc
-                </Button>
+                />
               )}
             </div>
           ))}
@@ -201,13 +219,13 @@ const NotificationsPage: React.FC = () => {
     <div className="space-y-6 font-sans pb-12">
       {/* Page Header */}
       <PageHeader
-        title="Thông báo Hệ thống"
-        description="Theo dõi cập nhật phân công công việc, biến động dự án và nhắc nhở thời hạn"
+        title={t('Thông báo Hệ thống', 'System Notifications')}
+        description={t('Theo dõi cập nhật phân công công việc, biến động dự án và nhắc nhở thời hạn', 'Track task assignments, project updates, and deadline reminders')}
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Thông báo' },
+              { label: t('Bảng điều khiển', 'Dashboard'), href: '/dashboard' },
+              { label: t('Thông báo', 'Notifications') },
             ]}
           />
         }
@@ -219,7 +237,7 @@ const NotificationsPage: React.FC = () => {
               leftIcon={<ArrowLeft className="h-4 w-4" />}
               onClick={() => navigate(-1)}
             >
-              Quay lại
+              {t('Quay lại', 'Back')}
             </Button>
             {unreadCount > 0 && (
               <Button
@@ -229,7 +247,7 @@ const NotificationsPage: React.FC = () => {
                 onClick={handleMarkAll}
                 isLoading={markAllRead.isPending}
               >
-                Đánh dấu tất cả đã đọc
+                {t('Đánh dấu tất cả đã đọc', 'Mark All as Read')}
               </Button>
             )}
           </div>
@@ -241,25 +259,25 @@ const NotificationsPage: React.FC = () => {
         <CardContent className="p-4 flex items-center justify-between bg-accent/10">
           <div className="flex items-center gap-2">
             {[
-              { id: 'all', label: `Tất cả (${notifications.length})` },
-              { id: 'unread', label: `Chưa đọc (${unreadCount})` },
-              { id: 'read', label: `Đã đọc (${notifications.length - unreadCount})` },
-            ].map((t) => (
+              { id: 'all', label: `${t('Tất cả', 'All')} (${notifications.length})` },
+              { id: 'unread', label: `${t('Chưa đọc', 'Unread')} (${unreadCount})` },
+              { id: 'read', label: `${t('Đã đọc', 'Read')} (${notifications.length - unreadCount})` },
+            ].map((tabItem) => (
               <button
-                key={t.id}
+                key={tabItem.id}
                 type="button"
-                onClick={() => setFilter(t.id as any)}
+                onClick={() => setFilter(tabItem.id as any)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                  filter === t.id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-text-muted hover:text-text-primary'
+                  filter === tabItem.id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-text-muted hover:text-text-primary'
                 }`}
               >
-                {t.label}
+                {tabItem.label}
               </button>
             ))}
           </div>
 
           <Badge variant={unreadCount > 0 ? 'warning' : 'success'} showDot>
-            {unreadCount} Tin nhắn mới
+            {unreadCount} {t('Tin nhắn mới', 'Unread')}
           </Badge>
         </CardContent>
       </Card>
@@ -270,15 +288,19 @@ const NotificationsPage: React.FC = () => {
           {filteredNotifications.length === 0 ? (
             <div className="py-12">
               <EmptyState
-                title="Không có thông báo nào"
-                description="Hộp thư thông báo của bạn hiện đang trống."
+                title={t('Không có thông báo nào', 'No Notifications')}
+                description={t('Hộp thư thông báo của bạn đã được đồng bộ và hiện đang trống.', 'Your notification inbox is synced and currently empty.')}
+                actionLabel={t('Làm mới hộp thư', 'Refresh Inbox')}
+                onAction={() => {
+                  void refetch();
+                }}
               />
             </div>
           ) : (
             <div className="space-y-4 pb-4">
-              {renderGroupSection('Hôm nay', groupedNotifications.today)}
-              {renderGroupSection('Hôm qua', groupedNotifications.yesterday)}
-              {renderGroupSection('Trước đó', groupedNotifications.earlier)}
+              {renderGroupSection(t('Hôm nay', 'Today'), groupedNotifications.today)}
+              {renderGroupSection(t('Hôm qua', 'Yesterday'), groupedNotifications.yesterday)}
+              {renderGroupSection(t('Trước đó', 'Earlier'), groupedNotifications.earlier)}
             </div>
           )}
         </CardContent>

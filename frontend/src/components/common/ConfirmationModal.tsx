@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Modal, type ModalProps } from './Modal';
 import { Button } from '../ui/Button';
+import { useSettings } from '../../providers/SettingsProvider';
 
 export interface ConfirmationModalProps extends Omit<ModalProps, 'children' | 'footer'> {
   message: string;
@@ -13,27 +14,28 @@ export interface ConfirmationModalProps extends Omit<ModalProps, 'children' | 'f
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isOpen,
   onClose,
-  title = 'Xác nhận hành động',
+  title,
   message,
-  confirmText = 'Xác nhận',
-  cancelText = 'Hủy',
+  confirmText,
+  cancelText,
   onConfirm,
   isLoading,
   ...props
 }) => {
+  const { t } = useSettings();
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={title}
+      title={title || t('Xác nhận hành động', 'Confirm Action')}
       size="sm"
       footer={
         <>
           <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
-            {cancelText}
+            {cancelText || t('Hủy', 'Cancel')}
           </Button>
           <Button variant="danger" size="sm" onClick={onConfirm} isLoading={isLoading}>
-            {confirmText}
+            {confirmText || t('Xác nhận', 'Confirm')}
           </Button>
         </>
       }

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { useSprintAnalytics } from '../../hooks/useSprintBacklog';
 import { Card, CardHeader, CardTitle, CardContent } from '../common/Card';
+import { useSettings } from '../../providers/SettingsProvider';
 import { Flame, TrendingDown, CheckCircle, Target } from 'lucide-react';
 
 interface SprintBurndownChartProps {
@@ -9,6 +10,7 @@ interface SprintBurndownChartProps {
 }
 
 export const SprintBurndownChart: React.FC<SprintBurndownChartProps> = ({ sprintId }) => {
+  const { t, formatDate } = useSettings();
   const { data: analytics, isLoading, isError } = useSprintAnalytics(sprintId);
 
   const chartData = React.useMemo(() => {
@@ -21,10 +23,7 @@ export const SprintBurndownChart: React.FC<SprintBurndownChartProps> = ({ sprint
     return snapshots.map((s, index) => {
       // Calculate ideal linear burndown
       const idealRemaining = Math.max(0, Math.round(totalSP - (totalSP / totalDays) * index));
-      const formattedDate = new Date(s.snapshot_date).toLocaleDateString('vi-VN', {
-        month: 'short',
-        day: 'numeric',
-      });
+      const formattedDate = formatDate(s.snapshot_date);
 
       return {
         date: formattedDate,
@@ -34,14 +33,14 @@ export const SprintBurndownChart: React.FC<SprintBurndownChartProps> = ({ sprint
         completedSP: s.completed_story_points,
       };
     });
-  }, [analytics]);
+  }, [analytics, formatDate]);
 
   if (isLoading) {
-    return <div className="text-center py-8 text-xs text-text-muted">Đang tính toán dữ liệu Sprint Burndown Chart...</div>;
+    return <div className="text-center py-8 text-xs text-text-muted">{t('Đang tính toán dữ liệu Sprint Burndown Chart...', 'Calculating Sprint Burndown Chart...')}</div>;
   }
 
   if (isError || !analytics) {
-    return <div className="text-center py-6 text-xs text-text-muted">Không thể tải dữ liệu Burndown Chart.</div>;
+    return <div className="text-center py-6 text-xs text-text-muted">{t('Không thể tải dữ liệu Burndown Chart.', 'Unable to load Burndown Chart data.')}</div>;
   }
 
   const completionRate = analytics.total_story_points > 0
@@ -59,11 +58,11 @@ export const SprintBurndownChart: React.FC<SprintBurndownChartProps> = ({ sprint
           <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
               <CheckCircle className="h-3.5 w-3.5" />
-              Đã xong: {analytics.completed_story_points}/{analytics.total_story_points} SP ({completionRate}%)
+              {t('Đã xong:', 'Completed:')} {analytics.completed_story_points}/{analytics.total_story_points} SP ({completionRate}%)
             </span>
             <span className="flex items-center gap-1 text-primary font-semibold">
               <Target className="h-3.5 w-3.5" />
-              Capacity: {analytics.capacity} SP
+              {t('Capacity:', 'Capacity:')} {analytics.capacity} SP
             </span>
           </div>
         </div>
@@ -73,7 +72,7 @@ export const SprintBurndownChart: React.FC<SprintBurndownChartProps> = ({ sprint
         {chartData.length === 0 ? (
           <div className="py-12 text-center text-xs text-text-muted flex flex-col items-center gap-2">
             <TrendingDown className="h-8 w-8 text-text-muted/40" />
-            <span>Chưa có dữ liệu snapshot hàng ngày cho Sprint này. Kích hoạt Sprint để theo dõi tiến trình.</span>
+            <span>{t('Chưa có dữ liệu snapshot hàng ngày cho Sprint này. Kích hoạt Sprint để theo dõi tiến trình.', 'No daily snapshots recorded for this Sprint yet. Start the Sprint to track burndown.')}</span>
           </div>
         ) : (
           <div className="h-64 w-full text-xs">
@@ -91,10 +90,10 @@ export const SprintBurndownChart: React.FC<SprintBurndownChartProps> = ({ sprint
                   }}
                   formatter={(value: any, name: any) => [
                     `${value} SP`,
-                    name === 'actualRemaining' ? 'Thực tế còn lại' : 'Lý tưởng (Ideal)',
+                    name === 'actualRemaining' ? t('Thực tế còn lại', 'Actual Remaining') : t('Lý tưởng (Ideal)', 'Ideal Remaining'),
                   ]}
                 />
-                <Legend formatter={(value) => (value === 'actualRemaining' ? 'Thực tế còn lại (Actual)' : 'Tiến độ lý tưởng (Ideal)')} />
+                <Legend formatter={(value) => (value === 'actualRemaining' ? t('Thực tế còn lại (Actual)', 'Actual Remaining') : t('Tiến độ lý tưởng (Ideal)', 'Ideal Progress'))} />
                 <Line
                   type="monotone"
                   dataKey="idealRemaining"

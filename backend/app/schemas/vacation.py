@@ -40,6 +40,7 @@ class VacationUpdate(BaseModel):
     @classmethod
     def validate_status(cls, value: str) -> str:
         allowed = {
+            "Pending",
             "Manager Approved",
             "HR Approved",
             "Info Requested",

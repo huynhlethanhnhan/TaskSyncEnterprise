@@ -134,8 +134,8 @@ File kịch bản nguồn: [`Database/Scripts/01_create_tables_and_constraints.s
 ### TRỤ CỘT 3: TỐI ƯU HÓA TRUY VẤN (QUERY OPTIMIZATION)
 
 File kịch bản nguồn: 
-- [`Database/Indexes/06_query_optimization_indexes.sql`](file:///e:/TaskSyncEnterprise/Database/Indexes/06_query_optimization_indexes.sql)
-- [`Database/Procedures/04_stored_procedures.sql`](file:///e:/TaskSyncEnterprise/Database/Procedures/04_stored_procedures.sql)
+- [`Database/Indexes/05_query_optimization_indexes.sql`](file:///e:/TaskSyncEnterprise/Database/Indexes/05_query_optimization_indexes.sql)
+- [`Database/Procedures/03_stored_procedures.sql`](file:///e:/TaskSyncEnterprise/Database/Procedures/03_stored_procedures.sql)
 
 #### 3.1. Đánh chỉ mục trên Khóa ngoại (Foreign Key Indexes)
 *   **Lý thuyết:** SQL Server **không** tự động tạo index cho cột Foreign Key (chỉ tạo trên Primary Key).
@@ -195,7 +195,7 @@ File kịch bản nguồn:
 
 ### TRỤ CỘT 4: QUY TẮC TRUY VẤN VỀ RULES GLOBAL
 
-File kịch bản nguồn: [`Database/Procedures/05_views.sql`](file:///e:/TaskSyncEnterprise/Database/Procedures/04_views.sql)
+File kịch bản nguồn: [`Database/Procedures/04_views.sql`](file:///e:/TaskSyncEnterprise/Database/Procedures/04_views.sql)
 
 "Rules Global" là các quy tắc, chính sách bảo mật và lọc dữ liệu mang tính **toàn cục**, áp dụng xuyên suốt mọi câu truy vấn trong hệ thống.
 

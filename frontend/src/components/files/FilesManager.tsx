@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { Badge } from '../common/Badge';
 import { useToast } from '../../providers/ToastProvider';
 import { useAuth } from '../../providers/AuthProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { Search, Download, Trash2, FileIcon, FileText, ImageIcon, FileArchive, AlertCircle } from 'lucide-react';
 import api from '../../api/axios';
 
@@ -16,6 +17,7 @@ interface FilesManagerProps {
 export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module }) => {
   const toast = useToast();
   const { user } = useAuth();
+  const { t, formatDate } = useSettings();
 
   const roleStr = (user?.role || '').toLowerCase();
   const isMod = user?.role_id === 1 || user?.role_id === 2 || roleStr === 'admin' || roleStr === 'manager';
@@ -43,19 +45,19 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module })
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Tải tệp thành công!');
+      toast.success(t('Tải tệp thành công!', 'File downloaded!'));
     } catch {
-      toast.error('Lỗi tải tệp', 'Không thể tải xuống tệp tin này.');
+      toast.error(t('Lỗi tải tệp', 'Download Error'), t('Không thể tải xuống tệp tin này.', 'Unable to download this file.'));
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Xác nhận xóa tệp tin này? Hành động này sẽ loại bỏ tệp vĩnh viễn khỏi hệ thống.')) return;
+    if (!window.confirm(t('Xác nhận xóa tệp tin này? Hành động này sẽ loại bỏ tệp vĩnh viễn khỏi hệ thống.', 'Confirm deleting this file? This will permanently remove it.'))) return;
     try {
       await deleteMutation.mutateAsync(id);
-      toast.success('Đã xóa tệp tin thành công');
+      toast.success(t('Đã xóa tệp tin thành công', 'File deleted successfully'));
     } catch {
-      toast.error('Lỗi', 'Không thể xóa tệp tin này.');
+      toast.error(t('Lỗi', 'Error'), t('Không thể xóa tệp tin này.', 'Unable to delete this file.'));
     }
   };
 
@@ -76,7 +78,7 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module })
   }, [files, searchQuery, selectedModule]);
 
   if (isLoading) {
-    return <div className="text-center py-8 text-xs text-text-muted">Đang tải danh sách tài liệu...</div>;
+    return <div className="text-center py-8 text-xs text-text-muted">{t('Đang tải danh sách tài liệu...', 'Loading files...')}</div>;
   }
 
   return (
@@ -85,11 +87,11 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module })
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <CardTitle className="text-sm font-bold uppercase flex items-center gap-1.5">
             <FileText className="h-4 w-4 text-primary" />
-            Unified Files Registry ({filteredFiles.length})
+            {t('Kho Tài liệu Hợp nhất', 'Unified Files Registry')} ({filteredFiles.length})
           </CardTitle>
           <div className="w-full sm:max-w-xs relative">
             <Input
-              placeholder="Tìm kiếm theo tên tệp..."
+              placeholder={t('Tìm kiếm theo tên tệp...', 'Search by file name...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8"
@@ -108,7 +110,7 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module })
                 className="cursor-pointer select-none"
                 onClick={() => setSelectedModule(mod)}
               >
-                {mod === 'All' ? 'Tất cả nguồn' : mod}
+                {mod === 'All' ? t('Tất cả nguồn', 'All Sources') : mod}
               </Badge>
             ))}
           </div>
@@ -119,19 +121,19 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module })
         {filteredFiles.length === 0 ? (
           <div className="text-center py-12 text-text-muted flex flex-col items-center justify-center gap-2">
             <AlertCircle className="h-8 w-8 text-text-muted/60" />
-            <span>Không tìm thấy tài liệu nào.</span>
+            <span>{t('Không tìm thấy tài liệu nào.', 'No files found.')}</span>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-border/40 text-[10px] uppercase font-bold text-text-muted tracking-wider">
-                  <th className="pb-3 pl-2">Tên Tệp</th>
-                  <th className="pb-3">Kích thước</th>
-                  <th className="pb-3">Nguồn (Module)</th>
-                  <th className="pb-3">Người tải lên</th>
-                  <th className="pb-3">Ngày upload</th>
-                  <th className="pb-3 pr-2 text-right">Thao tác</th>
+                  <th className="pb-3 pl-2">{t('Tên Tệp', 'File Name')}</th>
+                  <th className="pb-3">{t('Kích thước', 'Size')}</th>
+                  <th className="pb-3">{t('Nguồn (Module)', 'Source Module')}</th>
+                  <th className="pb-3">{t('Người tải lên', 'Uploaded By')}</th>
+                  <th className="pb-3">{t('Ngày upload', 'Uploaded At')}</th>
+                  <th className="pb-3 pr-2 text-right">{t('Thao tác', 'Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/20">
@@ -157,9 +159,9 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module })
                       <td className="py-3">
                         <Badge variant="default">{file.parent_module}</Badge>
                       </td>
-                      <td className="py-3 text-text-secondary">{file.uploader_name || 'Hệ thống'}</td>
+                      <td className="py-3 text-text-secondary">{file.uploader_name || t('Hệ thống', 'System')}</td>
                       <td className="py-3 text-text-muted">
-                        {new Date(file.uploaded_at).toLocaleDateString('vi-VN')}
+                        {formatDate(file.uploaded_at)}
                       </td>
                       <td className="py-3 pr-2 text-right">
                         <div className="flex items-center justify-end gap-1.5">
@@ -167,7 +169,7 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module })
                             type="button"
                             onClick={() => handleDownloadFile(file.id, file.file_name)}
                             className="p-1.5 rounded-lg border border-border bg-surface text-primary hover:bg-secondary transition-colors cursor-pointer"
-                            title="Tải tệp về"
+                            title={t('Tải tệp về', 'Download file')}
                           >
                             <Download className="h-3.5 w-3.5" />
                           </button>
@@ -176,7 +178,7 @@ export const FilesManager: React.FC<FilesManagerProps> = ({ projectId, module })
                               type="button"
                               onClick={() => handleDelete(file.id)}
                               className="p-1.5 rounded-lg border border-border bg-surface text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:border-rose-200 dark:hover:border-rose-950/40 transition-colors cursor-pointer"
-                              title="Xóa tệp"
+                              title={t('Xóa tệp', 'Delete file')}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>

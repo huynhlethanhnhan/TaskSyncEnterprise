@@ -27,6 +27,20 @@ import re
 from pydantic import field_validator
 
 
+def validate_password_policy_value(v: str) -> str:
+    if len(v) < 8:
+        raise ValueError("Mật khẩu phải có ít nhất 8 ký tự.")
+    if not re.search(r"[A-Z]", v):
+        raise ValueError("Mật khẩu phải chứa ít nhất một chữ hoa.")
+    if not re.search(r"[a-z]", v):
+        raise ValueError("Mật khẩu phải chứa ít nhất một chữ thường.")
+    if not re.search(r"\d", v):
+        raise ValueError("Mật khẩu phải chứa ít nhất một chữ số.")
+    if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]", v):
+        raise ValueError("Mật khẩu phải chứa ít nhất một ký tự đặc biệt.")
+    return v
+
+
 class EmployeeCreate(EmployeeBase):
     employee_code: str | None = None
     password: str
@@ -34,17 +48,7 @@ class EmployeeCreate(EmployeeBase):
     @field_validator("password")
     @classmethod
     def validate_password_policy(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Mật khẩu phải có ít nhất 8 ký tự.")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Mật khẩu phải chứa ít nhất một chữ hoa.")
-        if not re.search(r"[a-z]", v):
-            raise ValueError("Mật khẩu phải chứa ít nhất một chữ thường.")
-        if not re.search(r"\d", v):
-            raise ValueError("Mật khẩu phải chứa ít nhất một chữ số.")
-        if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]", v):
-            raise ValueError("Mật khẩu phải chứa ít nhất một ký tự đặc biệt.")
-        return v
+        return validate_password_policy_value(v)
 
 
 class EmployeeUpdate(BaseModel):
@@ -61,6 +65,7 @@ class EmployeeUpdate(BaseModel):
     gender: str | None = None
     address: str | None = None
     date_of_birth: date | None = None
+    start_date: date | None = None
 
 
 class EmployeeResponse(EmployeeBase):
@@ -71,6 +76,7 @@ class EmployeeResponse(EmployeeBase):
     employee_code: str
     avatar_url: str | None
     is_active: bool
+    is_online: bool = False
     created_at: datetime
     last_login: datetime | None = None
     last_logout: datetime | None = None

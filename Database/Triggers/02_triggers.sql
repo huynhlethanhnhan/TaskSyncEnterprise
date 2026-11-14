@@ -47,7 +47,7 @@ BEGIN
         timestamp
     )
     SELECT 
-        d.created_by,
+        COALESCE(d.deleted_by_id, d.updated_by_id, d.created_by),
         N'SOFT_DELETE_TASK',
         N'Task',
         d.id,
@@ -232,5 +232,183 @@ BEGIN
         ROLLBACK TRANSACTION;
         RETURN;
     END;
+END;
+GO
+
+-- ============================================================================
+-- TRIGGER 6 (HRM + CURSOR): AFTER INSERT, UPDATE — QUẢN LÝ DUYỆT PHÉP & HOÀN TRẢ QUỸ PHÉP
+-- Nghiệp vụ HRM mở rộng:
+--   1. Chặn tự duyệt đơn nghỉ phép của chính mình (requested_by = approved_by).
+--   2. Chặn trùng lịch nghỉ phép đang hiệu lực của cùng nhân viên.
+--   3. Dùng CURSOR duyệt từng đơn trong inserted/deleted:
+--      - Khi đơn chuyển sang 'HR Approved' / 'Approved': trừ quỹ phép (used_days)
+--        trong dbo.leave_balances; nếu vượt quá số dư còn lại -> ROLLBACK TRANSACTION.
+--      - Khi thu hồi / hủy đơn đã duyệt ('HR Approved'/'Approved' -> 'Pending'/'Withdrawn'/'Cancelled'):
+--        tự động hoàn trả (rollback) số ngày phép đã trừ vào dbo.leave_balances và ghi audit_logs.
+-- ============================================================================
+IF OBJECT_ID(N'dbo.trg_Vacations_ApproveAndLeaveBalance', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.trg_Vacations_ApproveAndLeaveBalance;
+GO
+
+CREATE TRIGGER dbo.trg_Vacations_ApproveAndLeaveBalance
+ON dbo.vacations
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. Chặn tự duyệt đơn của chính mình
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        WHERE i.is_deleted = 0
+          AND i.approved_by IS NOT NULL
+          AND i.approved_by = i.requested_by
+          AND i.status IN (N'Manager Approved', N'HR Approved', N'Approved')
+    )
+    BEGIN
+        RAISERROR(N'Lỗi nghiệp vụ HRM: Nhân viên không được tự phê duyệt đơn nghỉ phép của chính mình.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END;
+
+    -- 2. Chặn trùng khoảng ngày nghỉ phép của cùng nhân viên (với các đơn còn hiệu lực)
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        INNER JOIN dbo.vacations v
+            ON v.requested_by = i.requested_by
+           AND v.id <> i.id
+           AND v.is_deleted = 0
+           AND v.status NOT IN (N'Rejected', N'Withdrawn', N'Cancelled')
+        WHERE i.is_deleted = 0
+          AND i.status NOT IN (N'Rejected', N'Withdrawn', N'Cancelled')
+          AND i.start_date <= v.end_date
+          AND i.end_date >= v.start_date
+    )
+    BEGIN
+        RAISERROR(N'Lỗi nghiệp vụ HRM: Khoảng thời gian nghỉ phép bị trùng với đơn nghỉ phép khác đang hiệu lực.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END;
+
+    -- 3. Sử dụng CURSOR xử lý trừ / hoàn trả quỹ phép năm khi trạng thái duyệt thay đổi
+    DECLARE
+        @VacId INT,
+        @EmpId INT,
+        @VacType NVARCHAR(100),
+        @StartDate DATE,
+        @EndDate DATE,
+        @NewStatus NVARCHAR(50),
+        @OldStatus NVARCHAR(50),
+        @ApproverId INT,
+        @IsDeleted BIT,
+        @OldDeleted BIT,
+        @Days DECIMAL(5,2),
+        @LeaveYear INT,
+        @RemainingDays DECIMAL(5,2);
+
+    DECLARE cur_vac CURSOR LOCAL FAST_FORWARD FOR
+        SELECT
+            i.id,
+            i.requested_by,
+            i.type,
+            i.start_date,
+            i.end_date,
+            i.status,
+            d.status,
+            i.approved_by,
+            i.is_deleted,
+            ISNULL(d.is_deleted, 0)
+        FROM inserted i
+        LEFT JOIN deleted d ON i.id = d.id;
+
+    OPEN cur_vac;
+    FETCH NEXT FROM cur_vac INTO
+        @VacId, @EmpId, @VacType, @StartDate, @EndDate,
+        @NewStatus, @OldStatus, @ApproverId, @IsDeleted, @OldDeleted;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @Days = CAST(DATEDIFF(DAY, @StartDate, @EndDate) + 1 AS DECIMAL(5,2));
+        SET @LeaveYear = YEAR(@StartDate);
+
+        -- Trường hợp A: Đơn chuyển từ chưa duyệt -> Đã duyệt cuối (HR Approved / Approved)
+        IF @IsDeleted = 0
+           AND @NewStatus IN (N'HR Approved', N'Approved')
+           AND (ISNULL(@OldStatus, N'') NOT IN (N'HR Approved', N'Approved') OR @OldDeleted = 1)
+           AND @VacType = N'Annual Leave'
+        BEGIN
+            -- Khởi tạo quỹ phép năm nếu nhân viên chưa có bản ghi năm hiện tại
+            IF NOT EXISTS (
+                SELECT 1 FROM dbo.leave_balances
+                WHERE employee_id = @EmpId AND leave_year = @LeaveYear
+            )
+            BEGIN
+                INSERT INTO dbo.leave_balances (employee_id, leave_year, annual_entitlement, carried_over_days, used_days, pending_days, updated_at)
+                VALUES (@EmpId, @LeaveYear, 12.00, 0.00, 0.00, 0.00, SYSUTCDATETIME());
+            END;
+
+            SELECT @RemainingDays = (annual_entitlement + carried_over_days - used_days - pending_days)
+            FROM dbo.leave_balances
+            WHERE employee_id = @EmpId AND leave_year = @LeaveYear;
+
+            IF @RemainingDays < @Days
+            BEGIN
+                CLOSE cur_vac;
+                DEALLOCATE cur_vac;
+                RAISERROR(N'Lỗi nghiệp vụ HRM: Số ngày phép năm còn lại không đủ để duyệt đơn nghỉ phép này.', 16, 1);
+                ROLLBACK TRANSACTION;
+                RETURN;
+            END;
+
+            UPDATE dbo.leave_balances
+            SET
+                used_days = used_days + @Days,
+                updated_at = SYSUTCDATETIME()
+            WHERE employee_id = @EmpId AND leave_year = @LeaveYear;
+
+            INSERT INTO dbo.audit_logs (employee_id, action, entity_type, entity_id, old_values, new_values, timestamp)
+            VALUES (
+                @ApproverId,
+                N'DEDUCT_LEAVE_BALANCE',
+                N'Vacation',
+                @VacId,
+                N'Status: ' + ISNULL(@OldStatus, N'NEW'),
+                N'Status: ' + @NewStatus + N' | Deducted Days: ' + CAST(@Days AS NVARCHAR(10)),
+                SYSUTCDATETIME()
+            );
+        END;
+
+        -- Trường hợp B: Thu hồi / Hủy / Xóa mềm đơn đã duyệt -> Hoàn trả lại quỹ phép năm
+        IF (@OldStatus IN (N'HR Approved', N'Approved') AND @OldDeleted = 0)
+           AND (@NewStatus NOT IN (N'HR Approved', N'Approved') OR @IsDeleted = 1)
+           AND @VacType = N'Annual Leave'
+        BEGIN
+            UPDATE dbo.leave_balances
+            SET
+                used_days = CASE WHEN used_days >= @Days THEN used_days - @Days ELSE 0.00 END,
+                updated_at = SYSUTCDATETIME()
+            WHERE employee_id = @EmpId AND leave_year = @LeaveYear;
+
+            INSERT INTO dbo.audit_logs (employee_id, action, entity_type, entity_id, old_values, new_values, timestamp)
+            VALUES (
+                COALESCE(@ApproverId, @EmpId),
+                N'ROLLBACK_LEAVE_BALANCE',
+                N'Vacation',
+                @VacId,
+                N'Status: ' + @OldStatus,
+                N'Status: ' + @NewStatus + N' | Refunded Days: ' + CAST(@Days AS NVARCHAR(10)),
+                SYSUTCDATETIME()
+            );
+        END;
+
+        FETCH NEXT FROM cur_vac INTO
+            @VacId, @EmpId, @VacType, @StartDate, @EndDate,
+            @NewStatus, @OldStatus, @ApproverId, @IsDeleted, @OldDeleted;
+    END;
+
+    CLOSE cur_vac;
+    DEALLOCATE cur_vac;
 END;
 GO

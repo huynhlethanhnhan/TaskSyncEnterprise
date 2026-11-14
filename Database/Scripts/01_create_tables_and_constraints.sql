@@ -376,7 +376,193 @@ END;
 GO
 
 -- ============================================================================
--- PHẦN 3: BẢO ĐẢM TÍNH TƯƠNG THÍCH TRÊN CSDL ĐÃ TỒN TẠI TỪ TRƯỚC (IDEMPOTENT MIGRATION)
+-- PHẦN 3: MỞ RỘNG QUẢN TRỊ NHÂN SỰ (HRM EXTENSIBILITY & GOVERNANCE CONTEXT)
+-- Thiết kế sẵn sàng tích hợp phân hệ HRM: Nghỉ phép, Quỹ phép năm, Hợp đồng,
+-- Chấm công và Nhật ký Backup/Phục hồi dữ liệu.
+-- ============================================================================
+
+-- 15. Bảng Đơn xin nghỉ phép (Vacations / Leave Requests)
+IF OBJECT_ID(N'dbo.vacations', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.vacations (
+        id INT IDENTITY(1,1) NOT NULL,
+        type NVARCHAR(100) NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        reason NVARCHAR(500) NULL,
+        status NVARCHAR(50) NOT NULL CONSTRAINT DF_vacations_status DEFAULT (N'Pending'),
+        requested_by INT NOT NULL,
+        approved_by INT NULL,
+        approved_at DATETIME2(7) NULL,
+        is_deleted BIT NOT NULL CONSTRAINT DF_vacations_is_deleted DEFAULT (0),
+        deleted_at DATETIME2(7) NULL,
+        created_at DATETIME2(7) NOT NULL CONSTRAINT DF_vacations_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at DATETIME2(7) NULL,
+        deleted_by_id INT NULL,
+        CONSTRAINT PK_vacations PRIMARY KEY CLUSTERED (id),
+        CONSTRAINT FK_vacations_requester FOREIGN KEY (requested_by) REFERENCES dbo.employees(id),
+        CONSTRAINT FK_vacations_approver FOREIGN KEY (approved_by) REFERENCES dbo.employees(id),
+        CONSTRAINT CK_vacations_dates CHECK (end_date >= start_date),
+        CONSTRAINT CK_vacations_type CHECK (type IN (
+            N'Annual Leave', N'Sick Leave', N'Unpaid Leave',
+            N'Maternity Leave', N'Remote Work', N'Emergency Leave', N'Other'
+        )),
+        CONSTRAINT CK_vacations_status CHECK (status IN (
+            N'Pending', N'Manager Approved', N'HR Approved', N'Approved',
+            N'Info Requested', N'Rejected', N'Withdrawn', N'Cancelled'
+        ))
+    );
+END;
+GO
+
+-- 16. Bảng Quỹ phép năm theo nhân viên (Leave Balances - HRM)
+IF OBJECT_ID(N'dbo.leave_balances', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.leave_balances (
+        id INT IDENTITY(1,1) NOT NULL,
+        employee_id INT NOT NULL,
+        leave_year INT NOT NULL,
+        annual_entitlement DECIMAL(5,2) NOT NULL CONSTRAINT DF_leave_balances_entitlement DEFAULT (12.00),
+        carried_over_days DECIMAL(5,2) NOT NULL CONSTRAINT DF_leave_balances_carried DEFAULT (0.00),
+        used_days DECIMAL(5,2) NOT NULL CONSTRAINT DF_leave_balances_used DEFAULT (0.00),
+        pending_days DECIMAL(5,2) NOT NULL CONSTRAINT DF_leave_balances_pending DEFAULT (0.00),
+        remaining_days AS (annual_entitlement + carried_over_days - used_days - pending_days),
+        updated_at DATETIME2(7) NULL,
+        CONSTRAINT PK_leave_balances PRIMARY KEY CLUSTERED (id),
+        CONSTRAINT UQ_leave_balances_emp_year UNIQUE (employee_id, leave_year),
+        CONSTRAINT FK_leave_balances_employee FOREIGN KEY (employee_id) REFERENCES dbo.employees(id),
+        CONSTRAINT CK_leave_balances_year CHECK (leave_year BETWEEN 2020 AND 2100),
+        CONSTRAINT CK_leave_balances_non_negative CHECK (
+            annual_entitlement >= 0.00 AND carried_over_days >= 0.00
+            AND used_days >= 0.00 AND pending_days >= 0.00
+        )
+    );
+END;
+GO
+
+-- 17. Bảng Hợp đồng lao động (Employment Contracts - HRM)
+IF OBJECT_ID(N'dbo.employment_contracts', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.employment_contracts (
+        id INT IDENTITY(1,1) NOT NULL,
+        employee_id INT NOT NULL,
+        contract_code NVARCHAR(50) NOT NULL,
+        contract_type NVARCHAR(50) NOT NULL CONSTRAINT DF_contracts_type DEFAULT (N'Indefinite'),
+        base_salary DECIMAL(18,2) NOT NULL,
+        allowance DECIMAL(18,2) NOT NULL CONSTRAINT DF_contracts_allowance DEFAULT (0.00),
+        currency NVARCHAR(10) NOT NULL CONSTRAINT DF_contracts_currency DEFAULT (N'VND'),
+        start_date DATE NOT NULL,
+        end_date DATE NULL,
+        status NVARCHAR(30) NOT NULL CONSTRAINT DF_contracts_status DEFAULT (N'Active'),
+        is_deleted BIT NOT NULL CONSTRAINT DF_contracts_is_deleted DEFAULT (0),
+        deleted_at DATETIME2(7) NULL,
+        created_at DATETIME2(7) NOT NULL CONSTRAINT DF_contracts_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at DATETIME2(7) NULL,
+        created_by_id INT NULL,
+        updated_by_id INT NULL,
+        deleted_by_id INT NULL,
+        CONSTRAINT PK_employment_contracts PRIMARY KEY CLUSTERED (id),
+        CONSTRAINT UQ_employment_contracts_code UNIQUE (contract_code),
+        CONSTRAINT FK_employment_contracts_employee FOREIGN KEY (employee_id) REFERENCES dbo.employees(id),
+        CONSTRAINT CK_employment_contracts_type CHECK (contract_type IN (
+            N'Probation', N'Fixed-Term', N'Indefinite', N'Part-Time', N'Contractor'
+        )),
+        CONSTRAINT CK_employment_contracts_status CHECK (status IN (
+            N'Draft', N'Active', N'Expired', N'Terminated'
+        )),
+        CONSTRAINT CK_employment_contracts_salary CHECK (base_salary >= 0.00 AND allowance >= 0.00),
+        CONSTRAINT CK_employment_contracts_dates CHECK (end_date IS NULL OR end_date >= start_date)
+    );
+END;
+GO
+
+-- 18. Bảng Chấm công hàng ngày (Attendance Logs - HRM)
+IF OBJECT_ID(N'dbo.attendance_logs', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.attendance_logs (
+        id INT IDENTITY(1,1) NOT NULL,
+        employee_id INT NOT NULL,
+        work_date DATE NOT NULL,
+        check_in TIME(0) NULL,
+        check_out TIME(0) NULL,
+        work_hours DECIMAL(5,2) NOT NULL CONSTRAINT DF_attendance_work_hours DEFAULT (0.00),
+        overtime_hours DECIMAL(5,2) NOT NULL CONSTRAINT DF_attendance_ot_hours DEFAULT (0.00),
+        status NVARCHAR(30) NOT NULL CONSTRAINT DF_attendance_status DEFAULT (N'Present'),
+        note NVARCHAR(255) NULL,
+        created_at DATETIME2(7) NOT NULL CONSTRAINT DF_attendance_created_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_attendance_logs PRIMARY KEY CLUSTERED (id),
+        CONSTRAINT UQ_attendance_logs_emp_date UNIQUE (employee_id, work_date),
+        CONSTRAINT FK_attendance_logs_employee FOREIGN KEY (employee_id) REFERENCES dbo.employees(id),
+        CONSTRAINT CK_attendance_logs_status CHECK (status IN (
+            N'Present', N'Remote', N'Leave', N'Absent', N'Holiday'
+        )),
+        CONSTRAINT CK_attendance_logs_hours CHECK (
+            work_hours BETWEEN 0.00 AND 24.00
+            AND overtime_hours BETWEEN 0.00 AND 24.00
+        )
+    );
+END;
+GO
+
+-- 19. Bảng Nhật ký Sao lưu & Phục hồi Dữ liệu (Backup History Logs)
+IF OBJECT_ID(N'dbo.backup_history_logs', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.backup_history_logs (
+        id INT IDENTITY(1,1) NOT NULL,
+        backup_type NVARCHAR(30) NOT NULL,
+        database_name NVARCHAR(128) NOT NULL,
+        backup_path NVARCHAR(500) NULL,
+        status NVARCHAR(30) NOT NULL CONSTRAINT DF_backup_logs_status DEFAULT (N'SUCCESS'),
+        performed_by INT NULL,
+        notes NVARCHAR(500) NULL,
+        created_at DATETIME2(7) NOT NULL CONSTRAINT DF_backup_logs_created_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_backup_history_logs PRIMARY KEY CLUSTERED (id),
+        CONSTRAINT FK_backup_history_employee FOREIGN KEY (performed_by) REFERENCES dbo.employees(id),
+        CONSTRAINT CK_backup_history_type CHECK (backup_type IN (
+            N'FULL', N'DIFFERENTIAL', N'LOG', N'SNAPSHOT', N'LOGICAL_ROLLBACK'
+        )),
+        CONSTRAINT CK_backup_history_status CHECK (status IN (
+            N'SUCCESS', N'VERIFIED', N'FAILED', N'RESTORED'
+        ))
+    );
+END;
+GO
+
+-- 20. Bảng Yêu cầu Làm thêm giờ (Overtime Requests - HRM & Work Integration)
+IF OBJECT_ID(N'dbo.overtime_requests', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.overtime_requests (
+        id INT IDENTITY(1,1) NOT NULL,
+        employee_id INT NOT NULL,
+        project_id INT NULL,
+        work_date DATE NOT NULL,
+        hours DECIMAL(4,2) NOT NULL,
+        reason NVARCHAR(500) NULL,
+        status NVARCHAR(30) NOT NULL CONSTRAINT DF_overtime_requests_status DEFAULT (N'Pending'),
+        team_leader_note NVARCHAR(300) NULL,
+        approved_by INT NULL,
+        approved_at DATETIME2(7) NULL,
+        is_deleted BIT NOT NULL CONSTRAINT DF_overtime_requests_is_deleted DEFAULT (0),
+        deleted_at DATETIME2(7) NULL,
+        created_at DATETIME2(7) NOT NULL CONSTRAINT DF_overtime_requests_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at DATETIME2(7) NULL,
+        created_by_id INT NULL,
+        updated_by_id INT NULL,
+        deleted_by_id INT NULL,
+        CONSTRAINT PK_overtime_requests PRIMARY KEY CLUSTERED (id),
+        CONSTRAINT FK_overtime_requests_employee FOREIGN KEY (employee_id) REFERENCES dbo.employees(id),
+        CONSTRAINT FK_overtime_requests_project FOREIGN KEY (project_id) REFERENCES dbo.projects(id),
+        CONSTRAINT FK_overtime_requests_approver FOREIGN KEY (approved_by) REFERENCES dbo.employees(id),
+        CONSTRAINT CK_overtime_requests_hours CHECK (hours > 0.00 AND hours <= 16.00),
+        CONSTRAINT CK_overtime_requests_status CHECK (status IN (
+            N'Pending', N'Manager Approved', N'HR Approved', N'Rejected', N'Withdrawn'
+        ))
+    );
+END;
+GO
+
+-- ============================================================================
+-- PHẦN 4: BẢO ĐẢM TÍNH TƯƠNG THÍCH TRÊN CSDL ĐÃ TỒN TẠI TỪ TRƯỚC (IDEMPOTENT MIGRATION)
 -- Nếu các bảng đã tồn tại từ các phiên bản migration cũ, tự động bổ sung các cột còn thiếu.
 -- ============================================================================
 
@@ -422,5 +608,73 @@ IF COL_LENGTH('dbo.audit_logs', 'new_values') IS NULL
 GO
 IF COL_LENGTH('dbo.audit_logs', 'ip_address') IS NULL
     ALTER TABLE dbo.audit_logs ADD ip_address NVARCHAR(50) NULL;
+GO
+
+-- Bổ sung cho dbo.vacations (nếu bảng cũ được tạo bởi Alembic chưa có cột soft-delete)
+IF COL_LENGTH('dbo.vacations', 'is_deleted') IS NULL
+    ALTER TABLE dbo.vacations ADD is_deleted BIT NOT NULL CONSTRAINT DF_vacations_is_deleted DEFAULT (0);
+GO
+IF COL_LENGTH('dbo.vacations', 'deleted_at') IS NULL
+    ALTER TABLE dbo.vacations ADD deleted_at DATETIME2(7) NULL;
+GO
+IF COL_LENGTH('dbo.vacations', 'deleted_by_id') IS NULL
+    ALTER TABLE dbo.vacations ADD deleted_by_id INT NULL;
+GO
+
+-- ============================================================================
+-- PHẦN 5: ÁP DỤNG SQL SERVER RULE (CREATE RULE & sp_bindrule) CHO NGHIỆP VỤ
+-- Đáp ứng chuẩn đối tượng RULE bản địa trong Microsoft SQL Server.
+-- ============================================================================
+
+-- RULE 1: rul_TaskStoryPoints_NonNegative
+-- Nghiệp vụ Agile: Story Points ước lượng công việc phải nằm trong khoảng [0, 100].
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.tasks') AND name = N'story_points' AND rule_object_id <> 0)
+    EXEC sys.sp_unbindrule @objname = N'dbo.tasks.story_points';
+GO
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.backlog_items') AND name = N'story_points' AND rule_object_id <> 0)
+    EXEC sys.sp_unbindrule @objname = N'dbo.backlog_items.story_points';
+GO
+IF OBJECT_ID(N'dbo.rul_TaskStoryPoints_NonNegative', N'R') IS NOT NULL
+    DROP RULE dbo.rul_TaskStoryPoints_NonNegative;
+GO
+
+CREATE RULE dbo.rul_TaskStoryPoints_NonNegative
+AS @sp >= 0 AND @sp <= 100;
+GO
+
+EXEC sys.sp_bindrule N'dbo.rul_TaskStoryPoints_NonNegative', N'dbo.tasks.story_points';
+EXEC sys.sp_bindrule N'dbo.rul_TaskStoryPoints_NonNegative', N'dbo.backlog_items.story_points';
+GO
+
+-- RULE 2: rul_EmployeeEmailFormat
+-- Nghiệp vụ Nhân sự (HRM): Email nhân viên phải có dạng hợp lệ (chứa '@', có tên miền '.', không chứa khoảng trắng).
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.employees') AND name = N'email' AND rule_object_id <> 0)
+    EXEC sys.sp_unbindrule @objname = N'dbo.employees.email';
+GO
+IF OBJECT_ID(N'dbo.rul_EmployeeEmailFormat', N'R') IS NOT NULL
+    DROP RULE dbo.rul_EmployeeEmailFormat;
+GO
+
+CREATE RULE dbo.rul_EmployeeEmailFormat
+AS @email LIKE N'%_@__%.__%' AND @email NOT LIKE N'% %';
+GO
+
+EXEC sys.sp_bindrule N'dbo.rul_EmployeeEmailFormat', N'dbo.employees.email';
+GO
+
+-- RULE 3: rul_EmployeeEmploymentStatus_HRM
+-- Nghiệp vụ Nhân sự (HRM): Trạng thái làm việc của nhân viên phải thuộc tập giá trị chuẩn HRM.
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.employees') AND name = N'employment_status' AND rule_object_id <> 0)
+    EXEC sys.sp_unbindrule @objname = N'dbo.employees.employment_status';
+GO
+IF OBJECT_ID(N'dbo.rul_EmployeeEmploymentStatus_HRM', N'R') IS NOT NULL
+    DROP RULE dbo.rul_EmployeeEmploymentStatus_HRM;
+GO
+
+CREATE RULE dbo.rul_EmployeeEmploymentStatus_HRM
+AS @status IN (N'Full-time', N'Part-time', N'Intern', N'Probation', N'Contract', N'Active', N'On Leave', N'Resigned', N'Terminated');
+GO
+
+EXEC sys.sp_bindrule N'dbo.rul_EmployeeEmploymentStatus_HRM', N'dbo.employees.employment_status';
 GO
 

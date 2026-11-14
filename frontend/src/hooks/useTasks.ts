@@ -8,6 +8,24 @@ export const useTasks = (isStaff = false) => {
   });
 };
 
+export const useSearchTasks = (
+  params: {
+    keyword?: string;
+    project_id?: number;
+    sprint_id?: number;
+    status?: string;
+    priority?: string;
+    overdue_only?: boolean;
+  },
+  enabled = false,
+) => {
+  return useQuery<TaskItem[], Error>({
+    queryKey: ['tasks', 'search', params],
+    queryFn: () => tasksApi.search(params),
+    enabled,
+  });
+};
+
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
   return useMutation({

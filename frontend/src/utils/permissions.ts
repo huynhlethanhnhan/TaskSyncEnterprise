@@ -11,9 +11,14 @@ export interface UserPermissions {
   canEditTask: boolean;
   canDeleteTask: boolean;
   canViewAuditLogs: boolean;
+  canManageHrm: boolean;
+  canManageBackups: boolean;
+  isTeamLeader: boolean;
 }
 
-export const getPermissionsForUser = (user: { role?: string; role_id?: number } | null): UserPermissions => {
+export const getPermissionsForUser = (
+  user: { role?: string; role_id?: number; is_team_leader?: boolean } | null
+): UserPermissions => {
   if (!user) {
     return {
       canCreateEmployee: false,
@@ -28,6 +33,9 @@ export const getPermissionsForUser = (user: { role?: string; role_id?: number } 
       canEditTask: false,
       canDeleteTask: false,
       canViewAuditLogs: false,
+      canManageHrm: false,
+      canManageBackups: false,
+      isTeamLeader: false,
     };
   }
 
@@ -36,7 +44,7 @@ export const getPermissionsForUser = (user: { role?: string; role_id?: number } 
 
   const isAdmin = roleStr === 'admin' || roleId === 1;
   const isManager = roleStr === 'manager' || roleId === 2;
-  const isTeamLead = Boolean((user as any)?.is_team_leader) || roleStr === 'team_leader' || roleStr === 'team leader';
+  const isTeamLead = Boolean(user.is_team_leader) || roleStr === 'team_leader' || roleStr === 'team leader';
 
   return {
     // Employee & Role management: Only Admin can create, edit, delete employees and read roles (Outcome A)
@@ -58,8 +66,13 @@ export const getPermissionsForUser = (user: { role?: string; role_id?: number } 
     canEditTask: isAdmin || isManager || isTeamLead,
     canDeleteTask: isAdmin || isManager || isTeamLead,
 
-    // Audit logs: Only Admin
+    // Audit logs & Backups: Only Admin
     canViewAuditLogs: isAdmin,
+    canManageBackups: isAdmin,
+
+    // HRM contracts, leave balance adjustment & overtime approval: Admin & Department Manager
+    canManageHrm: isAdmin || isManager,
+    isTeamLeader: isTeamLead,
   };
 };
 
