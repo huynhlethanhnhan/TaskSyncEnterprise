@@ -81,9 +81,7 @@ def ensure_hrm_and_upcoming_demo_data(db: Session) -> dict[str, int]:
     admin_user = next(
         (e for e in active_employees if e.role_id == ROLE_ADMIN), active_employees[0]
     )
-    staff_employees = [
-        e for e in active_employees if e.role_id == ROLE_EMPLOYEE
-    ] + [
+    staff_employees = [e for e in active_employees if e.role_id == ROLE_EMPLOYEE] + [
         e for e in active_employees if e.role_id == ROLE_MANAGER
     ] or active_employees
     active_projects = (
@@ -194,7 +192,9 @@ def ensure_hrm_and_upcoming_demo_data(db: Session) -> dict[str, int]:
                 status=st,
                 priority=prio,
                 story_points=sp,
-                progress_percent=65.0 if st == "In Progress" else (90.0 if st == "Review" else 15.0),
+                progress_percent=(
+                    65.0 if st == "In Progress" else (90.0 if st == "Review" else 15.0)
+                ),
                 deadline=now + timedelta(days=offset_days),
                 created_by=admin_user.id,
             )
@@ -217,13 +217,45 @@ def ensure_hrm_and_upcoming_demo_data(db: Session) -> dict[str, int]:
     )
     if upcoming_approved_count < 4:
         leave_specs = [
-            ("Annual Leave", 1, 2, "HR Approved", "Nghỉ phép năm cùng gia đình theo kế hoạch đã duyệt."),
-            ("Annual Leave", 3, 2, "Approved", "Nghỉ phép cá nhân xử lý thủ tục hành chính."),
-            ("Sick Leave", 6, 1, "Manager Approved", "Nghỉ khám sức khỏe định kỳ theo lịch bệnh viện."),
-            ("Personal Leave", 10, 2, "Approved", "Nghỉ tham dự lễ tốt nghiệp tại TP.HCM."),
-            ("Annual Leave", 2, 1, "Pending", "Đăng ký nghỉ phép ngắn ngày chờ quản lý phê duyệt."),
+            (
+                "Annual Leave",
+                1,
+                2,
+                "HR Approved",
+                "Nghỉ phép năm cùng gia đình theo kế hoạch đã duyệt.",
+            ),
+            (
+                "Annual Leave",
+                3,
+                2,
+                "Approved",
+                "Nghỉ phép cá nhân xử lý thủ tục hành chính.",
+            ),
+            (
+                "Sick Leave",
+                6,
+                1,
+                "Manager Approved",
+                "Nghỉ khám sức khỏe định kỳ theo lịch bệnh viện.",
+            ),
+            (
+                "Personal Leave",
+                10,
+                2,
+                "Approved",
+                "Nghỉ tham dự lễ tốt nghiệp tại TP.HCM.",
+            ),
+            (
+                "Annual Leave",
+                2,
+                1,
+                "Pending",
+                "Đăng ký nghỉ phép ngắn ngày chờ quản lý phê duyệt.",
+            ),
         ]
-        for idx, (ltype, start_off, dur_days, lstatus, reason) in enumerate(leave_specs):
+        for idx, (ltype, start_off, dur_days, lstatus, reason) in enumerate(
+            leave_specs
+        ):
             if lstatus != "Pending" and idx >= (4 - int(upcoming_approved_count)):
                 continue
             emp = staff_employees[idx % len(staff_employees)]
@@ -290,7 +322,9 @@ def ensure_hrm_and_upcoming_demo_data(db: Session) -> dict[str, int]:
             ctype = "Fixed-Term" if idx % 3 == 0 else "Indefinite"
 
         start_d = date(today.year, max(1, today.month - 6), 1)
-        end_d = date(today.year + 1, start_d.month, 1) if ctype == "Fixed-Term" else None
+        end_d = (
+            date(today.year + 1, start_d.month, 1) if ctype == "Fixed-Term" else None
+        )
         db.add(
             EmploymentContract(
                 employee_id=emp.id,
@@ -326,7 +360,9 @@ def ensure_hrm_and_upcoming_demo_data(db: Session) -> dict[str, int]:
             LeaveBalance(
                 employee_id=emp.id,
                 leave_year=today.year,
-                annual_entitlement=Decimal("14.00" if emp.role_id != ROLE_EMPLOYEE else "12.00"),
+                annual_entitlement=Decimal(
+                    "14.00" if emp.role_id != ROLE_EMPLOYEE else "12.00"
+                ),
                 carried_over_days=Decimal(str(idx % 3)),
                 used_days=Decimal(str((idx % 4) + 1)),
                 pending_days=Decimal("1.00" if idx % 5 == 0 else "0.00"),
@@ -371,7 +407,11 @@ def ensure_hrm_and_upcoming_demo_data(db: Session) -> dict[str, int]:
                     work_hours=Decimal("7.50" if late else "8.00"),
                     overtime_hours=Decimal("0.00"),
                     status="Late" if late else "Present",
-                    note="Chấm công chuẩn hệ thống" if not late else "Đi muộn nhẹ do kẹt xe",
+                    note=(
+                        "Chấm công chuẩn hệ thống"
+                        if not late
+                        else "Đi muộn nhẹ do kẹt xe"
+                    ),
                 )
             )
             stats["attendance_added"] += 1
@@ -389,17 +429,33 @@ def ensure_hrm_and_upcoming_demo_data(db: Session) -> dict[str, int]:
     )
     if ot_count < 5 and active_projects:
         ot_specs = [
-            (2.5, "Approved", "Triển khai vá bảo mật & tối ưu truy vấn SQL Server cuối sprint"),
+            (
+                2.5,
+                "Approved",
+                "Triển khai vá bảo mật & tối ưu truy vấn SQL Server cuối sprint",
+            ),
             (3.0, "Approved", "Hoàn thiện pipeline CI/CD & kiểm thử hiệu năng tải cao"),
             (2.0, "Approved", "Hỗ trợ đồng bộ dữ liệu hợp đồng & bảng lương kỳ mới"),
-            (2.0, "Pending", "Nghiên cứu tích hợp cảnh báo thông minh Realtime Dashboard"),
-            (1.5, "Pending", "Kiểm tra lại toàn bộ tài liệu hướng dẫn vận hành hệ thống"),
+            (
+                2.0,
+                "Pending",
+                "Nghiên cứu tích hợp cảnh báo thông minh Realtime Dashboard",
+            ),
+            (
+                1.5,
+                "Pending",
+                "Kiểm tra lại toàn bộ tài liệu hướng dẫn vận hành hệ thống",
+            ),
         ]
         for idx, (hrs, ot_status, reason) in enumerate(ot_specs):
             if ot_count + stats["overtime_added"] >= 5:
                 break
             emp = staff_employees[idx % len(staff_employees)]
-            wd = sample_days[-1 - (idx % max(1, len(sample_days)))] if sample_days else today
+            wd = (
+                sample_days[-1 - (idx % max(1, len(sample_days)))]
+                if sample_days
+                else today
+            )
             db.add(
                 OvertimeRequest(
                     employee_id=emp.id,
@@ -427,14 +483,76 @@ def ensure_hrm_and_upcoming_demo_data(db: Session) -> dict[str, int]:
     )
     if cand_count == 0:
         cand_specs = [
-            ("Trần Gia Hưng", "tranhung.dev@example.com", "0903111222", "Senior Backend Engineer (Python/FastAPI)", 32000000, "Interview", 2, "LinkedIn", "Kinh nghiệm 5 năm SQL Server & FastAPI microservices."),
-            ("Nguyễn Ngọc Minh Anh", "minhanh.fe@example.com", "0903222333", "Frontend React/TypeScript Lead", 29000000, "Offer", 1, "ITViec", "Đã vượt qua vòng technical & architecture review."),
-            ("Lê Quốc Việt", "vietle.qa@example.com", "0903333444", "QA Automation Engineer", 22000000, "Screening", 4, "TopCV", "Thành thạo Playwright & API contract testing."),
-            ("Phạm Thị Thu Trang", "thutrang.hr@example.com", "0903444555", "HR & C&B Specialist", 20000000, "Applied", 5, "Referral", "Có kinh nghiệm tính lương C&B doanh nghiệp IT."),
-            ("Đoàn Hải Đăng", "haidang.devops@example.com", "0903555666", "DevOps / SRE Engineer", 35000000, "Interview", 3, "LinkedIn", "Chuyên sâu Docker, Nginx, Prometheus & SQL Backup DR."),
-            ("Võ Hoàng Yến", "yenvo.ba@example.com", "0903666777", "Product Business Analyst", 24000000, "Hired", -2, "ITViec", "Đã nhận offer, sẵn sàng onboard đầu tuần tới."),
+            (
+                "Trần Gia Hưng",
+                "tranhung.dev@example.com",
+                "0903111222",
+                "Senior Backend Engineer (Python/FastAPI)",
+                32000000,
+                "Interview",
+                2,
+                "LinkedIn",
+                "Kinh nghiệm 5 năm SQL Server & FastAPI microservices.",
+            ),
+            (
+                "Nguyễn Ngọc Minh Anh",
+                "minhanh.fe@example.com",
+                "0903222333",
+                "Frontend React/TypeScript Lead",
+                29000000,
+                "Offer",
+                1,
+                "ITViec",
+                "Đã vượt qua vòng technical & architecture review.",
+            ),
+            (
+                "Lê Quốc Việt",
+                "vietle.qa@example.com",
+                "0903333444",
+                "QA Automation Engineer",
+                22000000,
+                "Screening",
+                4,
+                "TopCV",
+                "Thành thạo Playwright & API contract testing.",
+            ),
+            (
+                "Phạm Thị Thu Trang",
+                "thutrang.hr@example.com",
+                "0903444555",
+                "HR & C&B Specialist",
+                20000000,
+                "Applied",
+                5,
+                "Referral",
+                "Có kinh nghiệm tính lương C&B doanh nghiệp IT.",
+            ),
+            (
+                "Đoàn Hải Đăng",
+                "haidang.devops@example.com",
+                "0903555666",
+                "DevOps / SRE Engineer",
+                35000000,
+                "Interview",
+                3,
+                "LinkedIn",
+                "Chuyên sâu Docker, Nginx, Prometheus & SQL Backup DR.",
+            ),
+            (
+                "Võ Hoàng Yến",
+                "yenvo.ba@example.com",
+                "0903666777",
+                "Product Business Analyst",
+                24000000,
+                "Hired",
+                -2,
+                "ITViec",
+                "Đã nhận offer, sẵn sàng onboard đầu tuần tới.",
+            ),
         ]
-        for idx, (name, mail, phone, pos, sal, stage, iv_off, src, notes) in enumerate(cand_specs):
+        for idx, (name, mail, phone, pos, sal, stage, iv_off, src, notes) in enumerate(
+            cand_specs
+        ):
             dept_id = departments[idx % len(departments)].id if departments else None
             db.add(
                 RecruitmentCandidate(

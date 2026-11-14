@@ -1,3 +1,13 @@
+## [3.5.0] — 2026-11-14
+
+### Added
+- **Database-First T-SQL Suite & Backup/Rollback Audit:** Complete `Database/` suite (DDL, 5 Triggers, Stored Procedures including `dbo.sp_BackupDatabaseWithAudit`, Views, Indexes, and Verification scripts), LF-normalized & path-fixed `infrastructure/backup/scripts/`, and verified SQL `.bak` restore + `DBCC CHECKDB` + `alembic downgrade`/`upgrade head` rollback tests.
+- **HRM, Payroll & Recruitment Suite (`/hrm`):** Migrations `a1b2c3d4e5f6` -> `b2c3d4e5f6a7`, labor contracts, attendance, overtime, VND payroll calculation, recruitment candidates, and idempotent `seed_hrm.py` demo/upcoming seed data.
+- **Admin & Self-Service Password Reset Flow:** `password_reset_service.py`, employee self-service reset request card in `/profile`, and Admin reset modal, while hiding native password reveal icons (`input::-ms-reveal`) and duplicate required asterisks.
+- **Modern Portal Controls & Docker/CI Hardening:** Portaled `Select` and `MonthYearSelect` components, `implicit_returning=False` on trigger-backed MSSQL models (`Task`, `Sprint`, `TaskAssignment`), Nginx `/uploads/` reverse proxy, `FRONTEND_BASE_URL`/`SMTP_*` compose environment variables, OpenTelemetry `1.45.2` security fix (`CVE-2026-126360`), and `black==26.5.1` formatting compliance.
+
+---
+
 ## [Unreleased] — Phase 4.5: Enterprise UI/UX Redesign and Workflow Integration
 
 ### Added

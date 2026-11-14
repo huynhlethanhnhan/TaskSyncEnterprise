@@ -1,9 +1,9 @@
 # TaskSyncEnterprise — Nền Tảng Quản Lý Công Việc & Dự Án Doanh Nghiệp
 
-[![Release Candidate](https://img.shields.io/badge/Release%20Candidate-v1.0.0--RC2-blue.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
-[![Backend Pytest](https://img.shields.io/badge/Backend%20Pytest-437%20Passed-success.svg)](docs/reports/CODEX_FINAL_AUDIT.md)
-[![Frontend Vite](https://img.shields.io/badge/Vite%20Build-Passed%201.4s-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
-[![Contract Tests](https://img.shields.io/badge/Contract%20Tests-28%2F28%20Passed-success.svg)](frontend/ui-contract.test.mjs)
+[![Release Version](https://img.shields.io/badge/Version-v3.5.0-blue.svg)](CHANGELOG.md)
+[![Backend Pytest](https://img.shields.io/badge/Backend%20Pytest-493%20Passed-success.svg)](docs/reports/CODEX_FINAL_AUDIT.md)
+[![Frontend Vite](https://img.shields.io/badge/Vite%20Build-Passed-success.svg)](docs/reports/ANTIGRAVITY_FINAL_RELEASE_REVIEW.md)
+[![Contract Tests](https://img.shields.io/badge/Contract%20Tests-38%2F38%20Passed-success.svg)](frontend/ui-contract.test.mjs)
 [![Alembic Clean Database](https://img.shields.io/badge/Alembic%20Migrations-Verified%20Head-success.svg)](backend/alembic/versions/)
 [![Database-First Suite](https://img.shields.io/badge/Database--First-SQL%20Server%202022-green.svg)](Database/README.md)
 
@@ -98,23 +98,26 @@ Chi tiết sơ đồ kiến trúc, mô hình dữ liệu và ma trận phân quy
 - **Cache & Message Broker**: Redis 7 (In-memory caching, Cache Invalidation tự động, Session store)
 - **Reverse Proxy & Web Server**: Nginx 1.27 Alpine (Hardened Non-root, SSL/TLS, Gzip, WebSockets `/ws/`)
 - **Frontend Framework**: React 19, TypeScript, Vite, TailwindCSS v4, TanStack React Query
-- **Kiểm thử & Chất lượng**: Pytest (437 tests passed 100%), Playwright E2E, Ruff, Black, ESLint, Hadolint
+- **Kiểm thử & Chất lượng**: Pytest (493 tests passed 100%), Playwright E2E, Ruff, Black, ESLint, Hadolint
 
 ---
 
-## 6. Cập Nhật Mới Nhất (Latest Engineering Updates)
+## 6. Lịch Sử Phiên Bản Trên `master` & Cập Nhật Mới Nhất
 
-- **Bộ Master Database-First T-SQL:** Cung cấp trọn vẹn thư mục `Database/` với kịch bản DDL, 5 Triggers T-SQL, Stored Procedures, Views toàn cục và Indexing Suite chạy độc lập trên Microsoft SQL Server.
-- **Kanban Card Responsive Layout:** Tái cấu trúc hoàn toàn layout thẻ Kanban thành 3 hàng độc lập, loại bỏ triệt để lỗi ép chữ xếp dọc 1-2 ký tự khi sidebar mở rộng hoặc màn hình co nhỏ. Tiêu đề hiển thị trọn vẹn, co giãn mượt mà.
-- **Phân quyền Xóa Toàn diện (RBAC & Delete Operations):**
-  - **Admin & Manager:** Toàn quyền CRUD trên thẻ Kanban (Action Menu `⋮`), Task Detail Drawer (Nút đỏ "Xóa công việc"), trang Chi tiết Dự án (Nút Sửa/Xóa công việc gần đây và Vùng Nguy Hiểm - Xóa Dự án trong Cài đặt).
-  - **Employee:** Tích hợp quy trình **Yêu cầu xóa (Request Delete)** kèm modal nhập lý do gửi cấp trên duyệt.
-- **Sprint Agile Deletion Workflow:** Bổ sung API `DELETE /api/v1/sprints/{id}` và nút "Xóa Sprint" trên giao diện cho các sprint `Planned` và `Cancelled`. Tự động giải phóng toàn bộ Task và Backlog Item liên kết về Product Backlog an toàn.
-- **Quy trình Thu hồi & Rút đơn Nghỉ phép (Vacation Revocation):**
-  - **Manager & HR/Admin Thu hồi:** Nút "Thu hồi duyệt" (icon `Undo2`) cho phép đảo ngược trạng thái từ `Manager Approved` hoặc `HR Approved` về `Pending` để xử lý các tình huống bấm nhầm.
-  - **Nhân viên Rút đơn:** Nhân viên có thể rút đơn (`Withdrawn`) ngay cả khi Manager đã duyệt sơ bộ nếu HR chưa duyệt cuối.
-  - **Superuser Admin:** Admin có toàn quyền can thiệp vào mọi bước duyệt và có nút "Xóa đơn" vĩnh viễn.
-- **CI/CD & Repository Hygiene:** Đảm bảo 100% test suites xanh trên GitHub Actions (`develop` và `master`), kiểm tra linter, typecheck, contract test và formatting chặt chẽ.
+### 🏷️ Phiên bản `v3.5.0` (Hiện tại trên `master`) — Database-First, HRM Suite, Password Reset & Full-Stack Stabilization
+Những gì đã triển khai và bổ sung trên nhánh `master` so với `v3.4.1`:
+- **Bộ Master Database-First T-SQL & Backup/Rollback Audit:** Bổ sung trọn vẹn thư mục `Database/` (DDL schema, 5 Triggers T-SQL, Stored Procedures bao gồm `dbo.sp_BackupDatabaseWithAudit`, Views toàn cục, Indexing Suite, kịch bản verification); chuẩn hóa LF và sửa path trong `infrastructure/backup/scripts/` (`backup_database.sh`, `restore_database.sh`), đồng thời kiểm thử thực tế `RESTORE DATABASE` + `DBCC CHECKDB` + `alembic downgrade` / `upgrade head`.
+- **Phân hệ Quản trị Nhân sự HRM, Bảng lương & Tuyển dụng:** Bổ sung 2 migration Alembic (`a1b2c3d4e5f6` -> `b2c3d4e5f6a7`), các API & giao diện `/hrm` cho Hợp đồng lao động, Chấm công, Tăng ca, Tính lương VND (với bộ chọn kỳ lương portal `MonthYearSelect`), Ứng viên tuyển dụng và dữ liệu mẫu idempotent (`seed_hrm.py`).
+- **Quy trình Quên mật khẩu & Cấp lại mật khẩu (Admin & Nhân viên):** Bổ sung dịch vụ `password_reset_service.py`, luồng tự yêu cầu cấp lại mật khẩu trong trang `/profile` cho nhân viên, modal cấp lại/reset ở Admin, và xử lý triệt để lỗi icon con mắt kép (`input::-ms-reveal`) cùng dấu `*` lặp.
+- **Hiện đại hóa UI Controls & Sửa lỗi SQL Server Trigger Compatibility:** Thay thế `<select>` và `<input type="month">` mặc định bằng component portal hiện đại (`Select`, `MonthYearSelect`), thêm cấu hình `implicit_returning = False` cho các bảng có trigger SQL Server (`Task`, `Sprint`, `TaskAssignment`), và bổ sung dữ liệu deadline 14 ngày tới / lịch nghỉ phép sắp tới trên Dashboard.
+- **Tăng cường Docker & CI/CD Gates:** Bổ sung proxy `/uploads/` trong `frontend/nginx.conf`, biến môi trường `FRONTEND_BASE_URL` / `SMTP_*` và volume backup trong `docker-compose*.yml`, đồng bộ `database-ci.yml`, `black --check`, `ruff`, `pip-audit` và `bandit`.
+
+### 📌 Tổng kết các phiên bản `master` trước đó (`v3.4.0` -> `v3.4.1`)
+- **Đồng bộ tiến độ & Cảnh báo ngữ cảnh (`v3.4.0` / `v3.4.1`):** Đồng bộ tiến độ Dự án & Sprint theo thời gian thực, cảnh báo ngữ cảnh Sprint/Backlog/Task riêng lẻ và kiểm thử Chrome E2E.
+- **Kanban Card Responsive Layout:** Tái cấu trúc hoàn toàn layout thẻ Kanban thành 3 hàng độc lập, loại bỏ lỗi ép chữ xếp dọc khi sidebar mở rộng hoặc màn hình co nhỏ.
+- **Phân quyền Xóa Toàn diện (RBAC & Delete Operations):** Phân quyền CRUD cho Admin & Manager; nhân viên gửi Yêu cầu xóa (`Request Delete`) kèm lý do.
+- **Sprint Agile Deletion Workflow & Thu hồi Nghỉ phép:** API `DELETE /api/v1/sprints/{id}` giải phóng Task về Backlog an toàn; quy trình thu hồi duyệt (`Undo2`) và rút đơn nghỉ phép (`Withdrawn`).
+- **CI/CD & Repository Hygiene:** Đảm bảo 100% test suites xanh trên GitHub Actions (`Dev-Database`, `develop`, `master`).
 
 ---
 
@@ -283,17 +286,21 @@ Dự án áp dụng chặt chẽ mô hình **GitFlow** kết hợp nhánh chuyê
 ### 🛡️ Tiêu chuẩn CI/CD GitHub Actions (100% Green Gate)
 Mỗi commit / Pull Request đẩy lên `develop` hoặc `master` bắt buộc phải vượt qua:
 1. **Repository Hygiene:** Không chứa file rác (`.env`, `.venv`, `dist`, `__pycache__`), `git diff --check` sạch sẽ không có trailing whitespace.
-2. **Backend CI:** Ruff check sạch, Black formatted, Alembic migration head hợp lệ, **437/437 Pytest passed** kèm báo cáo coverage, Bandit & pip-audit bảo mật.
-3. **Frontend CI:** ESLint 0 errors, TypeScript `tsc --noEmit` 0 errors, **28/28 Contract tests passed**, Vite production build thành công.
+2. **Backend CI:** Ruff check sạch, Black formatted, Alembic migration head hợp lệ (`b2c3d4e5f6a7`), **493/493 Pytest passed** kèm báo cáo coverage, Bandit & pip-audit bảo mật.
+3. **Frontend CI:** ESLint 0 errors, TypeScript `tsc --noEmit` 0 errors, **38/38 Contract tests passed**, Vite production build thành công.
 4. **Docker Validation:** Hadolint Dockerfile linter pass, Docker Buildx build thành công cả backend và frontend, cú pháp Docker Compose hợp lệ.
 
-### 🔄 Quy Trình Đẩy Code & Merge Lên GitHub
+### 🔄 Quy Trình Đẩy Code, Merge Lên `master` & Gắn Tag Phát Hành
 ```powershell
-# 1. Kiểm tra trạng thái và commit trên nhánh Dev-Database
+# 1. Commit trên nhánh phát triển và đẩy lên Dev-Database
 git checkout Dev-Database
 git add .
-git commit -m "feat(database): introduce database-first architecture suite"
-
-# 2. Đẩy lên nhánh Dev-Database trên GitHub
+git commit -m "feat(system): complete HRM, password reset UI, and backup/rollback"
 git push -u origin Dev-Database
+
+# 2. Tích hợp lên develop và phát hành trên master kèm tag SemVer
+git checkout develop && git merge --ff-only Dev-Database && git push origin develop
+git checkout master && git merge develop && git push origin master
+git tag -a v3.5.0 -m "Release v3.5.0: Database-First, HRM Suite, Password Reset & Full-Stack Stabilization"
+git push origin v3.5.0
 ```

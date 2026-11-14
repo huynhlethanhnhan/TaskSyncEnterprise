@@ -129,10 +129,16 @@ def list_pending_reset_requests(db: Session) -> list[dict]:
                 "employee_code": emp.employee_code,
                 "full_name": emp.full_name,
                 "email": emp.email,
-                "department_name": dept_map.get(emp.department_id) if emp.department_id else None,
+                "department_name": (
+                    dept_map.get(emp.department_id) if emp.department_id else None
+                ),
                 "avatar_url": emp.avatar_url,
                 "note": ctx.get("note"),
-                "requested_at": row.created_at.isoformat() if row.created_at else ctx.get("requested_at"),
+                "requested_at": (
+                    row.created_at.isoformat()
+                    if row.created_at
+                    else ctx.get("requested_at")
+                ),
                 "notification_id": row.id,
             }
         )

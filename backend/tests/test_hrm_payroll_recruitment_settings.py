@@ -77,7 +77,12 @@ def test_runtime_settings_sync_and_admin_security_boundary(client, db):
 
     # Manager and Employee are blocked from Admin /settings/system
     assert client.get("/api/v1/settings/system", headers=mgr_h).status_code == 403
-    assert client.patch("/api/v1/settings/system", json={"system_name": "Hack"}, headers=mgr_h).status_code == 403
+    assert (
+        client.patch(
+            "/api/v1/settings/system", json={"system_name": "Hack"}, headers=mgr_h
+        ).status_code
+        == 403
+    )
     assert client.get("/api/v1/settings/system", headers=emp_h).status_code == 403
 
     # Runtime settings reflect updated system_name and page size for all users
@@ -131,7 +136,11 @@ def test_attendance_edit_and_payroll_calculation_and_rbac(client, db):
     work_day = date(2026, 11, 10)
     ci = client.post(
         "/api/v1/hrm/attendance/check-in",
-        json={"work_date": work_day.isoformat(), "check_in": "08:12:00", "status": "Present"},
+        json={
+            "work_date": work_day.isoformat(),
+            "check_in": "08:12:00",
+            "status": "Present",
+        },
         headers=emp_h,
     )
     assert ci.status_code == 201, ci.json()
@@ -148,7 +157,11 @@ def test_attendance_edit_and_payroll_calculation_and_rbac(client, db):
     # Manager creates own attendance log and cannot edit own log
     mgr_ci = client.post(
         "/api/v1/hrm/attendance/check-in",
-        json={"work_date": work_day.isoformat(), "check_in": "08:00:00", "status": "Present"},
+        json={
+            "work_date": work_day.isoformat(),
+            "check_in": "08:00:00",
+            "status": "Present",
+        },
         headers=mgr_h,
     )
     assert mgr_ci.status_code == 201
@@ -164,7 +177,12 @@ def test_attendance_edit_and_payroll_calculation_and_rbac(client, db):
     # Manager edits emp attendance to 08:00 -> 18:00 (10h work => 2h OT auto-computed)
     edit_att = client.put(
         f"/api/v1/hrm/attendance/{att_id}",
-        json={"check_in": "08:00:00", "check_out": "18:00:00", "status": "Present", "note": "Adjusted shift"},
+        json={
+            "check_in": "08:00:00",
+            "check_out": "18:00:00",
+            "status": "Present",
+            "note": "Adjusted shift",
+        },
         headers=mgr_h,
     )
     assert edit_att.status_code == 200, edit_att.json()
@@ -209,7 +227,10 @@ def test_attendance_edit_and_payroll_calculation_and_rbac(client, db):
 
     # Employee can view own payslip, outsider cannot
     assert len(client.get("/api/v1/hrm/payrolls", headers=emp_h).json()) == 1
-    assert client.get(f"/api/v1/hrm/payrolls/{payroll_id}", headers=oth_h).status_code == 403
+    assert (
+        client.get(f"/api/v1/hrm/payrolls/{payroll_id}", headers=oth_h).status_code
+        == 403
+    )
 
     # Manager adjusts bonus/deduction and confirms, but only Admin can mark Paid
     upd_pay = client.put(
@@ -248,7 +269,10 @@ def test_attendance_edit_and_payroll_calculation_and_rbac(client, db):
     # List leave balances returns scoped rows
     lb_list = client.get("/api/v1/hrm/leave-balances?leave_year=2026", headers=mgr_h)
     assert lb_list.status_code == 200
-    assert any(item["employee_id"] == mgr_id or item["employee_id"] == emp_id for item in lb_list.json())
+    assert any(
+        item["employee_id"] == mgr_id or item["employee_id"] == emp_id
+        for item in lb_list.json()
+    )
 
 
 def test_recruitment_candidate_pipeline_and_admin_onboarding(client, db):
@@ -322,13 +346,17 @@ def test_recruitment_candidate_pipeline_and_admin_onboarding(client, db):
         data={"username": "candidate.le@enterprise.com", "password": TEST_PWD},
     )
     assert login_new.status_code == 200
-    contracts = client.get(f"/api/v1/hrm/contracts?employee_id={new_emp_id}", headers=adm_h).json()
+    contracts = client.get(
+        f"/api/v1/hrm/contracts?employee_id={new_emp_id}", headers=adm_h
+    ).json()
     assert len(contracts) == 1
     assert Decimal(contracts[0]["base_salary"]) == Decimal("25000000.00")
 
 
 def test_admin_can_edit_own_attendance_and_clear_checkout(client, db):
-    admin = _make_employee(db, "ADM-SELF-ATT", "admselfatt@test.com", role_id=ROLE_ADMIN)
+    admin = _make_employee(
+        db, "ADM-SELF-ATT", "admselfatt@test.com", role_id=ROLE_ADMIN
+    )
     db.commit()
 
     adm_token = client.post(
@@ -337,7 +365,9 @@ def test_admin_can_edit_own_attendance_and_clear_checkout(client, db):
     ).json()["access_token"]
     adm_h = {"Authorization": f"Bearer {adm_token}"}
 
-    ci_resp = client.post("/api/v1/hrm/attendance/check-in", json={"status": "Present"}, headers=adm_h)
+    ci_resp = client.post(
+        "/api/v1/hrm/attendance/check-in", json={"status": "Present"}, headers=adm_h
+    )
     assert ci_resp.status_code == 201
     att_id = ci_resp.json()["id"]
 
@@ -348,7 +378,11 @@ def test_admin_can_edit_own_attendance_and_clear_checkout(client, db):
     # Admin clears accidental check_out back to None
     clear_resp = client.put(
         f"/api/v1/hrm/attendance/{att_id}",
-        json={"check_in": "08:30:00", "check_out": None, "note": "Clear mistaken check-out"},
+        json={
+            "check_in": "08:30:00",
+            "check_out": None,
+            "note": "Clear mistaken check-out",
+        },
         headers=adm_h,
     )
     assert clear_resp.status_code == 200

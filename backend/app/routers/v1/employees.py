@@ -123,6 +123,7 @@ def _attach_single_online_presence(
 ) -> EmployeeResponse:
     return _attach_online_presence(db, [item], current_user_id=current_user_id)[0]
 
+
 # ==========================================
 # 🔐 LUỒNG QUẢN TRỊ (BẮT BUỘC PHẢI LÀ ADMIN THÔNG QUA DEPENDENCIES RIÊNG)
 # ==========================================
@@ -336,11 +337,7 @@ def update_employee(
             else {"full_name", "email", "phone", "gender", "address", "date_of_birth"}
         )
         values = data.model_dump(exclude_unset=True)
-        restricted = {
-            k: v
-            for k, v in values.items()
-            if k in allowed_fields
-        }
+        restricted = {k: v for k, v in values.items() if k in allowed_fields}
         if not restricted:
             return obj
         for key, value in restricted.items():

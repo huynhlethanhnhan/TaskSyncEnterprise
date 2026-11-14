@@ -22,9 +22,7 @@ def get_led_team_ids(db: Session, employee_id: int) -> list[int]:
     )
 
 
-def is_team_leader(
-    db: Session, employee_id: int, team_id: int | None = None
-) -> bool:
+def is_team_leader(db: Session, employee_id: int, team_id: int | None = None) -> bool:
     """Checks whether the employee is currently leader of a given team (or any active team)."""
     stmt = select(Team.id).where(
         Team.leader_id == employee_id,

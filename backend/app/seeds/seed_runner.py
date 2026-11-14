@@ -227,7 +227,9 @@ def main():
             for key, val in summary.items():
                 print(f"  * {key:<20}: {val:>5}")
             print("=" * 55)
-            print("  Demo Accounts Seeded (password configured via SEED_ADMIN_PASSWORD env):")
+            print(
+                "  Demo Accounts Seeded (password configured via SEED_ADMIN_PASSWORD env):"
+            )
             print("    - Admin   : admin001@enterprise.com")
             print("    - Manager : manager001@enterprise.com")
             print("    - Employee: employee001@enterprise.com")

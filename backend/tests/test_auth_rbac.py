@@ -427,11 +427,15 @@ def test_forgot_password_notifies_admin_and_admin_or_token_resets_password(clien
     assert forgot_res.json()["admin_notified"] is True
 
     # 2. Non-admin cannot view admin pending reset queue
-    forbidden_q = client.get("/api/v1/employees/password-reset-requests", headers=emp_headers)
+    forbidden_q = client.get(
+        "/api/v1/employees/password-reset-requests", headers=emp_headers
+    )
     assert forbidden_q.status_code == 403
 
     # 3. Admin sees both the real-time Notification and the Pending Queue entry
-    queue_res = client.get("/api/v1/employees/password-reset-requests", headers=admin_headers)
+    queue_res = client.get(
+        "/api/v1/employees/password-reset-requests", headers=admin_headers
+    )
     assert queue_res.status_code == 200
     pending = queue_res.json()
     assert len(pending) == 1
@@ -441,7 +445,9 @@ def test_forgot_password_notifies_admin_and_admin_or_token_resets_password(clien
     notif_res = client.get("/api/v1/notifications", headers=admin_headers)
     assert notif_res.status_code == 200
     notif_body = notif_res.json()
-    notif_items = notif_body if isinstance(notif_body, list) else notif_body.get("data", [])
+    notif_items = (
+        notif_body if isinstance(notif_body, list) else notif_body.get("data", [])
+    )
     assert any(n["type"] == "PASSWORD_RESET_REQUEST" for n in notif_items)
 
     # 4. Admin resets employee password (auto temp password + single-use reset link)
@@ -456,7 +462,9 @@ def test_forgot_password_notifies_admin_and_admin_or_token_resets_password(clien
     reset_token = body["reset_link"].split("token=")[1]
 
     # Queue is automatically cleared once handled
-    after_queue = client.get("/api/v1/employees/password-reset-requests", headers=admin_headers)
+    after_queue = client.get(
+        "/api/v1/employees/password-reset-requests", headers=admin_headers
+    )
     assert after_queue.status_code == 200
     assert after_queue.json() == []
 

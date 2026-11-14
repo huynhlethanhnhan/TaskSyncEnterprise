@@ -86,9 +86,12 @@ def test_seed_password_upgrade_and_production_warning():
         ALLOWED_HOSTS=["api.tasksync.example.com"],
         SEED_ADMIN_PASSWORD="Admin@Task2026!",
     )
-    with patch("app.startup.production_check.settings", prod_settings), patch(
-        "app.startup.production_check.SystemValidator.run_all_checks",
-        return_value={"db": "PASS", "redis": "PASS"},
+    with (
+        patch("app.startup.production_check.settings", prod_settings),
+        patch(
+            "app.startup.production_check.SystemValidator.run_all_checks",
+            return_value={"db": "PASS", "redis": "PASS"},
+        ),
     ):
         report = run_production_readiness_check()
         assert report["security_warnings"] is True
@@ -101,27 +104,53 @@ def test_work_management_manager_department_scope_and_acting_team_leader(client,
     db.add_all([dept_a, dept_b])
     db.flush()
 
-    team_a1 = Team(department_id=dept_a.id, team_code="ENG-1", name="Core", is_active=True)
-    team_a2 = Team(department_id=dept_a.id, team_code="ENG-2", name="Platform", is_active=True)
-    team_b1 = Team(department_id=dept_b.id, team_code="FIN-1", name="Audit", is_active=True)
+    team_a1 = Team(
+        department_id=dept_a.id, team_code="ENG-1", name="Core", is_active=True
+    )
+    team_a2 = Team(
+        department_id=dept_a.id, team_code="ENG-2", name="Platform", is_active=True
+    )
+    team_b1 = Team(
+        department_id=dept_b.id, team_code="FIN-1", name="Audit", is_active=True
+    )
     db.add_all([team_a1, team_a2, team_b1])
     db.flush()
 
     admin = _make_employee(db, "ADM01", "adm01@example.com", ROLE_ADMIN)
     mgr_a = _make_employee(
-        db, "MGR01", "mgra@example.com", ROLE_MANAGER, department_id=dept_a.id, team_id=team_a1.id
+        db,
+        "MGR01",
+        "mgra@example.com",
+        ROLE_MANAGER,
+        department_id=dept_a.id,
+        team_id=team_a1.id,
     )
     dept_a.manager_id = mgr_a.id
     # Acting/temporary Team Leader: home team is team_a1, delegated to lead team_a2
     acting_leader = _make_employee(
-        db, "EMP_TL", "actingtl@example.com", ROLE_EMPLOYEE, department_id=dept_a.id, team_id=team_a1.id
+        db,
+        "EMP_TL",
+        "actingtl@example.com",
+        ROLE_EMPLOYEE,
+        department_id=dept_a.id,
+        team_id=team_a1.id,
     )
     team_a2.leader_id = acting_leader.id
     worker_a2 = _make_employee(
-        db, "EMP_W2", "worker2@example.com", ROLE_EMPLOYEE, department_id=dept_a.id, team_id=team_a2.id
+        db,
+        "EMP_W2",
+        "worker2@example.com",
+        ROLE_EMPLOYEE,
+        department_id=dept_a.id,
+        team_id=team_a2.id,
     )
     emp_b = _make_employee(
-        db, "EMP_B", "empb@example.com", ROLE_EMPLOYEE, department_id=dept_b.id, team_id=team_b1.id
+        db,
+        "EMP_B",
+        "empb@example.com",
+        ROLE_EMPLOYEE,
+        department_id=dept_b.id,
+        team_id=team_b1.id,
     )
 
     proj_a2 = Project(
@@ -175,10 +204,16 @@ def test_work_management_manager_department_scope_and_acting_team_leader(client,
     assert proj_b.id not in mgr_proj_ids
 
     # Manager cannot access Dept B's project directly
-    assert client.get(f"/api/v1/projects/{proj_b.id}", headers=mgr_headers).status_code == 403
+    assert (
+        client.get(f"/api/v1/projects/{proj_b.id}", headers=mgr_headers).status_code
+        == 403
+    )
 
     # 2. Acting Team Leader of team_a2 can access proj_a2 and create a task inside it
-    assert client.get(f"/api/v1/projects/{proj_a2.id}", headers=tl_headers).status_code == 200
+    assert (
+        client.get(f"/api/v1/projects/{proj_a2.id}", headers=tl_headers).status_code
+        == 200
+    )
     create_resp = client.post(
         "/api/v1/tasks",
         headers=tl_headers,
@@ -226,7 +261,9 @@ def test_work_management_manager_department_scope_and_acting_team_leader(client,
     del_resp = client.delete(f"/api/v1/tasks/{task_id}", headers=mgr_headers)
     assert del_resp.status_code == 200
     assert crud_task.get_by_id(db, task_id) is None
-    assert client.get(f"/api/v1/tasks/{task_id}", headers=mgr_headers).status_code == 404
+    assert (
+        client.get(f"/api/v1/tasks/{task_id}", headers=mgr_headers).status_code == 404
+    )
 
     # Cleanup unused variable lint
     assert worker_a2.id > 0
@@ -238,19 +275,35 @@ def test_hrm_contracts_rbac_and_soft_delete(client, db):
     db.add_all([dept_eng, dept_hr])
     db.flush()
 
-    team_eng = Team(department_id=dept_eng.id, team_code="T-ENG", name="Backend", is_active=True)
+    team_eng = Team(
+        department_id=dept_eng.id, team_code="T-ENG", name="Backend", is_active=True
+    )
     db.add(team_eng)
     db.flush()
 
     admin = _make_employee(db, "H-ADM", "hadm@example.com", ROLE_ADMIN)
-    mgr_eng = _make_employee(db, "H-MGR", "hmgr@example.com", ROLE_MANAGER, department_id=dept_eng.id)
-    mgr_hr = _make_employee(db, "H-HRMGR", "hhrmgr@example.com", ROLE_MANAGER, department_id=dept_hr.id)
+    mgr_eng = _make_employee(
+        db, "H-MGR", "hmgr@example.com", ROLE_MANAGER, department_id=dept_eng.id
+    )
+    mgr_hr = _make_employee(
+        db, "H-HRMGR", "hhrmgr@example.com", ROLE_MANAGER, department_id=dept_hr.id
+    )
     tl_eng = _make_employee(
-        db, "H-TL", "htl@example.com", ROLE_EMPLOYEE, department_id=dept_eng.id, team_id=team_eng.id
+        db,
+        "H-TL",
+        "htl@example.com",
+        ROLE_EMPLOYEE,
+        department_id=dept_eng.id,
+        team_id=team_eng.id,
     )
     team_eng.leader_id = tl_eng.id
     dev_eng = _make_employee(
-        db, "H-DEV", "hdev@example.com", ROLE_EMPLOYEE, department_id=dept_eng.id, team_id=team_eng.id
+        db,
+        "H-DEV",
+        "hdev@example.com",
+        ROLE_EMPLOYEE,
+        department_id=dept_eng.id,
+        team_id=team_eng.id,
     )
     db.commit()
 
@@ -280,15 +333,32 @@ def test_hrm_contracts_rbac_and_soft_delete(client, db):
     contract_id = c1.json()["id"]
 
     # Contract owner can view own salary/contract
-    assert client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=dev_h).status_code == 200
+    assert (
+        client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=dev_h).status_code
+        == 200
+    )
     # Admin can view
-    assert client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=adm_h).status_code == 200
+    assert (
+        client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=adm_h).status_code
+        == 200
+    )
     # Scoped Dept Manager can view
-    assert client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=mgr_eng_h).status_code == 200
+    assert (
+        client.get(
+            f"/api/v1/hrm/contracts/{contract_id}", headers=mgr_eng_h
+        ).status_code
+        == 200
+    )
     # Other Dept Manager gets 403
-    assert client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=mgr_hr_h).status_code == 403
+    assert (
+        client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=mgr_hr_h).status_code
+        == 403
+    )
     # Team Leader CANNOT view teammate's contract/salary (403)
-    assert client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=tl_h).status_code == 403
+    assert (
+        client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=tl_h).status_code
+        == 403
+    )
     # HR Manager cannot create contract for Engineering employee (403)
     c_forbid = client.post(
         "/api/v1/hrm/contracts",
@@ -329,22 +399,43 @@ def test_hrm_contracts_rbac_and_soft_delete(client, db):
     db.refresh(c1_refreshed)
     assert c1_refreshed.is_deleted is True
     assert c1_refreshed.deleted_at is not None
-    assert client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=adm_h).status_code == 404
+    assert (
+        client.get(f"/api/v1/hrm/contracts/{contract_id}", headers=adm_h).status_code
+        == 404
+    )
 
 
 def test_hrm_leave_balance_vacation_attendance_overtime_and_overview(client, db):
     dept = Department(department_code="OPS-HRM", name="Ops HRM", is_active=True)
     db.add(dept)
     db.flush()
-    team = Team(department_id=dept.id, team_code="OPS-T", name="Ops Team", is_active=True)
+    team = Team(
+        department_id=dept.id, team_code="OPS-T", name="Ops Team", is_active=True
+    )
     db.add(team)
     db.flush()
 
     admin = _make_employee(db, "O-ADM", "oadm@example.com", ROLE_ADMIN)
-    mgr = _make_employee(db, "O-MGR", "omgr@example.com", ROLE_MANAGER, department_id=dept.id)
-    tl = _make_employee(db, "O-TL", "otl@example.com", ROLE_EMPLOYEE, department_id=dept.id, team_id=team.id)
+    mgr = _make_employee(
+        db, "O-MGR", "omgr@example.com", ROLE_MANAGER, department_id=dept.id
+    )
+    tl = _make_employee(
+        db,
+        "O-TL",
+        "otl@example.com",
+        ROLE_EMPLOYEE,
+        department_id=dept.id,
+        team_id=team.id,
+    )
     team.leader_id = tl.id
-    emp = _make_employee(db, "O-EMP", "oemp@example.com", ROLE_EMPLOYEE, department_id=dept.id, team_id=team.id)
+    emp = _make_employee(
+        db,
+        "O-EMP",
+        "oemp@example.com",
+        ROLE_EMPLOYEE,
+        department_id=dept.id,
+        team_id=team.id,
+    )
 
     proj = Project(
         project_code="OPS-PRJ",
@@ -375,6 +466,7 @@ def test_hrm_leave_balance_vacation_attendance_overtime_and_overview(client, db)
     db.add(task_conflict)
     db.flush()
     from app.models.task_assignment import TaskAssignment
+
     db.add(TaskAssignment(task_id=task_conflict.id, employee_id=emp.id))
     db.commit()
 
@@ -479,7 +571,11 @@ def test_hrm_leave_balance_vacation_attendance_overtime_and_overview(client, db)
     ci = client.post(
         "/api/v1/hrm/attendance/check-in",
         headers=emp_h,
-        json={"work_date": today.isoformat(), "check_in": "08:00:00", "status": "Present"},
+        json={
+            "work_date": today.isoformat(),
+            "check_in": "08:00:00",
+            "status": "Present",
+        },
     )
     assert ci.status_code == 201, ci.text
     co = client.post(

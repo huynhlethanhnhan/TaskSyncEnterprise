@@ -19,9 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def _table_exists(inspector: sa.Inspector, table_name: str) -> bool:
-    return (
-        inspector.has_table(table_name)
-        or inspector.has_table(table_name, schema="dbo")
+    return inspector.has_table(table_name) or inspector.has_table(
+        table_name, schema="dbo"
     )
 
 
@@ -115,9 +114,7 @@ def upgrade() -> None:
                 name="ck_leave_balances_non_negative",
             ),
         )
-        op.create_index(
-            "ix_dbo_leave_balances_id", "leave_balances", ["id"]
-        )
+        op.create_index("ix_dbo_leave_balances_id", "leave_balances", ["id"])
         op.create_index(
             "ix_dbo_leave_balances_employee_id", "leave_balances", ["employee_id"]
         )
@@ -261,9 +258,7 @@ def upgrade() -> None:
                 name="ck_attendance_logs_hours",
             ),
         )
-        op.create_index(
-            "ix_dbo_attendance_logs_id", "attendance_logs", ["id"]
-        )
+        op.create_index("ix_dbo_attendance_logs_id", "attendance_logs", ["id"])
         op.create_index(
             "ix_dbo_attendance_logs_employee_id", "attendance_logs", ["employee_id"]
         )
@@ -341,9 +336,7 @@ def upgrade() -> None:
                 "hours > 0 AND hours <= 16", name="ck_overtime_requests_hours"
             ),
         )
-        op.create_index(
-            "ix_dbo_overtime_requests_id", "overtime_requests", ["id"]
-        )
+        op.create_index("ix_dbo_overtime_requests_id", "overtime_requests", ["id"])
         op.create_index(
             "ix_dbo_overtime_requests_employee_id", "overtime_requests", ["employee_id"]
         )
@@ -382,15 +375,12 @@ def upgrade() -> None:
                 server_default=sa.text("SYSUTCDATETIME()"),
             ),
         )
-        op.create_index(
-            "ix_dbo_backup_history_logs_id", "backup_history_logs", ["id"]
-        )
+        op.create_index("ix_dbo_backup_history_logs_id", "backup_history_logs", ["id"])
 
 
 def _drop_mssql_col_constraints(table_name: str, column_name: str) -> None:
     """Drops SQL Server default and foreign-key constraints on a column before DROP COLUMN."""
-    op.execute(
-        f"""
+    op.execute(f"""
         DECLARE @sql NVARCHAR(MAX) = N'';
         SELECT @sql += N'ALTER TABLE dbo.{table_name} DROP CONSTRAINT [' + dc.name + N'];'
         FROM sys.default_constraints dc
@@ -404,8 +394,7 @@ def _drop_mssql_col_constraints(table_name: str, column_name: str) -> None:
         WHERE fkc.parent_object_id = OBJECT_ID(N'dbo.{table_name}') AND c.name = N'{column_name}';
 
         IF LEN(@sql) > 0 EXEC sp_executesql @sql;
-        """
-    )
+        """)
 
 
 def downgrade() -> None:
