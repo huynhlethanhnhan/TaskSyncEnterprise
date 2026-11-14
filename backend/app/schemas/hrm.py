@@ -7,7 +7,9 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-ContractType = Literal["Probation", "Fixed-Term", "Indefinite", "Part-Time", "Contractor"]
+ContractType = Literal[
+    "Probation", "Fixed-Term", "Indefinite", "Part-Time", "Contractor"
+]
 ContractStatus = Literal["Draft", "Active", "Expired", "Terminated"]
 AttendanceStatus = Literal[
     "Present", "Remote", "Late", "Half-Day", "Leave", "Absent", "Holiday"
@@ -38,7 +40,9 @@ class LeaveBalanceResponse(BaseModel):
 class LeaveBalanceAdjust(BaseModel):
     leave_year: int = Field(ge=2020, le=2100)
     annual_entitlement: Decimal = Field(ge=Decimal("0"), le=Decimal("365"))
-    carried_over_days: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0"), le=Decimal("365"))
+    carried_over_days: Decimal = Field(
+        default=Decimal("0.00"), ge=Decimal("0"), le=Decimal("365")
+    )
 
 
 class EmploymentContractCreate(BaseModel):
@@ -103,7 +107,9 @@ class AttendanceCheckOut(BaseModel):
 class AttendanceUpdate(BaseModel):
     check_in: Optional[time] = None
     check_out: Optional[time] = None
-    work_hours: Optional[Decimal] = Field(default=None, ge=Decimal("0"), le=Decimal("24"))
+    work_hours: Optional[Decimal] = Field(
+        default=None, ge=Decimal("0"), le=Decimal("24")
+    )
     overtime_hours: Optional[Decimal] = Field(
         default=None, ge=Decimal("0"), le=Decimal("24")
     )
@@ -201,7 +207,9 @@ BackupStatus = Literal["SUCCESS", "VERIFIED", "FAILED", "RESTORED"]
 
 class BackupHistoryCreate(BaseModel):
     backup_type: BackupType = "SNAPSHOT"
-    database_name: str = Field(default="TaskSyncEnterprise", min_length=1, max_length=128)
+    database_name: str = Field(
+        default="TaskSyncEnterprise", min_length=1, max_length=128
+    )
     backup_path: Optional[str] = Field(default=None, max_length=500)
     status: BackupStatus = "SUCCESS"
     notes: Optional[str] = Field(default=None, max_length=500)

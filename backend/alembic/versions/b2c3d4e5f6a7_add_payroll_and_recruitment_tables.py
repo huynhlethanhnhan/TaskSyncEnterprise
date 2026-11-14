@@ -19,9 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def _table_exists(inspector: sa.Inspector, table_name: str) -> bool:
-    return (
-        inspector.has_table(table_name)
-        or inspector.has_table(table_name, schema="dbo")
+    return inspector.has_table(table_name) or inspector.has_table(
+        table_name, schema="dbo"
     )
 
 

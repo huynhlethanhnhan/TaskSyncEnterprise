@@ -7,7 +7,9 @@ from app.core.constants import ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE
 from app.core.security import get_password_hash
 from app.core.settings import settings
 
-DEFAULT_PASSWORD_HASH = get_password_hash(settings.SEED_ADMIN_PASSWORD.get_secret_value())
+DEFAULT_PASSWORD_HASH = get_password_hash(
+    settings.SEED_ADMIN_PASSWORD.get_secret_value()
+)
 
 
 def seed_employees(

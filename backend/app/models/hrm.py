@@ -33,8 +33,12 @@ class LeaveBalance(Base):
 
     __tablename__ = "leave_balances"
     __table_args__ = (
-        UniqueConstraint("employee_id", "leave_year", name="uq_leave_balances_emp_year"),
-        CheckConstraint("leave_year BETWEEN 2020 AND 2100", name="ck_leave_balances_year"),
+        UniqueConstraint(
+            "employee_id", "leave_year", name="uq_leave_balances_emp_year"
+        ),
+        CheckConstraint(
+            "leave_year BETWEEN 2020 AND 2100", name="ck_leave_balances_year"
+        ),
         CheckConstraint(
             "annual_entitlement >= 0 AND carried_over_days >= 0 "
             "AND used_days >= 0 AND pending_days >= 0",
@@ -48,16 +52,28 @@ class LeaveBalance(Base):
     )
     leave_year: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     annual_entitlement: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, server_default=text("12.00"), default=Decimal("12.00")
+        Numeric(5, 2),
+        nullable=False,
+        server_default=text("12.00"),
+        default=Decimal("12.00"),
     )
     carried_over_days: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(5, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     used_days: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(5, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     pending_days: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(5, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
@@ -80,7 +96,9 @@ class EmploymentContract(Base, AuditMixin):
 
     __tablename__ = "employment_contracts"
     __table_args__ = (
-        CheckConstraint("base_salary >= 0 AND allowance >= 0", name="ck_contracts_salary"),
+        CheckConstraint(
+            "base_salary >= 0 AND allowance >= 0", name="ck_contracts_salary"
+        ),
         CheckConstraint(
             "end_date IS NULL OR end_date >= start_date", name="ck_contracts_dates"
         ),
@@ -130,7 +148,9 @@ class AttendanceLog(Base):
 
     __tablename__ = "attendance_logs"
     __table_args__ = (
-        UniqueConstraint("employee_id", "work_date", name="uq_attendance_logs_emp_date"),
+        UniqueConstraint(
+            "employee_id", "work_date", name="uq_attendance_logs_emp_date"
+        ),
         CheckConstraint(
             "work_hours >= 0 AND work_hours <= 24 AND overtime_hours >= 0 AND overtime_hours <= 24",
             name="ck_attendance_logs_hours",
@@ -145,13 +165,22 @@ class AttendanceLog(Base):
     check_in: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
     check_out: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
     work_hours: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(5, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     overtime_hours: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(5, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     status: Mapped[str] = mapped_column(
-        Unicode(30), nullable=False, server_default=text("N'Present'"), default="Present"
+        Unicode(30),
+        nullable=False,
+        server_default=text("N'Present'"),
+        default="Present",
     )
     note: Mapped[Optional[str]] = mapped_column(Unicode(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -218,7 +247,10 @@ class BackupHistoryLog(Base):
     database_name: Mapped[str] = mapped_column(Unicode(128), nullable=False)
     backup_path: Mapped[Optional[str]] = mapped_column(Unicode(500), nullable=True)
     status: Mapped[str] = mapped_column(
-        Unicode(30), nullable=False, server_default=text("N'SUCCESS'"), default="SUCCESS"
+        Unicode(30),
+        nullable=False,
+        server_default=text("N'SUCCESS'"),
+        default="SUCCESS",
     )
     performed_by: Mapped[Optional[int]] = mapped_column(
         ForeignKey("employees.id"), nullable=True
@@ -260,34 +292,64 @@ class PayrollRecord(Base, AuditMixin):
     )
     pay_period: Mapped[str] = mapped_column(Unicode(7), nullable=False, index=True)
     standard_work_days: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, server_default=text("22.00"), default=Decimal("22.00")
+        Numeric(5, 2),
+        nullable=False,
+        server_default=text("22.00"),
+        default=Decimal("22.00"),
     )
     actual_work_days: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(5, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     paid_leave_days: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(5, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     overtime_hours: Mapped[Decimal] = mapped_column(
-        Numeric(6, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(6, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     base_salary: Mapped[Decimal] = mapped_column(
-        Numeric(18, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(18, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     allowance: Mapped[Decimal] = mapped_column(
-        Numeric(18, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(18, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     overtime_pay: Mapped[Decimal] = mapped_column(
-        Numeric(18, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(18, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     bonus: Mapped[Decimal] = mapped_column(
-        Numeric(18, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(18, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     deduction: Mapped[Decimal] = mapped_column(
-        Numeric(18, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(18, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     net_salary: Mapped[Decimal] = mapped_column(
-        Numeric(18, 2), nullable=False, server_default=text("0.00"), default=Decimal("0.00")
+        Numeric(18, 2),
+        nullable=False,
+        server_default=text("0.00"),
+        default=Decimal("0.00"),
     )
     currency: Mapped[str] = mapped_column(
         Unicode(10), nullable=False, server_default=text("N'VND'"), default="VND"
@@ -327,7 +389,10 @@ class RecruitmentCandidate(Base, AuditMixin):
         Numeric(18, 2), nullable=True
     )
     stage: Mapped[str] = mapped_column(
-        Unicode(30), nullable=False, server_default=text("N'Applied'"), default="Applied"
+        Unicode(30),
+        nullable=False,
+        server_default=text("N'Applied'"),
+        default="Applied",
     )
     interview_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     source: Mapped[Optional[str]] = mapped_column(Unicode(100), nullable=True)

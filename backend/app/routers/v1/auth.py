@@ -359,7 +359,8 @@ def reset_password_with_token(
 ):
     if data.confirm_password is not None and data.new_password != data.confirm_password:
         raise HTTPException(
-            status_code=400, detail="Mật khẩu mới và xác nhận mật khẩu không trùng khớp."
+            status_code=400,
+            detail="Mật khẩu mới và xác nhận mật khẩu không trùng khớp.",
         )
 
     payload = verify_password_reset_token(data.token.strip())

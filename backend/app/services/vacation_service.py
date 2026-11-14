@@ -197,7 +197,9 @@ def _sync_leave_balance_on_status_change(
     old_status: str,
     new_status: str,
 ) -> None:
-    if not hasattr(db, "scalar") or not _is_annual_leave(getattr(vacation, "type", None)):
+    if not hasattr(db, "scalar") or not _is_annual_leave(
+        getattr(vacation, "type", None)
+    ):
         return
 
     days = _calc_leave_days(vacation.start_date, vacation.end_date)
@@ -241,7 +243,11 @@ def update_vacation_status(
     normalized_status = "Withdrawn" if status == "Cancelled" else status
 
     # Anti-self-approval guard
-    if is_owner and normalized_status in {"Manager Approved", "HR Approved", "Approved"}:
+    if is_owner and normalized_status in {
+        "Manager Approved",
+        "HR Approved",
+        "Approved",
+    }:
         raise HTTPException(
             status_code=403,
             detail="Employees cannot approve their own leave request.",

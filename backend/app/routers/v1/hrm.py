@@ -8,7 +8,12 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.cache import CacheInvalidator
-from app.core.deps import RequireAdmin, RequireEmployee, RequireManager, get_current_user
+from app.core.deps import (
+    RequireAdmin,
+    RequireEmployee,
+    RequireManager,
+    get_current_user,
+)
 from app.database import get_db
 from app.models.employee import Employee
 from app.schemas.hrm import (

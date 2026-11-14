@@ -87,7 +87,10 @@ def _is_manager_of_employee(
         return True
     if manager.role_id != ROLE_MANAGER:
         return False
-    if manager.department_id is not None and target_emp.department_id == manager.department_id:
+    if (
+        manager.department_id is not None
+        and target_emp.department_id == manager.department_id
+    ):
         return True
     if target_emp.department_id is not None:
         managed = db.scalar(
@@ -448,9 +451,7 @@ def update_contract(
     return contract
 
 
-def delete_contract(
-    db: Session, contract_id: int, current_user: Employee
-) -> None:
+def delete_contract(db: Session, contract_id: int, current_user: Employee) -> None:
     contract = db.scalar(
         select(EmploymentContract).where(
             EmploymentContract.id == contract_id,
@@ -582,7 +583,9 @@ def list_attendance(
                 if not _is_manager_of_employee(db, current_user, target):
                     raise HTTPException(status_code=403, detail="Forbidden")
             else:
-                led_member_ids = _accessible_employee_ids_for_team_leader(db, current_user)
+                led_member_ids = _accessible_employee_ids_for_team_leader(
+                    db, current_user
+                )
                 if target.id not in led_member_ids:
                     raise HTTPException(status_code=403, detail="Forbidden")
         stmt = stmt.where(AttendanceLog.employee_id == employee_id)
@@ -619,7 +622,9 @@ def get_attendance_log(
         if current_user.role_id == ROLE_MANAGER:
             if not _is_manager_of_employee(db, current_user, target):
                 raise HTTPException(status_code=403, detail="Forbidden")
-        elif target.id not in _accessible_employee_ids_for_team_leader(db, current_user):
+        elif target.id not in _accessible_employee_ids_for_team_leader(
+            db, current_user
+        ):
             raise HTTPException(status_code=403, detail="Forbidden")
     return log
 
@@ -662,12 +667,16 @@ def update_attendance_log(
                 detail="Check-out time cannot be earlier than Check-in time.",
             )
         # Recompute hours automatically whenever times change unless caller supplies explicit overrides
-        if "work_hours" not in values and ("check_in" in values or "check_out" in values):
+        if "work_hours" not in values and (
+            "check_in" in values or "check_out" in values
+        ):
             computed_hours = Decimal(
                 str(round((dt_out - dt_in).total_seconds() / 3600.0, 2))
             )
             log.work_hours = min(computed_hours, Decimal("24.00"))
-        if "overtime_hours" not in values and ("check_in" in values or "check_out" in values):
+        if "overtime_hours" not in values and (
+            "check_in" in values or "check_out" in values
+        ):
             effective_hours = values.get("work_hours", log.work_hours)
             log.overtime_hours = max(
                 Decimal("0.00"), Decimal(str(effective_hours)) - Decimal("8.00")
@@ -676,7 +685,14 @@ def update_attendance_log(
         log.work_hours = values.get("work_hours", Decimal("0.00"))
         log.overtime_hours = values.get("overtime_hours", Decimal("0.00"))
 
-    for field in ("check_in", "check_out", "work_hours", "overtime_hours", "status", "note"):
+    for field in (
+        "check_in",
+        "check_out",
+        "work_hours",
+        "overtime_hours",
+        "status",
+        "note",
+    ):
         if field in values:
             if field in ("check_out", "note") or values[field] is not None:
                 setattr(log, field, values[field])
@@ -823,21 +839,35 @@ def update_overtime_status(
             status_code=403, detail="Employees cannot approve their own overtime."
         )
 
-    if is_manager and not is_owner and not _is_manager_of_employee(
-        db, current_user, target
+    if (
+        is_manager
+        and not is_owner
+        and not _is_manager_of_employee(db, current_user, target)
     ):
         raise HTTPException(
             status_code=403,
             detail="Managers can only process overtime within their department.",
         )
 
-    if is_owner and new_status == "Withdrawn" and ot.status in {"Pending", "Manager Approved"}:
+    if (
+        is_owner
+        and new_status == "Withdrawn"
+        and ot.status in {"Pending", "Manager Approved"}
+    ):
         ot.status = "Withdrawn"
-    elif (is_manager or is_admin) and ot.status == "Pending" and new_status in {"Manager Approved", "Rejected"}:
+    elif (
+        (is_manager or is_admin)
+        and ot.status == "Pending"
+        and new_status in {"Manager Approved", "Rejected"}
+    ):
         ot.status = new_status
         ot.approved_by = current_user.id
         ot.approved_at = _utc_now()
-    elif is_admin and ot.status in {"Pending", "Manager Approved"} and new_status in {"HR Approved", "Rejected"}:
+    elif (
+        is_admin
+        and ot.status in {"Pending", "Manager Approved"}
+        and new_status in {"HR Approved", "Rejected"}
+    ):
         ot.status = new_status
         ot.approved_by = current_user.id
         ot.approved_at = _utc_now()
@@ -875,7 +905,9 @@ def delete_overtime_request(
 
     is_owner = ot.employee_id == current_user.id
     is_admin = current_user.role_id == ROLE_ADMIN
-    if not is_admin and not (is_owner and ot.status in {"Pending", "Withdrawn", "Rejected"}):
+    if not is_admin and not (
+        is_owner and ot.status in {"Pending", "Withdrawn", "Rejected"}
+    ):
         raise HTTPException(
             status_code=403, detail="Not permitted to delete this overtime request"
         )
@@ -911,7 +943,9 @@ def get_leave_task_conflicts(
             Task.deadline.is_not(None),
             Employee.is_deleted == False,  # noqa: E712
             Vacation.is_deleted == False,  # noqa: E712
-            Vacation.status.in_(["Pending", "Manager Approved", "HR Approved", "Approved"]),
+            Vacation.status.in_(
+                ["Pending", "Manager Approved", "HR Approved", "Approved"]
+            ),
         )
     )
 
@@ -981,25 +1015,29 @@ def get_hrm_overview(db: Session, current_user: Employee) -> HRMOverviewResponse
         )
     ).all()
 
-    pending_leaves = db.scalar(
-        select(func.count(Vacation.id)).where(
-            Vacation.requested_by == current_user.id,
-            Vacation.is_deleted == False,  # noqa: E712
-            Vacation.status.in_(["Pending", "Manager Approved", "Info Requested"]),
+    pending_leaves = (
+        db.scalar(
+            select(func.count(Vacation.id)).where(
+                Vacation.requested_by == current_user.id,
+                Vacation.is_deleted == False,  # noqa: E712
+                Vacation.status.in_(["Pending", "Manager Approved", "Info Requested"]),
+            )
         )
-    ) or 0
-
-    pending_ot = db.scalar(
-        select(func.count(OvertimeRequest.id)).where(
-            OvertimeRequest.employee_id == current_user.id,
-            OvertimeRequest.is_deleted == False,  # noqa: E712
-            OvertimeRequest.status.in_(["Pending", "Manager Approved"]),
-        )
-    ) or 0
-
-    conflicts = get_leave_task_conflicts(
-        db, current_user, employee_id=current_user.id
+        or 0
     )
+
+    pending_ot = (
+        db.scalar(
+            select(func.count(OvertimeRequest.id)).where(
+                OvertimeRequest.employee_id == current_user.id,
+                OvertimeRequest.is_deleted == False,  # noqa: E712
+                OvertimeRequest.status.in_(["Pending", "Manager Approved"]),
+            )
+        )
+        or 0
+    )
+
+    conflicts = get_leave_task_conflicts(db, current_user, employee_id=current_user.id)
 
     return HRMOverviewResponse(
         employee_id=current_user.id,
@@ -1114,7 +1152,9 @@ def update_overtime_request(
             setattr(ot, field, val)
     ot.updated_at = _utc_now()
     ot.updated_by_id = current_user.id
-    _record_audit(db, current_user, f"HRM_OVERTIME_UPDATE id={ot.id} emp={ot.employee_id}")
+    _record_audit(
+        db, current_user, f"HRM_OVERTIME_UPDATE id={ot.id} emp={ot.employee_id}"
+    )
     db.commit()
     db.refresh(ot)
     return ot
@@ -1141,7 +1181,11 @@ def _compute_net_salary(
     deduction: Decimal,
 ) -> Decimal:
     total_paid_days = actual_work_days + paid_leave_days
-    ratio = min(Decimal("1.00"), total_paid_days / standard_work_days) if standard_work_days > 0 else Decimal("0.00")
+    ratio = (
+        min(Decimal("1.00"), total_paid_days / standard_work_days)
+        if standard_work_days > 0
+        else Decimal("0.00")
+    )
     earned_base = _quantize_money(base_salary * ratio)
     net = earned_base + allowance + overtime_pay + bonus - deduction
     return max(Decimal("0.00"), _quantize_money(net))
@@ -1177,7 +1221,9 @@ def calculate_payrolls(
         target_employees = list(
             db.scalars(
                 select(Employee)
-                .where(Employee.is_deleted == False, Employee.is_active == True)  # noqa: E712
+                .where(
+                    Employee.is_deleted == False, Employee.is_active == True
+                )  # noqa: E712
                 .order_by(Employee.id.asc())
             ).all()
         )
@@ -1212,7 +1258,11 @@ def calculate_payrolls(
                 PayrollRecord.pay_period == data.pay_period,
             )
         )
-        if existing is not None and not existing.is_deleted and existing.status == "Paid":
+        if (
+            existing is not None
+            and not existing.is_deleted
+            and existing.status == "Paid"
+        ):
             results.append(existing)
             continue
 
@@ -1225,7 +1275,9 @@ def calculate_payrolls(
             )
             .order_by(EmploymentContract.start_date.desc())
         )
-        base_salary = Decimal(str(contract.base_salary)) if contract else Decimal("0.00")
+        base_salary = (
+            Decimal(str(contract.base_salary)) if contract else Decimal("0.00")
+        )
         allowance = Decimal(str(contract.allowance)) if contract else Decimal("0.00")
         currency = contract.currency if contract else "VND"
 
@@ -1384,9 +1436,7 @@ def list_payrolls(
     return list(db.scalars(stmt).all())
 
 
-def get_payroll(
-    db: Session, payroll_id: int, current_user: Employee
-) -> PayrollRecord:
+def get_payroll(db: Session, payroll_id: int, current_user: Employee) -> PayrollRecord:
     record = db.scalar(
         select(PayrollRecord).where(
             PayrollRecord.id == payroll_id,
@@ -1503,7 +1553,10 @@ def list_candidates(
                 )
             ).all()
         )
-        if current_user.department_id and current_user.department_id not in managed_depts:
+        if (
+            current_user.department_id
+            and current_user.department_id not in managed_depts
+        ):
             managed_depts.append(current_user.department_id)
         if not managed_depts:
             return []
@@ -1537,7 +1590,10 @@ def create_candidate(
 ) -> RecruitmentCandidate:
     if current_user.role_id not in (ROLE_ADMIN, ROLE_MANAGER):
         raise HTTPException(status_code=403, detail="Forbidden")
-    if data.department_id is not None and db.get(Department, data.department_id) is None:
+    if (
+        data.department_id is not None
+        and db.get(Department, data.department_id) is None
+    ):
         raise HTTPException(status_code=409, detail="Department does not exist.")
     cand = RecruitmentCandidate(
         full_name=data.full_name,
@@ -1583,9 +1639,7 @@ def update_candidate(
     return cand
 
 
-def delete_candidate(
-    db: Session, candidate_id: int, current_user: Employee
-) -> None:
+def delete_candidate(db: Session, candidate_id: int, current_user: Employee) -> None:
     cand = get_candidate(db, candidate_id, current_user)
     cand.is_deleted = True
     cand.deleted_at = _utc_now()
@@ -1618,13 +1672,17 @@ def onboard_candidate(
             detail="An employee with this email already exists.",
         )
 
-    dept_id = data.department_id if data.department_id is not None else cand.department_id
+    dept_id = (
+        data.department_id if data.department_id is not None else cand.department_id
+    )
     if dept_id is not None and db.get(Department, dept_id) is None:
         raise HTTPException(status_code=409, detail="Department does not exist.")
     if data.team_id is not None:
         team = db.get(Team, data.team_id)
         if team is None or (dept_id is not None and team.department_id != dept_id):
-            raise HTTPException(status_code=409, detail="Invalid team for selected department.")
+            raise HTTPException(
+                status_code=409, detail="Invalid team for selected department."
+            )
 
     emp = Employee(
         employee_code=f"EMP-{str(uuid.uuid4())[:8].upper()}",
@@ -1637,7 +1695,9 @@ def onboard_candidate(
         job_title=data.job_title or cand.applied_position,
         start_date=data.start_date or _utc_now().date(),
         password_hash=get_password_hash(data.password),
-        employment_status="Probation" if data.contract_type == "Probation" else "Full-time",
+        employment_status=(
+            "Probation" if data.contract_type == "Probation" else "Full-time"
+        ),
     )
     db.add(emp)
     db.flush()
