@@ -2,6 +2,7 @@ import * as React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../ui/Button';
+import { useSettings } from '../../providers/SettingsProvider';
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
@@ -21,11 +22,12 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   title,
   message,
-  confirmText = 'Xác nhận',
-  cancelText = 'Hủy bỏ',
+  confirmText,
+  cancelText,
   variant = 'danger',
   isLoading = false,
 }) => {
+  const { t } = useSettings();
   const handleConfirm = async () => {
     await onConfirm();
     onClose();
@@ -40,10 +42,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       footer={
         <div className="flex items-center justify-end gap-3 w-full">
           <Button variant="outline" size="sm" onClick={onClose} type="button">
-            {cancelText}
+            {cancelText ?? t('Hủy bỏ', 'Cancel')}
           </Button>
           <Button variant={variant === 'warning' ? 'secondary' : variant} size="sm" onClick={handleConfirm} isLoading={isLoading}>
-            {confirmText}
+            {confirmText ?? t('Xác nhận', 'Confirm')}
           </Button>
         </div>
       }

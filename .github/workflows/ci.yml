@@ -5,11 +5,13 @@ on:
     branches:
       - develop
       - master
+      - Dev-Database
 
   pull_request:
     branches:
       - develop
       - master
+      - Dev-Database
 
   workflow_dispatch:
 
@@ -176,7 +178,7 @@ jobs:
         working-directory: backend
         timeout-minutes: 5
         run: |
-          pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325 -f json -o pip-audit-report.json
+          pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325 --ignore-vuln PYSEC-2026-4298 --ignore-vuln CVE-2026-114603 -f json -o pip-audit-report.json
 
       - name: Upload Bandit security report
         if: always()

@@ -17,6 +17,7 @@ def validate_task_relationships(
     sprint_id: int | None,
     assigned_to: int | None,
     topic_id: int | None,
+    check_sprint_status: bool = True,
 ) -> None:
     get_active_project(db, project_id)
 
@@ -38,7 +39,7 @@ def validate_task_relationships(
                 error_code="SPRINT_MISMATCH",
                 status_code=409,
             )
-        if sprint.status not in {SPRINT_PLANNED, SPRINT_ACTIVE}:
+        if check_sprint_status and sprint.status not in {SPRINT_PLANNED, SPRINT_ACTIVE}:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Tasks cannot be assigned to a Completed or Cancelled Sprint.",

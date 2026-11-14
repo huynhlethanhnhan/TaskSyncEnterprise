@@ -87,8 +87,8 @@ docker exec -e SQLCMDPASSWORD="${MSSQL_SA_PASSWORD:-}" "$CONTAINER_NAME" \
 
 # Move/Copy generated .bak file to host output directory if specified
 if [ -n "$OUTPUT_DIR" ] && [ -d "$OUTPUT_DIR" ]; then
-    # Since /var/opt/mssql/backup is mounted to host ./backups, copy to bundle directory if different
-    HOST_MOUNT_FILE="./backups/$FILE_NAME"
+    # Since /var/opt/mssql/backup is mounted to host BACKUP_ROOT, move to bundle directory if different
+    HOST_MOUNT_FILE="${BACKUP_ROOT:-./backups}/$FILE_NAME"
     TARGET_FILE="$OUTPUT_DIR/$FILE_NAME"
     if [ -f "$HOST_MOUNT_FILE" ] && [ "$HOST_MOUNT_FILE" != "$TARGET_FILE" ]; then
         mv "$HOST_MOUNT_FILE" "$TARGET_FILE"

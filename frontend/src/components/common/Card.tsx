@@ -10,9 +10,9 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     <div
       ref={ref}
       className={cn(
-        'rounded-xl border border-border bg-surface text-text-primary transition-all duration-200',
+        'min-w-0 overflow-hidden rounded-xl border border-border bg-surface text-text-primary transition-[transform,box-shadow,border-color] duration-200 ease-out',
         variant === 'default' && 'shadow-sm hover:shadow-md',
-        variant === 'interactive' && 'shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer',
+        variant === 'interactive' && 'shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer',
         variant === 'flat' && 'bg-slate-50/50 dark:bg-slate-900/50 shadow-none border-border/40',
         className
       )}
@@ -56,15 +56,25 @@ export const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTML
 CardDescription.displayName = 'CardDescription';
 
 export const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        'p-4 pt-0 first:pt-4 sm:p-6 sm:pt-0 sm:first:pt-6',
-        className
-      )}
-      {...props}
-    />
-  )
+  ({ className, ...props }, ref) => {
+    const hasShorthandPadding = Boolean(className && /(?:^|\s)p-(?:\d[\d.]*|px)(?:\s|$)/.test(className));
+    const hasVerticalPadding = Boolean(className && /(?:^|\s)py-(?:\d[\d.]*|px)(?:\s|$)/.test(className));
+    const hasTopPadding = Boolean(className && /(?:^|\s)pt-(?:\d[\d.]*|px)(?:\s|$)/.test(className));
+    const basePaddingClass = hasShorthandPadding
+      ? ''
+      : hasVerticalPadding
+        ? 'px-4 sm:px-6'
+        : hasTopPadding
+          ? 'px-4 pb-4 sm:px-6 sm:pb-6'
+          : 'p-4 pt-0 first:pt-4 sm:p-6 sm:pt-0 sm:first:pt-6';
+
+    return (
+      <div
+        ref={ref}
+        className={cn(basePaddingClass, className)}
+        {...props}
+      />
+    );
+  }
 );
 CardContent.displayName = 'CardContent';

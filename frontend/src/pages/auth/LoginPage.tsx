@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { useNavigate, useLocation, Link } from 'react-router';
-import { Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Checkbox } from '../../components/ui/Checkbox';
 import { useAuth } from '../../providers/AuthProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { useToast } from '../../providers/ToastProvider';
 import api from '../../api/axios';
 
@@ -12,11 +13,11 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated } = useAuth();
+  const { t } = useSettings();
   const toast = useToast();
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [showPassword, setShowPassword] = React.useState(false);
   const [rememberMe, setRememberMe] = React.useState(true);
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -35,7 +36,7 @@ const LoginPage: React.FC = () => {
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      setErrorMsg('Please enter both email address and password.');
+      setErrorMsg(t('Vui lòng nhập đầy đủ email và mật khẩu.', 'Please enter both email address and password.'));
       return;
     }
 
@@ -55,7 +56,7 @@ const LoginPage: React.FC = () => {
 
       const tokenData = res.data;
       if (!tokenData || !tokenData.access_token) {
-        throw new Error('Invalid authentication response from server.');
+        throw new Error(t('Phản hồi xác thực từ máy chủ không hợp lệ.', 'Invalid authentication response from server.'));
       }
 
       const userProfile = tokenData.user || {
@@ -68,13 +69,19 @@ const LoginPage: React.FC = () => {
       // Set auth state only after valid API login
       login(tokenData.access_token, tokenData.refresh_token, userProfile);
 
-      toast.success('Sign In Successful', `Welcome back, ${userProfile.name || userProfile.full_name || 'Admin'}!`);
+      toast.success(
+        t('Đăng nhập thành công', 'Sign In Successful'),
+        t(
+          `Chào mừng trở lại, ${userProfile.name || userProfile.full_name || 'Admin'}!`,
+          `Welcome back, ${userProfile.name || userProfile.full_name || 'Admin'}!`
+        )
+      );
 
       const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     } catch (err: unknown) {
       const responseData = (err as { response?: { data?: { detail?: string | { msg: string }[]; message?: string } } })?.response?.data;
-      let msg = 'Invalid credentials. Please verify your email and password.';
+      let msg = t('Thông tin đăng nhập không chính xác. Vui lòng kiểm tra email và mật khẩu.', 'Invalid credentials. Please verify your email and password.');
 
       if (responseData) {
         if (typeof responseData.detail === 'string') {
@@ -87,7 +94,7 @@ const LoginPage: React.FC = () => {
       }
 
       setErrorMsg(msg);
-      toast.error('Authentication Failed', msg);
+      toast.error(t('Xác thực thất bại', 'Authentication Failed'), msg);
     } finally {
       setIsLoading(false);
     }
@@ -106,19 +113,22 @@ const LoginPage: React.FC = () => {
               <span className="font-display text-2xl font-bold tracking-tight">TaskSync Enterprise</span>
             </div>
             <h1 className="text-3xl font-extrabold leading-tight mb-4">
-              Modern Enterprise HRM & Project Management Platform
+              {t('Nền tảng Quản trị Nhân sự & Dự án Doanh nghiệp Hiện đại', 'Modern Enterprise HRM & Project Management Platform')}
             </h1>
             <p className="text-blue-100 text-sm leading-relaxed max-w-md">
-              Streamline team coordination, leave requests, attendance tracking, and project execution with built-in audit compliance.
+              {t(
+                'Chuẩn hóa điều phối đội ngũ, đơn nghỉ phép, chấm công và thực thi dự án cùng tuân thủ nhật ký kiểm tra tích hợp.',
+                'Streamline team coordination, leave requests, attendance tracking, and project execution with built-in audit compliance.'
+              )}
             </p>
           </div>
 
           <div className="relative z-10 space-y-4">
             <div className="flex items-center gap-3 text-xs font-medium text-blue-100 bg-white/10 p-3 rounded-lg backdrop-blur-xs">
               <ShieldCheck className="h-5 w-5 text-emerald-300 shrink-0" />
-              <span>Role-Based Access Control & Encrypted JWT Authorization</span>
+              <span>{t('Phân quyền RBAC & Xác thực JWT mã hóa', 'Role-Based Access Control & Encrypted JWT Authorization')}</span>
             </div>
-            <p className="text-xs text-blue-200">© 2026 TaskSync Enterprise. All rights reserved.</p>
+            <p className="text-xs text-blue-200">{t('© 2026 TaskSync Enterprise. Đã đăng ký bản quyền.', '© 2026 TaskSync Enterprise. All rights reserved.')}</p>
           </div>
 
           {/* Decorative ambient background glows */}
@@ -129,8 +139,8 @@ const LoginPage: React.FC = () => {
         {/* Right Form Panel */}
         <div className="p-8 sm:p-12 flex flex-col justify-center">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-text-primary tracking-tight">Sign in to your account</h2>
-            <p className="text-xs text-text-muted mt-1.5">Enter your enterprise credentials to access your workspace portal</p>
+            <h2 className="text-2xl font-bold text-text-primary tracking-tight">{t('Đăng nhập tài khoản', 'Sign in to your account')}</h2>
+            <p className="text-xs text-text-muted mt-1.5">{t('Nhập thông tin doanh nghiệp để truy cập cổng làm việc', 'Enter your enterprise credentials to access your workspace portal')}</p>
           </div>
 
           {errorMsg && (
@@ -142,7 +152,7 @@ const LoginPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
-              label="Email Address"
+              label={t('Địa chỉ Email', 'Email Address')}
               type="email"
               placeholder="name@company.com"
               value={email}
@@ -152,28 +162,18 @@ const LoginPage: React.FC = () => {
             />
 
             <Input
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
+              label={t('Mật khẩu', 'Password')}
+              type="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               leftIcon={<Lock className="h-4 w-4" />}
-              rightIcon={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-text-muted hover:text-text-primary focus:outline-none"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              }
               required
             />
 
             <div className="flex items-center justify-between">
               <Checkbox
-                label="Remember me on this device"
+                label={t('Ghi nhớ trên thiết bị này', 'Remember me on this device')}
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
@@ -181,7 +181,7 @@ const LoginPage: React.FC = () => {
                 to="/forgot-password"
                 className="text-xs font-semibold text-primary hover:underline underline-offset-4"
               >
-                Forgot password?
+                {t('Quên mật khẩu?', 'Forgot password?')}
               </Link>
             </div>
 
@@ -192,7 +192,7 @@ const LoginPage: React.FC = () => {
               className="w-full mt-2"
               isLoading={isLoading}
             >
-              Sign In to Portal
+              {t('Đăng nhập vào Cổng hệ thống', 'Sign In to Portal')}
             </Button>
           </form>
         </div>

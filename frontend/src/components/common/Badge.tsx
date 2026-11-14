@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../utils/cn';
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-full font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 select-none',
+  'inline-flex items-center rounded-full font-medium whitespace-nowrap shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 select-none',
   {
     variants: {
       variant: {
@@ -31,6 +31,8 @@ export interface BadgeProps
     VariantProps<typeof badgeVariants> {
   showDot?: boolean;
 }
+
+export type BadgeVariant = NonNullable<BadgeProps['variant']>;
 
 export const Badge: React.FC<BadgeProps> = ({
   className,

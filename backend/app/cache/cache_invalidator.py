@@ -401,6 +401,12 @@ class CacheInvalidator:
         cls.invalidate_dashboard()
 
     @classmethod
+    def invalidate_hrm(cls, employee_id: int | None = None) -> None:
+        """Refresh HRM balances, contracts, attendance, and overtime caches."""
+        cls._publish("hrm.changed", employee_id)
+        cls.invalidate_dashboard()
+
+    @classmethod
     def invalidate_dashboard(cls) -> None:
         """Evicts cache keys related to the dashboard overview and analytics."""
         if not cls._check_redis_ready():

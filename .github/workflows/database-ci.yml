@@ -1,0 +1,154 @@
+name: Database CI & Verification
+
+on:
+  push:
+    branches:
+      - Dev-Database
+      - develop
+      - master
+    paths:
+      - "Database/**"
+      - ".github/workflows/database-ci.yml"
+  pull_request:
+    branches:
+      - Dev-Database
+      - develop
+      - master
+    paths:
+      - "Database/**"
+      - ".github/workflows/database-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  database-suite-verification:
+    name: SQL Server 2022 Schema & Triggers Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "TaskSync@2026Password!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TaskSync@2026Password!' -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Wait for SQL Server Service
+        run: |
+          echo "Waiting for Microsoft SQL Server 2022 container to become ready..."
+          until docker run --network host mcr.microsoft.com/mssql/server:2022-latest /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TaskSync@2026Password!" -C -Q "SELECT @@VERSION;" > /dev/null 2>&1; do
+            sleep 3
+          done
+          echo "Microsoft SQL Server 2022 is UP and READY."
+
+      - name: Step 1 — Execute Master DDL Schema & Constraints
+        run: |
+          echo "Executing 01_create_tables_and_constraints.sql..."
+          docker run --network host -v "${{ github.workspace }}/Database:/workspace" \
+            mcr.microsoft.com/mssql/server:2022-latest \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TaskSync@2026Password!" -C -b \
+            -i /workspace/Scripts/01_create_tables_and_constraints.sql
+
+      - name: Step 2 — Execute Master Triggers Suite
+        run: |
+          echo "Executing 02_triggers.sql..."
+          docker run --network host -v "${{ github.workspace }}/Database:/workspace" \
+            mcr.microsoft.com/mssql/server:2022-latest \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TaskSync@2026Password!" -C -b \
+            -i /workspace/Triggers/02_triggers.sql
+
+      - name: Step 3 — Execute Master Stored Procedures
+        run: |
+          echo "Executing 03_stored_procedures.sql..."
+          docker run --network host -v "${{ github.workspace }}/Database:/workspace" \
+            mcr.microsoft.com/mssql/server:2022-latest \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TaskSync@2026Password!" -C -b \
+            -i /workspace/Procedures/03_stored_procedures.sql
+
+      - name: Step 4 — Execute Master Views
+        run: |
+          echo "Executing 04_views.sql..."
+          docker run --network host -v "${{ github.workspace }}/Database:/workspace" \
+            mcr.microsoft.com/mssql/server:2022-latest \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TaskSync@2026Password!" -C -b \
+            -i /workspace/Procedures/04_views.sql
+
+      - name: Step 5 — Execute Query Optimization Indexes
+        run: |
+          echo "Executing 05_query_optimization_indexes.sql..."
+          docker run --network host -v "${{ github.workspace }}/Database:/workspace" \
+            mcr.microsoft.com/mssql/server:2022-latest \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TaskSync@2026Password!" -C -b \
+            -i /workspace/Indexes/05_query_optimization_indexes.sql
+
+      - name: Step 6 — Seed Initial Demo Data
+        run: |
+          echo "Executing 02_seed_initial_data.sql..."
+          docker run --network host -v "${{ github.workspace }}/Database:/workspace" \
+            mcr.microsoft.com/mssql/server:2022-latest \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TaskSync@2026Password!" -C -b \
+            -i /workspace/Scripts/02_seed_initial_data.sql
+
+      - name: Step 7 — Run 3-Table Query Optimization Benchmarks
+        run: |
+          echo "Executing 06_query_optimization_3_tables.sql..."
+          docker run --network host -v "${{ github.workspace }}/Database:/workspace" \
+            mcr.microsoft.com/mssql/server:2022-latest \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TaskSync@2026Password!" -C -b \
+            -i /workspace/Indexes/06_query_optimization_3_tables.sql
+
+      - name: Step 8 — Run Automated Test & Verification Scenarios
+        run: |
+          echo "Executing 07_test_and_demo_scenarios.sql..."
+          docker run --network host -v "${{ github.workspace }}/Database:/workspace" \
+            mcr.microsoft.com/mssql/server:2022-latest \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TaskSync@2026Password!" -C -b \
+            -i /workspace/Verification/07_test_and_demo_scenarios.sql
+
+      - name: Step 9 — Audit & Assert Database Objects Integrity
+        run: |
+          echo "Asserting Database Objects integrity..."
+          docker run --network host mcr.microsoft.com/mssql/server:2022-latest \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "TaskSync@2026Password!" -C -b -d TaskSyncEnterprise -Q "
+            SET NOCOUNT ON;
+            DECLARE @TableCount INT = (SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0);
+            DECLARE @RuleCount INT = (SELECT COUNT(*) FROM sys.objects WHERE type = 'R' AND is_ms_shipped = 0);
+            DECLARE @TriggerCount INT = (SELECT COUNT(*) FROM sys.triggers WHERE is_ms_shipped = 0);
+            DECLARE @ProcCount INT = (SELECT COUNT(*) FROM sys.procedures WHERE is_ms_shipped = 0);
+            DECLARE @ViewCount INT = (SELECT COUNT(*) FROM sys.views WHERE is_ms_shipped = 0);
+            DECLARE @IndexCount INT = (SELECT COUNT(*) FROM sys.indexes WHERE is_hypothetical = 0 AND name IS NOT NULL);
+
+            PRINT N'Database Objects Audit Summary:';
+            PRINT N'  - Tables: ' + CAST(@TableCount AS NVARCHAR(10));
+            PRINT N'  - Rules: ' + CAST(@RuleCount AS NVARCHAR(10));
+            PRINT N'  - Triggers: ' + CAST(@TriggerCount AS NVARCHAR(10));
+            PRINT N'  - Procedures: ' + CAST(@ProcCount AS NVARCHAR(10));
+            PRINT N'  - Views: ' + CAST(@ViewCount AS NVARCHAR(10));
+            PRINT N'  - Indexes: ' + CAST(@IndexCount AS NVARCHAR(10));
+
+            IF @TableCount < 18 RAISERROR(N'Check failed: Tables count is less than 18', 16, 1);
+            IF @RuleCount < 2 RAISERROR(N'Check failed: Rules count is less than 2', 16, 1);
+            IF @TriggerCount < 5 RAISERROR(N'Check failed: Triggers count is less than 5', 16, 1);
+            IF @ProcCount < 5 RAISERROR(N'Check failed: Procedures count is less than 5', 16, 1);
+            IF @ViewCount < 3 RAISERROR(N'Check failed: Views count is less than 3', 16, 1);
+            IF @IndexCount < 10 RAISERROR(N'Check failed: Indexes count is less than 10', 16, 1);
+
+            PRINT N'ALL DATABASE CI ASSERTIONS PASSED SUCCESSFULLY!';
+            "

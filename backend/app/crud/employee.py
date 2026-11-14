@@ -4,6 +4,7 @@ from sqlalchemy import select
 
 from app.models.department import Department
 from app.models.employee import Employee
+from app.models.role import Role
 from app.models.team import Team
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
 
@@ -64,6 +65,13 @@ def create(db: Session, data: EmployeeCreate):
         department_id=data.department_id,
         team_id=data.team_id,
     )
+    _validate_employee_fields(
+        db,
+        role_id=data.role_id,
+        email=data.email,
+        employee_code=data.employee_code,
+        manager_id=data.manager_id,
+    )
 
     import uuid
 
@@ -110,6 +118,14 @@ def update(db: Session, obj: Employee, data: EmployeeUpdate):
         db,
         department_id=target_department_id,
         team_id=target_team_id,
+    )
+    _validate_employee_fields(
+        db,
+        role_id=values.get("role_id"),
+        email=values.get("email"),
+        employee_code=values.get("employee_code"),
+        manager_id=values.get("manager_id"),
+        exclude_employee_id=obj.id,
     )
 
     for k, v in values.items():
@@ -172,3 +188,58 @@ def _validate_organization_assignment(
             status_code=status.HTTP_409_CONFLICT,
             detail="Team must belong to the Employee's Department.",
         )
+
+
+def _validate_employee_fields(
+    db: Session,
+    *,
+    role_id: int | None = None,
+    email: str | None = None,
+    employee_code: str | None = None,
+    manager_id: int | None = None,
+    exclude_employee_id: int | None = None,
+) -> None:
+    """Validate foreign keys and unique constraints before writing Employee rows."""
+    if role_id is not None and db.get(Role, role_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Role does not exist.",
+        )
+
+    if email is not None:
+        email_stmt = select(Employee.id).where(Employee.email == email)
+        if exclude_employee_id is not None:
+            email_stmt = email_stmt.where(Employee.id != exclude_employee_id)
+        if db.scalar(email_stmt) is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already exists.",
+            )
+
+    if employee_code:
+        code_stmt = select(Employee.id).where(Employee.employee_code == employee_code)
+        if exclude_employee_id is not None:
+            code_stmt = code_stmt.where(Employee.id != exclude_employee_id)
+        if db.scalar(code_stmt) is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Employee code already exists.",
+            )
+
+    if manager_id is not None:
+        if exclude_employee_id is not None and manager_id == exclude_employee_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An Employee cannot be their own manager.",
+            )
+        manager = db.scalar(
+            select(Employee.id).where(
+                Employee.id == manager_id,
+                Employee.is_deleted == False,  # noqa: E712
+            )
+        )
+        if manager is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Manager does not exist or has been deleted.",
+            )

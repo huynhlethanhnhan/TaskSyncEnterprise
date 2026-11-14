@@ -6,14 +6,17 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
 import { Badge } from '../common/Badge';
+import { StatusBadge } from '../common/StatusBadge';
 import { Avatar } from '../common/Avatar';
 import { useToast } from '../../providers/ToastProvider';
 import { useAuth } from '../../providers/AuthProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { HelpCircle, Lock, MessageSquare, Shield, ShieldCheck, EyeOff, X } from 'lucide-react';
 
 export const FeedbackManager: React.FC = () => {
   const toast = useToast();
   const { user } = useAuth();
+  const { t, statusLabel, formatDate } = useSettings();
 
   const isManagerOrAdmin = user?.role_id === 1 || user?.role_id === 2;
 
@@ -54,9 +57,9 @@ export const FeedbackManager: React.FC = () => {
       setTitle('');
       setDescription('');
       setIsAnonymous(false);
-      toast.success('Thành công', 'Ý kiến của bạn đã được gửi tới Ban quản lý.');
+      toast.success(t('Thành công', 'Success'), t('Ý kiến của bạn đã được gửi tới Ban quản lý.', 'Your feedback has been submitted to management.'));
     } catch {
-      toast.error('Lỗi', 'Không thể gửi phản hồi.');
+      toast.error(t('Lỗi', 'Error'), t('Không thể gửi phản hồi.', 'Unable to submit feedback.'));
     }
   };
 
@@ -73,23 +76,10 @@ export const FeedbackManager: React.FC = () => {
       });
       setReviewId(null);
       setReviewResponse('');
-      toast.success('Thành công', 'Đã lưu kết quả đánh giá ý kiến phản hồi.');
+      toast.success(t('Thành công', 'Success'), t('Đã lưu kết quả đánh giá ý kiến phản hồi.', 'Feedback review saved.'));
     } catch {
-      toast.error('Lỗi', 'Không thể cập nhật đánh giá.');
+      toast.error(t('Lỗi', 'Error'), t('Không thể cập nhật đánh giá.', 'Unable to update review.'));
     }
-  };
-
-  const impactBadges: Record<string, 'primary' | 'success' | 'warning' | 'danger'> = {
-    Low: 'primary',
-    Medium: 'success',
-    High: 'warning',
-    Critical: 'danger',
-  };
-
-  const statusBadges: Record<string, 'warning' | 'success' | 'danger' | 'primary'> = {
-    New: 'warning',
-    'Under Review': 'primary',
-    Resolved: 'success',
   };
 
   return (
@@ -105,7 +95,7 @@ export const FeedbackManager: React.FC = () => {
                 : 'border-transparent text-text-muted hover:text-text-primary'
             }`}
           >
-            Đóng góp ý kiến của tôi
+            {t('Đóng góp ý kiến của tôi', 'My Feedback')}
           </button>
           <button
             onClick={() => setActiveTab('review')}
@@ -115,7 +105,7 @@ export const FeedbackManager: React.FC = () => {
                 : 'border-transparent text-text-muted hover:text-text-primary'
             }`}
           >
-            Quản lý & Duyệt phản hồi
+            {t('Quản lý & Duyệt phản hồi', 'Review & Manage Feedback')}
           </button>
         </div>
       )}
@@ -128,46 +118,46 @@ export const FeedbackManager: React.FC = () => {
               <CardHeader>
                 <CardTitle className="text-sm font-bold uppercase flex items-center gap-1.5">
                   <HelpCircle className="h-4 w-4 text-primary" />
-                  Đóng góp ý kiến mới
+                  {t('Đóng góp ý kiến mới', 'Submit New Feedback')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <Input
-                    label="Tiêu đề ý kiến *"
-                    placeholder="Ví dụ: Đề xuất mở rộng bộ nhớ Redis test..."
+                    label={t('Tiêu đề ý kiến *', 'Title *')}
+                    placeholder={t('Ví dụ: Đề xuất mở rộng bộ nhớ Redis test...', 'e.g. Proposal to upgrade test server memory...')}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
                   />
                   <Select
-                    label="Chuyên mục đóng góp"
+                    label={t('Chuyên mục đóng góp', 'Category')}
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     options={[
-                      { value: 'Hạ tầng & Công cụ', label: 'Hạ tầng & Công cụ' },
-                      { value: 'Môi trường làm việc', label: 'Môi trường làm việc' },
-                      { value: 'Quy trình kỹ thuật', label: 'Quy trình kỹ thuật' },
-                      { value: 'Phúc lợi & Sự kiện', label: 'Phúc lợi & Sự kiện' },
+                      { value: 'Hạ tầng & Công cụ', label: t('Hạ tầng & Công cụ', 'Infrastructure & Tools') },
+                      { value: 'Môi trường làm việc', label: t('Môi trường làm việc', 'Work Environment') },
+                      { value: 'Quy trình kỹ thuật', label: t('Quy trình kỹ thuật', 'Engineering Process') },
+                      { value: 'Phúc lợi & Sự kiện', label: t('Phúc lợi & Sự kiện', 'Benefits & Events') },
                     ]}
                   />
                   <Textarea
-                    label="Nội dung chi tiết *"
-                    placeholder="Phân tích tình trạng hiện tại và giải pháp kiến nghị..."
+                    label={t('Nội dung chi tiết *', 'Details *')}
+                    placeholder={t('Phân tích tình trạng hiện tại và giải pháp kiến nghị...', 'Describe current situation and proposed solution...')}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
                     required
                   />
                   <Select
-                    label="Mức độ ảnh hưởng"
+                    label={t('Mức độ ảnh hưởng', 'Impact Level')}
                     value={impactLevel}
                     onChange={(e) => setImpactLevel(e.target.value)}
                     options={[
-                      { value: 'Low', label: 'Thấp (Low)' },
-                      { value: 'Medium', label: 'Trung bình (Medium)' },
-                      { value: 'High', label: 'Cao (High)' },
-                      { value: 'Critical', label: 'Nghiêm trọng (Critical)' },
+                      { value: 'Low', label: statusLabel('Low') },
+                      { value: 'Medium', label: statusLabel('Medium') },
+                      { value: 'High', label: statusLabel('High') },
+                      { value: 'Critical', label: statusLabel('Critical') },
                     ]}
                   />
 
@@ -181,7 +171,7 @@ export const FeedbackManager: React.FC = () => {
                     />
                     <label htmlFor="feedback-anonymous" className="cursor-pointer text-[11px] text-text-secondary flex items-center gap-1">
                       <Lock className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span>Gửi ẩn danh ý kiến này (Ẩn tên đối với Manager/Admin)</span>
+                      <span>{t('Gửi ẩn danh ý kiến này (Ẩn tên đối với Manager/Admin)', 'Submit anonymously (Hide name from Managers/Admins)')}</span>
                     </label>
                   </div>
 
@@ -192,7 +182,7 @@ export const FeedbackManager: React.FC = () => {
                     className="w-full"
                     isLoading={submitMutation.isPending}
                   >
-                    Gửi phản hồi
+                    {t('Gửi phản hồi', 'Submit Feedback')}
                   </Button>
                 </form>
               </CardContent>
@@ -203,13 +193,13 @@ export const FeedbackManager: React.FC = () => {
           <div className="lg:col-span-2 space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-bold uppercase">Lịch sử phản hồi của tôi ({myFeedback.length})</CardTitle>
+                <CardTitle className="text-sm font-bold uppercase">{t('Lịch sử phản hồi của tôi', 'My Feedback History')} ({myFeedback.length})</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {myLoading ? (
-                  <div className="text-center py-6 text-text-muted">Đang tải lịch sử...</div>
+                  <div className="text-center py-6 text-text-muted">{t('Đang tải lịch sử...', 'Loading history...')}</div>
                 ) : myFeedback.length === 0 ? (
-                  <div className="text-center py-12 text-text-muted">Bạn chưa gửi đóng góp ý kiến nào.</div>
+                  <div className="text-center py-12 text-text-muted">{t('Bạn chưa gửi đóng góp ý kiến nào.', 'You have not submitted any feedback yet.')}</div>
                 ) : (
                   myFeedback.map((feedback) => (
                     <div
@@ -221,21 +211,17 @@ export const FeedbackManager: React.FC = () => {
                           <h4 className="font-bold text-text-primary text-sm">{feedback.title}</h4>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <Badge variant="default">{feedback.category}</Badge>
-                            <Badge variant={impactBadges[feedback.impact_level] || 'primary'}>
-                              Ảnh hưởng: {feedback.impact_level}
-                            </Badge>
-                            <Badge variant={statusBadges[feedback.status] || 'primary'}>
-                              {feedback.status}
-                            </Badge>
+                            <StatusBadge status={feedback.impact_level} />
+                            <StatusBadge status={feedback.status} />
                             {feedback.is_anonymous && (
                               <Badge variant="danger" className="flex items-center gap-1">
-                                <EyeOff className="h-3 w-3" /> Ẩn danh
+                                <EyeOff className="h-3 w-3" /> {t('Ẩn danh', 'Anonymous')}
                               </Badge>
                             )}
                           </div>
                         </div>
                         <span className="text-[10px] text-text-muted">
-                          {new Date(feedback.created_at).toLocaleDateString('vi-VN')}
+                          {formatDate(feedback.created_at)}
                         </span>
                       </div>
                       <p className="text-text-secondary leading-relaxed bg-secondary/10 p-2.5 rounded-lg border border-border/10">
@@ -246,12 +232,12 @@ export const FeedbackManager: React.FC = () => {
                         <div className="p-3 rounded-lg border border-emerald-100 bg-emerald-500/[0.02] dark:border-emerald-950/20 text-xs">
                           <div className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 mb-1">
                             <MessageSquare className="h-4 w-4" />
-                            Phản hồi từ Ban quản lý:
+                            {t('Phản hồi từ Ban quản lý:', 'Management Response:')}
                           </div>
                           <p className="text-text-secondary leading-relaxed">{feedback.response}</p>
                           {feedback.reviewer && (
                             <p className="text-[10px] text-text-muted mt-1.5 italic text-right">
-                              Đăng bởi: {feedback.reviewer.full_name} ({feedback.reviewer.job_title})
+                              {t('Đăng bởi:', 'Posted by:')} {feedback.reviewer.full_name} ({feedback.reviewer.job_title})
                             </p>
                           )}
                         </div>
@@ -269,14 +255,14 @@ export const FeedbackManager: React.FC = () => {
           <CardHeader>
             <CardTitle className="text-sm font-bold uppercase flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              Danh sách ý kiến đóng góp toàn công ty ({allFeedback.length})
+              {t('Danh sách ý kiến đóng góp toàn công ty', 'Company-Wide Feedback')} ({allFeedback.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {allLoading ? (
-              <div className="text-center py-6 text-text-muted">Đang tải danh sách đóng góp...</div>
+              <div className="text-center py-6 text-text-muted">{t('Đang tải danh sách đóng góp...', 'Loading feedback...')}</div>
             ) : allFeedback.length === 0 ? (
-              <div className="text-center py-12 text-text-muted">Hiện tại không có ý kiến phản hồi nào.</div>
+              <div className="text-center py-12 text-text-muted">{t('Hiện tại không có ý kiến phản hồi nào.', 'No feedback entries available.')}</div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
                 {allFeedback.map((feedback) => (
@@ -289,25 +275,21 @@ export const FeedbackManager: React.FC = () => {
                         <h4 className="font-bold text-text-primary text-sm">{feedback.title}</h4>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge variant="default">{feedback.category}</Badge>
-                          <Badge variant={impactBadges[feedback.impact_level] || 'primary'}>
-                            Ảnh hưởng: {feedback.impact_level}
-                          </Badge>
-                          <Badge variant={statusBadges[feedback.status] || 'primary'}>
-                            {feedback.status}
-                          </Badge>
+                          <StatusBadge status={feedback.impact_level} />
+                          <StatusBadge status={feedback.status} />
                           {feedback.is_anonymous ? (
                             <Badge variant="danger" className="flex items-center gap-1">
-                              <EyeOff className="h-3 w-3" /> Ẩn danh
+                              <EyeOff className="h-3 w-3" /> {t('Ẩn danh', 'Anonymous')}
                             </Badge>
                           ) : (
                             <Badge variant="primary" className="flex items-center gap-1">
-                              Mã NV: {feedback.submitter?.id}
+                              {t('Mã NV:', 'Emp ID:')} {feedback.submitter?.id}
                             </Badge>
                           )}
                         </div>
                       </div>
                       <span className="text-[10px] text-text-muted">
-                        {new Date(feedback.created_at).toLocaleString('vi-VN')}
+                        {formatDate(feedback.created_at, 'full')}
                       </span>
                     </div>
 
@@ -320,7 +302,7 @@ export const FeedbackManager: React.FC = () => {
                             name={feedback.submitter.full_name}
                             size="sm"
                           />
-                          <span>Người gửi: <strong>{feedback.submitter.full_name}</strong> ({feedback.submitter.job_title})</span>
+                          <span>{t('Người gửi:', 'Submitted by:')} <strong>{feedback.submitter.full_name}</strong> ({feedback.submitter.job_title})</span>
                         </div>
                       )}
                     </div>
@@ -330,7 +312,7 @@ export const FeedbackManager: React.FC = () => {
                         <div className="flex justify-between items-center gap-2 mb-1.5">
                           <span className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
                             <MessageSquare className="h-4 w-4" />
-                            Đã phản hồi:
+                            {t('Đã phản hồi:', 'Responded:')}
                           </span>
                           <Button
                             variant="outline"
@@ -341,13 +323,13 @@ export const FeedbackManager: React.FC = () => {
                               setReviewResponse(feedback.response || '');
                             }}
                           >
-                            Chỉnh sửa
+                            {t('Chỉnh sửa', 'Edit')}
                           </Button>
                         </div>
                         <p className="text-text-secondary">{feedback.response}</p>
                         {feedback.reviewer && (
                           <p className="text-[10px] text-text-muted mt-1.5 italic text-right">
-                            Duyệt bởi: {feedback.reviewer.full_name} ({feedback.reviewer.job_title})
+                            {t('Duyệt bởi:', 'Reviewed by:')} {feedback.reviewer.full_name} ({feedback.reviewer.job_title})
                           </p>
                         )}
                       </div>
@@ -362,7 +344,7 @@ export const FeedbackManager: React.FC = () => {
                             setReviewResponse('');
                           }}
                         >
-                          Phản hồi ý kiến này
+                          {t('Phản hồi ý kiến này', 'Respond to Feedback')}
                         </Button>
                       </div>
                     )}
@@ -381,7 +363,7 @@ export const FeedbackManager: React.FC = () => {
             <div className="p-4 border-b border-border flex justify-between items-center bg-secondary/10">
               <h3 className="font-bold text-text-primary text-sm flex items-center gap-1.5 uppercase">
                 <Shield className="h-4 w-4 text-primary" />
-                Đánh giá & Trả lời đóng góp
+                {t('Đánh giá & Trả lời đóng góp', 'Review & Respond to Feedback')}
               </h3>
               <button
                 type="button"
@@ -393,17 +375,17 @@ export const FeedbackManager: React.FC = () => {
             </div>
             <form onSubmit={handleReview} className="p-4 space-y-4">
               <Select
-                label="Trạng thái xử lý"
+                label={t('Trạng thái xử lý', 'Resolution Status')}
                 value={reviewStatus}
                 onChange={(e) => setReviewStatus(e.target.value)}
                 options={[
-                  { value: 'Under Review', label: 'Đang xem xét (Under Review)' },
-                  { value: 'Resolved', label: 'Đã giải quyết (Resolved)' },
+                  { value: 'Under Review', label: statusLabel('Under Review') },
+                  { value: 'Resolved', label: statusLabel('Resolved') },
                 ]}
               />
               <Textarea
-                label="Nội dung phản hồi chính thức *"
-                placeholder="Nhập nội dung trả lời cho nhân viên biết cách xử lý của Ban quản lý..."
+                label={t('Nội dung phản hồi chính thức *', 'Official Response *')}
+                placeholder={t('Nhập nội dung trả lời cho nhân viên biết cách xử lý của Ban quản lý...', 'Write management response to notify the employee...')}
                 value={reviewResponse}
                 onChange={(e) => setReviewResponse(e.target.value)}
                 rows={4}
@@ -411,10 +393,10 @@ export const FeedbackManager: React.FC = () => {
               />
               <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
                 <Button variant="outline" size="sm" type="button" onClick={() => setReviewId(null)}>
-                  Hủy bỏ
+                  {t('Hủy bỏ', 'Cancel')}
                 </Button>
                 <Button variant="primary" size="sm" type="submit" isLoading={reviewMutation.isPending}>
-                  Lưu & Gửi phản hồi
+                  {t('Lưu & Gửi phản hồi', 'Save & Send Response')}
                 </Button>
               </div>
             </form>

@@ -3,8 +3,9 @@ import api from "../../api/axios";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Breadcrumb } from "../../components/navigation/Breadcrumb";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/common/Card";
-import { Badge } from "../../components/common/Badge";
+import { StatusBadge } from "../../components/common/StatusBadge";
 import { Avatar } from "../../components/common/Avatar";
+import { useSettings } from "../../providers/SettingsProvider";
 import { Calendar as CalendarIcon, CheckSquare, Users } from "lucide-react";
 
 interface CalendarTask {
@@ -85,10 +86,9 @@ const formatDayKey = (date: Date | string): string => {
   return `${d.getFullYear()}-${month}-${day}`;
 };
 
-const formatLabel = (date: Date): string =>
-  date.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" });
-
 export default function CalendarPage(): React.ReactElement {
+  const { t, statusLabel, isEnglish } = useSettings();
+  const locale = isEnglish ? "en-US" : "vi-VN";
   const today = useMemo(() => new Date(), []);
   const [displayDate, setDisplayDate] = useState<Date>(new Date(today.getFullYear(), today.getMonth(), 1));
   const [tasks, setTasks] = useState<CalendarTask[]>([]);
@@ -199,19 +199,21 @@ export default function CalendarPage(): React.ReactElement {
     return vacationsByDate[key] || [];
   }, [selectedDate, vacationsByDate]);
 
-  const selectedDateLabel = selectedDate ? formatLabel(selectedDate) : null;
+  const selectedDateLabel = selectedDate
+    ? selectedDate.toLocaleDateString(locale, { weekday: "short", day: "2-digit", month: "2-digit" })
+    : null;
 
   return (
     <div className="space-y-6 font-sans pb-12">
       {/* Page Header */}
       <PageHeader
-        title="Lịch biểu dự án (Calendar)"
-        description="Theo dõi thời hạn hoàn thành công việc, lịch trình công tác và kế hoạch vắng mặt của nhóm"
+        title={t('Lịch biểu dự án', 'Project Calendar')}
+        description={t('Theo dõi thời hạn hoàn thành công việc, lịch trình công tác và kế hoạch vắng mặt của nhóm', 'Track task deadlines, work schedules, and team leave plans')}
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: 'Work Management', href: '#' },
-              { label: 'Calendar' },
+              { label: t('Quản lý công việc', 'Work Management'), href: '#' },
+              { label: t('Lịch biểu', 'Calendar') },
             ]}
           />
         }
@@ -221,19 +223,19 @@ export default function CalendarPage(): React.ReactElement {
               onClick={() => setDisplayDate(new Date(displayDate.getFullYear(), displayDate.getMonth() - 1, 1))}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface transition-all cursor-pointer"
             >
-              Tháng trước
+              {t('Tháng trước', 'Prev Month')}
             </button>
             <button
               onClick={() => setDisplayDate(new Date(today.getFullYear(), today.getMonth(), 1))}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface transition-all cursor-pointer"
             >
-              Tháng này
+              {t('Tháng này', 'This Month')}
             </button>
             <button
               onClick={() => setDisplayDate(new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 1))}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface transition-all cursor-pointer"
             >
-              Tháng sau
+              {t('Tháng sau', 'Next Month')}
             </button>
           </div>
         }
@@ -246,16 +248,16 @@ export default function CalendarPage(): React.ReactElement {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-base font-bold text-text-primary uppercase tracking-wide">
-                  {displayDate.toLocaleDateString("vi-VN", { month: "long", year: "numeric" })}
+                  {displayDate.toLocaleDateString(locale, { month: "long", year: "numeric" })}
                 </h2>
-                <p className="text-xs text-text-muted mt-0.5">Nhấp vào một ngày để xem chi tiết task và trạng thái vắng mặt.</p>
+                <p className="text-xs text-text-muted mt-0.5">{t('Nhấp vào một ngày để xem chi tiết task và trạng thái vắng mặt.', 'Click on any date to view task details and leave status.')}</p>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-[10px] font-semibold text-text-secondary">
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500" /> Quá hạn</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sky-500" /> Đang làm</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Done</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" /> To Do</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-indigo-500/20 border border-indigo-300" /> Nghỉ phép</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500" /> {t('Quá hạn', 'Overdue')}</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sky-500" /> {statusLabel('In Progress')}</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> {statusLabel('Done')}</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" /> {statusLabel('To Do')}</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-indigo-500/20 border border-indigo-300" /> {t('Nghỉ phép', 'On Leave')}</span>
               </div>
             </div>
           </CardHeader>
@@ -263,7 +265,7 @@ export default function CalendarPage(): React.ReactElement {
           <CardContent className="p-0">
             {/* Days Header */}
             <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
-              {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((label) => (
+              {(isEnglish ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] : ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']).map((label) => (
                 <div key={label} className="py-2">{label}</div>
               ))}
             </div>
@@ -306,13 +308,13 @@ export default function CalendarPage(): React.ReactElement {
                         const employee = employees.find((e) => e.id === vac.requested_by);
                         return (
                           <div key={vac.id} className="px-1 py-0.5 rounded-sm bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200/30 truncate">
-                            Nghỉ: {employee?.full_name || 'Nhân sự'}
+                            {t('Nghỉ:', 'Leave:')} {employee?.full_name || t('Nhân sự', 'Staff')}
                           </div>
                         );
                       })}
                       {dayTasks.length > 0 && (
                         <div className="px-1 py-0.5 rounded-sm bg-accent text-text-secondary truncate">
-                          {dayTasks.length} nhiệm vụ
+                          {dayTasks.length} {t('nhiệm vụ', 'tasks')}
                         </div>
                       )}
                     </div>
@@ -329,11 +331,11 @@ export default function CalendarPage(): React.ReactElement {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <CalendarIcon className="h-4 w-4 text-primary" />
-                Chi tiết ngày
+                {t('Chi tiết ngày', 'Day Details')}
               </CardTitle>
               {selectedDateLabel && (
                 <CardDescription className="text-text-primary font-semibold">
-                  {selectedDate.toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long" })}
+                  {selectedDate.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" })}
                 </CardDescription>
               )}
             </CardHeader>
@@ -341,7 +343,7 @@ export default function CalendarPage(): React.ReactElement {
               {selectedVacations.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1">
-                    <Users className="h-3 w-3" /> Lịch vắng mặt ({selectedVacations.length})
+                    <Users className="h-3 w-3" /> {t('Lịch vắng mặt', 'Leave Schedule')} ({selectedVacations.length})
                   </h4>
                   <div className="space-y-2">
                     {selectedVacations.map((vac) => {
@@ -350,8 +352,8 @@ export default function CalendarPage(): React.ReactElement {
                         <div key={vac.id} className="p-2.5 rounded-xl border border-indigo-100 bg-indigo-50/20 dark:bg-indigo-950/10 flex items-center gap-2">
                           <Avatar name={employee?.full_name || 'Staff'} size="sm" />
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-text-primary">{employee?.full_name || `Nhân sự #${vac.requested_by}`}</p>
-                            <p className="text-[10px] text-text-muted mt-0.5">Nghỉ phép ({vac.type})</p>
+                            <p className="text-xs font-bold text-text-primary">{employee?.full_name || `${t('Nhân sự', 'Staff')} #${vac.requested_by}`}</p>
+                            <p className="text-[10px] text-text-muted mt-0.5">{t('Nghỉ phép', 'On Leave')} ({statusLabel(vac.type)})</p>
                           </div>
                         </div>
                       );
@@ -362,11 +364,11 @@ export default function CalendarPage(): React.ReactElement {
 
               <div className="space-y-2">
                 <h4 className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
-                  <CheckSquare className="h-3 w-3" /> Công việc ({selectedTasks.length})
+                  <CheckSquare className="h-3 w-3" /> {t('Công việc', 'Tasks')} ({selectedTasks.length})
                 </h4>
                 {selectedTasks.length === 0 ? (
                   <p className="text-xs text-text-muted text-center py-6 border border-dashed border-border rounded-xl bg-surface/50">
-                    Không có task vào ngày này.
+                    {t('Không có task vào ngày này.', 'No tasks scheduled for this date.')}
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -378,34 +380,33 @@ export default function CalendarPage(): React.ReactElement {
                         <div key={task.id} className={`rounded-xl border p-4 ${isOverdue ? 'border-rose-200/50 bg-rose-50/20 dark:bg-rose-950/10' : 'border-border bg-surface'}`}>
                           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                             <h4 className="min-w-0 text-sm font-bold leading-snug text-text-primary">{task.title || task.name}</h4>
-                            <Badge className="shrink-0 whitespace-nowrap" variant={task.status === 'Done' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} size="sm">
-                              {task.status}
-                            </Badge>
+                            <StatusBadge status={task.status} size="sm" className="shrink-0" />
                           </div>
                           <div className="mt-3 space-y-1.5 border-t border-border/60 pt-3 text-[11px] text-text-secondary">
                             <div>
-                              <strong className="text-text-primary">Dự án:</strong>{' '}
+                              <strong className="text-text-primary">{t('Dự án:', 'Project:')}</strong>{' '}
                               {project ? (
                                 <span className="font-semibold text-text-primary">
                                   {project.name} {project.project_code ? `(${project.project_code})` : ''}
                                 </span>
                               ) : (
-                                <span className="italic text-text-muted">Không xác định</span>
+                                <span className="italic text-text-muted">{t('Không xác định', 'Unassigned')}</span>
                               )}
                               {project?.status && (
-                                <Badge variant="outline" size="sm" className="ml-1.5">
-                                  {project.status}
-                                </Badge>
+                                <StatusBadge status={project.status} size="sm" className="ml-1.5" />
                               )}
                             </div>
                             {employee && (
                               <div className="flex items-center gap-1.5 mt-1">
-                                <strong className="text-text-primary shrink-0">Người thực hiện:</strong>
+                                <strong className="text-text-primary shrink-0">{t('Người thực hiện:', 'Assignee:')}</strong>
                                 <Avatar name={employee.full_name} src={employee.avatar_url} size="sm" />
                                 <span className="truncate font-medium">{employee.full_name}</span>
                               </div>
                             )}
-                            <div><strong className="text-text-primary">Độ ưu tiên:</strong> {task.priority || 'Medium'}</div>
+                            <div className="flex items-center gap-1.5">
+                              <strong className="text-text-primary">{t('Độ ưu tiên:', 'Priority:')}</strong>
+                              <StatusBadge status={task.priority || 'Medium'} size="sm" />
+                            </div>
                           </div>
                         </div>
                       );

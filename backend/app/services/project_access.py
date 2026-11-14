@@ -3,10 +3,36 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
+from app.models.department import Department
 from app.models.employee import Employee
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.team import Team
+
+
+def get_led_team_ids(db: Session, employee_id: int) -> list[int]:
+    """Returns active team IDs where the employee is assigned as Team Leader (permanent or acting)."""
+    return list(
+        db.scalars(
+            select(Team.id).where(
+                Team.leader_id == employee_id,
+                Team.is_active == True,  # noqa: E712
+            )
+        ).all()
+    )
+
+
+def is_team_leader(
+    db: Session, employee_id: int, team_id: int | None = None
+) -> bool:
+    """Checks whether the employee is currently leader of a given team (or any active team)."""
+    stmt = select(Team.id).where(
+        Team.leader_id == employee_id,
+        Team.is_active == True,  # noqa: E712
+    )
+    if team_id is not None:
+        stmt = stmt.where(Team.id == team_id)
+    return db.scalar(stmt) is not None
 
 
 def get_active_project(db: Session, project_id: int) -> Project:
@@ -33,14 +59,35 @@ def user_can_access_project(
         return True
     if project.created_by == current_user.id:
         return True
-    if project.team_id is not None and current_user.team_id == project.team_id:
-        return True
+
+    # Manager scope covers all projects in their department or any department they manage
+    if current_user.role_id == ROLE_MANAGER and project.department_id is not None:
+        if current_user.department_id == project.department_id:
+            return True
+        managed_dept_id = db.scalar(
+            select(Department.id).where(
+                Department.id == project.department_id,
+                Department.manager_id == current_user.id,
+                Department.is_active == True,  # noqa: E712
+            )
+        )
+        if managed_dept_id is not None:
+            return True
+
+    # Contextual Team Leader (including temporary/acting leader) can access team's projects
+    if project.team_id is not None:
+        if current_user.team_id == project.team_id:
+            return True
+        if is_team_leader(db, current_user.id, team_id=project.team_id):
+            return True
+
     if (
         project.team_id is None
         and project.department_id is not None
         and current_user.department_id == project.department_id
     ):
         return True
+
     membership_id = db.scalar(
         select(ProjectMember.id).where(
             ProjectMember.project_id == project.id,
@@ -97,25 +144,39 @@ def require_project_management(
 def project_scope_predicate(current_user: Employee):
     if current_user.role_id == ROLE_ADMIN:
         return None
-    return or_(
+
+    led_teams_subq = select(Team.id).where(
+        Team.leader_id == current_user.id,
+        Team.is_active == True,  # noqa: E712
+    )
+    member_projects_subq = select(ProjectMember.project_id).where(
+        ProjectMember.employee_id == current_user.id
+    )
+
+    conditions = [
         Project.created_by == current_user.id,
-        (
-            Project.team_id == current_user.team_id
-            if current_user.team_id is not None
-            else False
-        ),
-        (
+        Project.team_id.in_(led_teams_subq),
+        Project.id.in_(member_projects_subq),
+    ]
+
+    if current_user.team_id is not None:
+        conditions.append(Project.team_id == current_user.team_id)
+
+    if current_user.role_id == ROLE_MANAGER:
+        if current_user.department_id is not None:
+            conditions.append(Project.department_id == current_user.department_id)
+        managed_depts_subq = select(Department.id).where(
+            Department.manager_id == current_user.id,
+            Department.is_active == True,  # noqa: E712
+        )
+        conditions.append(Project.department_id.in_(managed_depts_subq))
+    elif current_user.department_id is not None:
+        conditions.append(
             (Project.team_id.is_(None))
             & (Project.department_id == current_user.department_id)
-            if current_user.department_id is not None
-            else False
-        ),
-        Project.id.in_(
-            select(ProjectMember.project_id).where(
-                ProjectMember.employee_id == current_user.id
-            )
-        ),
-    )
+        )
+
+    return or_(*conditions)
 
 
 def validate_project_relationships(

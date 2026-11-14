@@ -5,6 +5,7 @@ import { Textarea } from '../ui/Textarea';
 import { Button } from '../ui/Button';
 import { useUpdateSprint } from '../../hooks/useSprintBacklog';
 import { useToast } from '../../providers/ToastProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { type SprintItem } from '../../api/services';
 
 import { extractApiError } from '../../utils/errorHelpers';
@@ -17,6 +18,7 @@ interface EditSprintModalProps {
 
 export const EditSprintModal: React.FC<EditSprintModalProps> = ({ isOpen, onClose, sprint }) => {
   const toast = useToast();
+  const { t } = useSettings();
   const updateMutation = useUpdateSprint();
 
   const [name, setName] = React.useState('');
@@ -50,36 +52,36 @@ export const EditSprintModal: React.FC<EditSprintModalProps> = ({ isOpen, onClos
           end_date: endDate ? new Date(`${endDate}T23:59:59`).toISOString() : null,
         },
       });
-      toast.success('Cập nhật thành công', `Đã cập nhật thông tin Sprint "${name}".`);
+      toast.success(t('Cập nhật thành công', 'Update Succeeded'), t(`Đã cập nhật thông tin Sprint "${name}".`, `Updated Sprint "${name}".`));
       onClose();
     } catch (err: any) {
-      const apiError = extractApiError(err, 'Không thể lưu thay đổi Sprint.');
-      toast.error('Lỗi cập nhật', apiError.message);
+      const apiError = extractApiError(err, t('Không thể lưu thay đổi Sprint.', 'Unable to save Sprint changes.'));
+      toast.error(t('Lỗi cập nhật', 'Update Error'), apiError.message);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Chỉnh sửa Thông tin Sprint" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('Chỉnh sửa Thông tin Sprint', 'Edit Sprint Details')} size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
-          label="Tên Sprint *"
+          label={t('Tên Sprint *', 'Sprint Name *')}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Tên Sprint..."
+          placeholder={t('Tên Sprint...', 'Sprint name...')}
           required
         />
 
         <Textarea
-          label="Mục tiêu Sprint (Sprint Goal)"
+          label={t('Mục tiêu Sprint (Sprint Goal)', 'Sprint Goal')}
           value={goal}
           onChange={(e) => setGoal(e.target.value)}
-          placeholder="Mô tả mục tiêu chính của Sprint này..."
+          placeholder={t('Mô tả mục tiêu chính của Sprint này...', 'Describe the primary objective of this Sprint...')}
           rows={3}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Dung lượng Story Points (Capacity)"
+            label={t('Dung lượng Story Points (Capacity)', 'Story Points Capacity')}
             type="number"
             value={capacity}
             onChange={(e) => setCapacity(Number(e.target.value))}
@@ -89,13 +91,13 @@ export const EditSprintModal: React.FC<EditSprintModalProps> = ({ isOpen, onClos
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Ngày Bắt đầu"
+            label={t('Ngày Bắt đầu', 'Start Date')}
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
           />
           <Input
-            label="Ngày Kết thúc"
+            label={t('Ngày Kết thúc', 'End Date')}
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
@@ -104,10 +106,10 @@ export const EditSprintModal: React.FC<EditSprintModalProps> = ({ isOpen, onClos
 
         <div className="flex items-center justify-end gap-2 pt-4 border-t border-border/40">
           <Button type="button" variant="outline" size="sm" onClick={onClose}>
-            Hủy
+            {t('Hủy', 'Cancel')}
           </Button>
           <Button type="submit" variant="primary" size="sm" isLoading={updateMutation.isPending}>
-            Lưu Thay Đổi
+            {t('Lưu Thay Đổi', 'Save Changes')}
           </Button>
         </div>
       </form>

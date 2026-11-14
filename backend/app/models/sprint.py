@@ -7,6 +7,7 @@ from app.models.mixins import AuditMixin
 
 class Sprint(AuditMixin, Base):
     __tablename__ = "sprints"
+    __table_args__ = {"implicit_returning": False}
 
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))

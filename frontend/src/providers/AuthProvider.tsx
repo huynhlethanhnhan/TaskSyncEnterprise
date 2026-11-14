@@ -15,6 +15,7 @@ interface UserProfile {
   team_id?: number | null;
   department_id?: number | null;
   is_team_leader?: boolean;
+  employment_status?: string | null;
 }
 
 

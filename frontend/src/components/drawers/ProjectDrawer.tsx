@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { type ProjectItem } from '../../api/services';
 import { useDepartments } from '../../hooks/useDepartments';
 import { useTeams } from '../../hooks/useTeams';
+import { useSettings } from '../../providers/SettingsProvider';
 
 interface ProjectDrawerProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
 }) => {
   const { data: departments = [] } = useDepartments();
   const { data: teams = [] } = useTeams();
+  const { t, statusLabel } = useSettings();
 
   const [name, setName] = React.useState('');
   const [projectCode, setProjectCode] = React.useState('');
@@ -67,7 +69,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
     if (!name.trim() || (!project && !projectCode.trim())) return;
 
     if (startDate && endDate && startDate > endDate) {
-      setDateError('Ngày bắt đầu không được sau ngày kết thúc.');
+      setDateError(t('Ngày bắt đầu không được sau ngày kết thúc.', 'Start date cannot be after end date.'));
       return;
     }
     setDateError(null);
@@ -86,7 +88,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
   };
 
   const departmentOptions = [
-    { value: '', label: '-- Chọn Phòng ban phụ trách --' },
+    { value: '', label: t('-- Chọn Phòng ban phụ trách --', '-- Select Department --') },
     ...departments.map((d) => ({
       value: String(d.id),
       label: d.name,
@@ -94,7 +96,12 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
   ];
 
   const teamOptions = [
-    { value: '', label: departmentId ? '-- Chọn Team phụ trách (Tùy chọn) --' : '-- Hãy chọn Phòng ban trước --' },
+    {
+      value: '',
+      label: departmentId
+        ? t('-- Chọn Team phụ trách (Tùy chọn) --', '-- Select Team (Optional) --')
+        : t('-- Hãy chọn Phòng ban trước --', '-- Select Department First --'),
+    },
     ...availableTeams.map((t) => ({
       value: String(t.id),
       label: t.name,
@@ -105,42 +112,42 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      title={project ? 'Chỉnh sửa Dự án' : 'Tạo Dự án Mới'}
-      description="Nhập thông tin chi tiết dự án để theo dõi tiến độ và công việc."
+      title={project ? t('Chỉnh sửa Dự án', 'Edit Project') : t('Tạo Dự án Mới', 'Create New Project')}
+      description={t('Nhập thông tin chi tiết dự án để theo dõi tiến độ và công việc.', 'Enter project details to track progress and tasks.')}
       position="right"
       size="md"
       footer={
         <div className="flex items-center justify-end gap-3 w-full">
           <Button variant="outline" size="sm" onClick={onClose} type="button">
-            Hủy bỏ
+            {t('Hủy bỏ', 'Cancel')}
           </Button>
           <Button variant="primary" size="sm" onClick={handleSubmit} isLoading={isLoading}>
-            {project ? 'Cập nhật Dự án' : 'Tạo Mới'}
+            {project ? t('Cập nhật Dự án', 'Update Project') : t('Tạo Mới', 'Create Project')}
           </Button>
         </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         <Input
-          label="Mã Dự án *"
-          placeholder="Ví dụ: PRJ-PHASE4"
+          label={t('Mã Dự án *', 'Project Code *')}
+          placeholder={t('Ví dụ: PRJ-PHASE4', 'e.g. PRJ-PHASE4')}
           value={projectCode}
           onChange={(e) => setProjectCode(e.target.value)}
           disabled={Boolean(project)}
-          helperText={project ? 'Mã dự án không thay đổi sau khi tạo.' : 'Dùng chữ cái, số và dấu gạch ngang.'}
+          helperText={project ? t('Mã dự án không thay đổi sau khi tạo.', 'Project code cannot be changed once created.') : t('Dùng chữ cái, số và dấu gạch ngang.', 'Use letters, numbers, and hyphens.')}
           required={!project}
         />
 
         <Input
-          label="Tên Dự án *"
-          placeholder="Ví dụ: TaskSync Mobile App Phase 1"
+          label={t('Tên Dự án *', 'Project Name *')}
+          placeholder={t('Ví dụ: TaskSync Mobile App Phase 1', 'e.g. TaskSync Mobile App Phase 1')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
 
         <Select
-          label="Phòng ban phụ trách *"
+          label={t('Phòng ban phụ trách *', 'Responsible Department *')}
           value={departmentId ? String(departmentId) : ''}
           onChange={handleDepartmentChange}
           options={departmentOptions}
@@ -148,17 +155,17 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
         />
 
         <Select
-          label="Team phụ trách (Primary Team)"
+          label={t('Team phụ trách (Primary Team)', 'Primary Team')}
           value={teamId ? String(teamId) : ''}
           onChange={(e) => setTeamId(e.target.value ? Number(e.target.value) : null)}
           options={teamOptions}
           disabled={!departmentId}
-          helperText={!departmentId ? 'Vui lòng chọn Phòng ban trước khi chọn Team.' : 'Chỉ các Team thuộc Phòng ban đã chọn mới hiển thị.'}
+          helperText={!departmentId ? t('Vui lòng chọn Phòng ban trước khi chọn Team.', 'Please select a Department before selecting a Team.') : t('Chỉ các Team thuộc Phòng ban đã chọn mới hiển thị.', 'Only Teams belonging to the selected Department are shown.')}
         />
 
         <Textarea
-          label="Mô tả Dự án"
-          placeholder="Nhập mục tiêu và mô tả chi tiết..."
+          label={t('Mô tả Dự án', 'Project Description')}
+          placeholder={t('Nhập mục tiêu và mô tả chi tiết...', 'Enter project objectives and details...')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
@@ -167,7 +174,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <Input
             type="date"
-            label="Ngày bắt đầu"
+            label={t('Ngày bắt đầu', 'Start Date')}
             value={startDate}
             onChange={(e) => {
               setStartDate(e.target.value);
@@ -176,7 +183,7 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
           />
           <Input
             type="date"
-            label="Ngày kết thúc"
+            label={t('Ngày kết thúc', 'End Date')}
             value={endDate}
             onChange={(e) => {
               setEndDate(e.target.value);
@@ -190,23 +197,23 @@ export const ProjectDrawer: React.FC<ProjectDrawerProps> = ({
 
         <div className="grid grid-cols-2 gap-4">
           <Select
-            label="Trạng thái Dự án"
+            label={t('Trạng thái Dự án', 'Project Status')}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             options={[
-              { value: 'Planning', label: 'Lập kế hoạch (Planning)' },
-              { value: 'Active', label: 'Hoạt động (Active)' },
-              { value: 'Completed', label: 'Hoàn thành (Completed)' },
+              { value: 'Planning', label: statusLabel('Planning') },
+              { value: 'Active', label: statusLabel('Active') },
+              { value: 'Completed', label: statusLabel('Completed') },
             ]}
           />
           <Select
-            label="Độ ưu tiên"
+            label={t('Độ ưu tiên', 'Priority')}
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
             options={[
-              { value: 'Low', label: 'Thấp (Low)' },
-              { value: 'Medium', label: 'Trung bình (Medium)' },
-              { value: 'High', label: 'Cao (High)' },
+              { value: 'Low', label: statusLabel('Low') },
+              { value: 'Medium', label: statusLabel('Medium') },
+              { value: 'High', label: statusLabel('High') },
             ]}
           />
         </div>

@@ -1,4 +1,5 @@
 # 📂 FILE: backend/scripts/debug_post_tasks_live.py
+import os
 import urllib.request
 import urllib.parse
 import json
@@ -9,8 +10,9 @@ def debug_live():
 
     # 1. Login
     login_url = f"{base_url}/auth/login"
+    admin_password = os.getenv("SEED_ADMIN_PASSWORD", "Admin@Task2026!")
     data = urllib.parse.urlencode(
-        {"username": "admin@tasksync.example.com", "password": "TaskSync@2026"}
+        {"username": "admin@tasksync.example.com", "password": admin_password}
     ).encode("utf-8")
 
     req = urllib.request.Request(login_url, data=data, method="POST")

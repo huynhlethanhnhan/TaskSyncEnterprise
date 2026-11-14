@@ -6,6 +6,7 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { StatusBadge } from '../../components/common/StatusBadge';
 import { Avatar } from '../../components/common/Avatar';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
@@ -23,6 +24,7 @@ import {
 } from '../../hooks/useDepartments';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import type { DepartmentMemberItem } from '../../api/services';
 
 const DepartmentDetailPage: React.FC = () => {
@@ -30,6 +32,7 @@ const DepartmentDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
+  const { t } = useSettings();
   const deptId = Number(id);
   const [addOpen, setAddOpen] = React.useState(false);
   const [selectedCandidate, setSelectedCandidate] = React.useState('');
@@ -59,11 +62,11 @@ const DepartmentDetailPage: React.FC = () => {
         id: deptId,
         payload: { manager_id: Number(selectedManager) },
       });
-      toast.success('Đã cập nhật Trưởng phòng', 'Phòng ban đã có Trưởng phòng mới.');
+      toast.success(t('Đã cập nhật Trưởng phòng', 'Department manager updated'), t('Phòng ban đã có Trưởng phòng mới.', 'A new department manager has been assigned.'));
       setChangeManagerOpen(false);
       refetch();
     } catch (error) {
-      toast.error('Không thể cập nhật Trưởng phòng', errorMessage(error));
+      toast.error(t('Không thể cập nhật Trưởng phòng', 'Failed to update manager'), errorMessage(error));
     }
   };
   const canManageMembers = isAdmin || isManager;
@@ -73,28 +76,31 @@ const DepartmentDetailPage: React.FC = () => {
 
   const errorMessage = (error: unknown) =>
     error instanceof AxiosError
-      ? error.response?.data?.detail || 'Không thể thực hiện thao tác thành viên.'
-      : 'Không thể thực hiện thao tác thành viên.';
+      ? error.response?.data?.detail || t('Không thể thực hiện thao tác thành viên.', 'Unable to complete member action.')
+      : t('Không thể thực hiện thao tác thành viên.', 'Unable to complete member action.');
 
   const handleAddMember = async () => {
     if (!selectedCandidate) return;
     try {
       await addMember.mutateAsync({ id: deptId, employeeId: Number(selectedCandidate) });
-      toast.success('Đã thêm thành viên', 'Nhân viên đã được thêm vào phòng ban.');
+      toast.success(t('Đã thêm thành viên', 'Member added'), t('Nhân viên đã được thêm vào phòng ban.', 'Employee has been added to this department.'));
       setSelectedCandidate('');
       setAddOpen(false);
     } catch (error) {
-      toast.error('Không thể thêm thành viên', errorMessage(error));
+      toast.error(t('Không thể thêm thành viên', 'Failed to add member'), errorMessage(error));
     }
   };
 
   const handleRemoveMember = async (member: DepartmentMemberItem) => {
-    if (!window.confirm(`Đưa "${member.full_name}" ra khỏi phòng ban? Thành viên cũng sẽ được gỡ khỏi team hiện tại.`)) return;
+    if (!window.confirm(t(
+      `Đưa "${member.full_name}" ra khỏi phòng ban? Thành viên cũng sẽ được gỡ khỏi team hiện tại.`,
+      `Remove "${member.full_name}" from this department? They will also be removed from their current team.`,
+    ))) return;
     try {
       await removeMember.mutateAsync({ id: deptId, employeeId: member.id });
-      toast.success('Đã gỡ thành viên', 'Nhân viên không còn thuộc phòng ban này.');
+      toast.success(t('Đã gỡ thành viên', 'Member removed'), t('Nhân viên không còn thuộc phòng ban này.', 'Employee is no longer in this department.'));
     } catch (error) {
-      toast.error('Không thể gỡ thành viên', errorMessage(error));
+      toast.error(t('Không thể gỡ thành viên', 'Failed to remove member'), errorMessage(error));
     }
   };
 
@@ -106,18 +112,18 @@ const DepartmentDetailPage: React.FC = () => {
         employeeId: transferMember.id,
         targetDepartmentId: Number(targetDepartmentId),
       });
-      toast.success('Đã chuyển phòng ban', `${transferMember.full_name} đã được chuyển sang phòng ban mới.`);
+      toast.success(t('Đã chuyển phòng ban', 'Department transferred'), `${transferMember.full_name} ${t('đã được chuyển sang phòng ban mới.', 'has been transferred to the new department.')}`);
       setTransferMember(null);
       setTargetDepartmentId('');
     } catch (error) {
-      toast.error('Không thể chuyển phòng ban', errorMessage(error));
+      toast.error(t('Không thể chuyển phòng ban', 'Failed to transfer member'), errorMessage(error));
     }
   };
 
   if (isLoading) {
     return (
       <div className="space-y-6 font-sans">
-        <PageHeader title="Chi tiết Phòng ban" description="Đang tải sơ đồ phòng ban..." />
+        <PageHeader title={t('Chi tiết Phòng ban', 'Department Details')} description={t('Đang tải sơ đồ phòng ban...', 'Loading department hierarchy...')} />
         <SkeletonCard />
       </div>
     );
@@ -126,10 +132,10 @@ const DepartmentDetailPage: React.FC = () => {
   if (isError || !department) {
     return (
       <div className="space-y-6 font-sans">
-        <PageHeader title="Chi tiết Phòng ban" description="Cơ cấu tổ chức" />
+        <PageHeader title={t('Chi tiết Phòng ban', 'Department Details')} description={t('Cơ cấu tổ chức', 'Organization structure')} />
         <ErrorState
-          title="Không tìm thấy phòng ban"
-          message="Phòng ban không tồn tại hoặc đã bị xóa khỏi hệ thống."
+          title={t('Không tìm thấy phòng ban', 'Department not found')}
+          message={t('Phòng ban không tồn tại hoặc đã bị xóa khỏi hệ thống.', 'The department does not exist or has been removed.')}
           onRetry={() => refetch()}
         />
       </div>
@@ -143,11 +149,11 @@ const DepartmentDetailPage: React.FC = () => {
     <div className="space-y-6 font-sans pb-12">
       <PageHeader
         title={department.name}
-        description={department.description || 'Chi tiết thành viên và nhiệm vụ phòng ban.'}
+        description={department.description || t('Chi tiết thành viên và nhiệm vụ phòng ban.', 'Department members, teams, and initiatives.')}
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: 'Phòng ban', href: '/departments' },
+              { label: t('Phòng ban', 'Departments'), href: '/departments' },
               { label: department.name },
             ]}
           />
@@ -159,7 +165,7 @@ const DepartmentDetailPage: React.FC = () => {
             leftIcon={<ArrowLeft className="h-4 w-4" />}
             onClick={() => navigate('/departments')}
           >
-            Quay lại
+            {t('Quay lại', 'Back')}
           </Button>
         }
       />
@@ -170,21 +176,21 @@ const DepartmentDetailPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-4.5 w-4.5 text-primary" />
-                <span>Thông tin Phòng ban</span>
+                <span>{t('Thông tin Phòng ban', 'Department Information')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-xs">
               <div className="flex items-center justify-between py-2 border-b border-border/60">
-                <span className="text-text-muted">Mã Phòng ban:</span>
+                <span className="text-text-muted">{t('Mã Phòng ban:', 'Department Code:')}</span>
                 <span className="font-mono font-bold text-text-primary">
                   {department.department_code || `DEPT-${department.id}`}
                 </span>
               </div>
 
               <div className="flex items-center justify-between py-2 border-b border-border/60">
-                <span className="text-text-muted">Trưởng phòng:</span>
+                <span className="text-text-muted">{t('Trưởng phòng:', 'Manager:')}</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-text-primary">{department.manager_name || 'Chưa chỉ định'}</span>
+                  <span className="font-bold text-text-primary">{department.manager_name || t('Chưa chỉ định', 'Unassigned')}</span>
                   {isAdmin && (
                     <Button
                       variant="ghost"
@@ -195,41 +201,41 @@ const DepartmentDetailPage: React.FC = () => {
                         setChangeManagerOpen(true);
                       }}
                     >
-                      Đổi
+                      {t('Đổi', 'Change')}
                     </Button>
                   )}
                 </div>
               </div>
 
               <div className="flex items-center justify-between py-2 border-b border-border/60">
-                <span className="text-text-muted">Tổng Số Nhân sự:</span>
-                <Badge variant="primary">{department.employee_count ?? deptEmployees.length} thành viên</Badge>
+                <span className="text-text-muted">{t('Tổng Số Nhân sự:', 'Total Staff:')}</span>
+                <Badge variant="primary">{department.employee_count ?? deptEmployees.length} {t('thành viên', 'members')}</Badge>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2">
                 <button
                   type="button"
                   className="rounded-lg bg-primary/5 p-2 text-center transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   onClick={() => navigate(`/projects?department_id=${department.id}`)}
-                  title="Mở các dự án của phòng ban"
+                  title={t('Mở các dự án của phòng ban', 'Open department projects')}
                 >
                   <Briefcase className="mx-auto h-4 w-4 text-primary" />
                   <div className="mt-1 font-bold">{department.project_count ?? 0}</div>
-                  <div className="text-[10px] text-text-muted">Dự án</div>
+                  <div className="text-[10px] text-text-muted">{t('Dự án', 'Projects')}</div>
                 </button>
                 <button
                   type="button"
                   className="rounded-lg bg-emerald-500/5 p-2 text-center transition-colors hover:bg-emerald-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   onClick={() => navigate(`/projects?department_id=${department.id}&status=Completed`)}
-                  title="Mở các dự án đã hoàn thành của phòng ban"
+                  title={t('Mở các dự án đã hoàn thành của phòng ban', 'Open completed department projects')}
                 >
                   <CircleCheckBig className="mx-auto h-4 w-4 text-emerald-500" />
                   <div className="mt-1 font-bold">{department.completed_project_count ?? 0}</div>
-                  <div className="text-[10px] text-text-muted">Đã xong</div>
+                  <div className="text-[10px] text-text-muted">{t('Đã xong', 'Completed')}</div>
                 </button>
                 <div className="rounded-lg bg-amber-500/5 p-2 text-center">
                   <RefreshCw className="mx-auto h-4 w-4 text-amber-500" />
                   <div className="mt-1 font-bold">{department.sprint_count ?? 0}</div>
-                  <div className="text-[10px] text-text-muted">Sprint</div>
+                  <div className="text-[10px] text-text-muted">{t('Sprint', 'Sprints')}</div>
                 </div>
               </div>
             </CardContent>
@@ -240,7 +246,7 @@ const DepartmentDetailPage: React.FC = () => {
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-4.5 w-4.5 text-primary" />
                 <span>
-                  Team trực thuộc ({departmentTeams.length})
+                  {t('Team trực thuộc', 'Teams')} ({departmentTeams.length})
                 </span>
               </CardTitle>
             </CardHeader>
@@ -248,7 +254,7 @@ const DepartmentDetailPage: React.FC = () => {
             <CardContent className="space-y-2">
               {departmentTeams.length === 0 ? (
                 <p className="text-xs text-text-muted">
-                  Phòng ban chưa có team trực thuộc.
+                  {t('Phòng ban chưa có team trực thuộc.', 'No teams in this department yet.')}
                 </p>
               ) : (
                 departmentTeams.map((team) => (
@@ -264,12 +270,12 @@ const DepartmentDetailPage: React.FC = () => {
                       </span>
 
                       <Badge variant="default">
-                        {team.member_count} thành viên
+                        {team.member_count} {t('thành viên', 'members')}
                       </Badge>
                     </div>
 
                     <p className="mt-1 text-xs text-text-muted">
-                      Leader: {team.leader_name || 'Chưa chỉ định'}
+                      {t('Trưởng nhóm:', 'Team Leader:')} {team.leader_name || t('Chưa chỉ định', 'Unassigned')}
                     </p>
                   </button>
                 ))
@@ -281,21 +287,21 @@ const DepartmentDetailPage: React.FC = () => {
         <div className="lg:col-span-2">
           <Card className="space-y-4">
             <CardHeader className="flex flex-col items-start justify-between gap-3 border-b border-border/40 pb-3 sm:flex-row sm:items-center">
-              <CardTitle>Danh sách Thành viên Trực thuộc ({deptEmployees.length})</CardTitle>
+              <CardTitle>{t('Danh sách Thành viên Trực thuộc', 'Department Members')} ({deptEmployees.length})</CardTitle>
               {canManageMembers && (
                 <Button
                   size="sm"
                   leftIcon={<UserPlus className="h-4 w-4" />}
                   onClick={() => setAddOpen(true)}
                 >
-                  Thêm thành viên
+                  {t('Thêm thành viên', 'Add Member')}
                 </Button>
               )}
             </CardHeader>
 
             <CardContent className="space-y-4">
               {deptEmployees.length === 0 ? (
-                <p className="text-xs text-text-muted text-center py-6">Chưa có nhân sự trực thuộc phòng ban này.</p>
+                <p className="text-xs text-text-muted text-center py-6">{t('Chưa có nhân sự trực thuộc phòng ban này.', 'No employees assigned to this department yet.')}</p>
               ) : (
                 <div className="divide-y divide-border/60">
                   {deptEmployees.map((emp) => (
@@ -306,7 +312,7 @@ const DepartmentDetailPage: React.FC = () => {
                           <div className="text-xs font-bold text-text-primary flex items-center gap-2">
                             {emp.full_name}
                             {emp.id === department.manager_id && (
-                              <Badge variant="primary" size="sm">Trưởng phòng</Badge>
+                              <Badge variant="primary" size="sm">{t('Trưởng phòng', 'Manager')}</Badge>
                             )}
                           </div>
                           <span className="text-[11px] text-text-muted">{emp.job_title || emp.email}</span>
@@ -314,9 +320,7 @@ const DepartmentDetailPage: React.FC = () => {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant={emp.is_active ? 'success' : 'danger'} showDot>
-                          {emp.is_active ? 'Hoạt động' : 'Tạm khóa'}
-                        </Badge>
+                        <StatusBadge isActive={Boolean(emp.is_active)} size="sm" />
                         {canManageMember(emp) && (
                           <>
                             <Button
@@ -325,7 +329,7 @@ const DepartmentDetailPage: React.FC = () => {
                               leftIcon={<ArrowRightLeft className="h-3.5 w-3.5" />}
                               onClick={() => setTransferMember(emp)}
                             >
-                              Chuyển
+                              {t('Chuyển', 'Transfer')}
                             </Button>
                             <Button
                               variant="danger"
@@ -334,7 +338,7 @@ const DepartmentDetailPage: React.FC = () => {
                               onClick={() => handleRemoveMember(emp)}
                               isLoading={removeMember.isPending}
                             >
-                              Gỡ
+                              {t('Gỡ', 'Remove')}
                             </Button>
                           </>
                         )}
@@ -351,23 +355,23 @@ const DepartmentDetailPage: React.FC = () => {
       <Modal
         isOpen={addOpen}
         onClose={() => setAddOpen(false)}
-        title="Thêm thành viên vào phòng ban"
-        description="Chỉ hiển thị nhân viên đang chưa thuộc phòng ban nào."
+        title={t('Thêm thành viên vào phòng ban', 'Add Member to Department')}
+        description={t('Chỉ hiển thị nhân viên đang chưa thuộc phòng ban nào.', 'Only shows employees not yet assigned to any department.')}
         footer={
           <>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Hủy</Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>{t('Hủy', 'Cancel')}</Button>
             <Button
               onClick={handleAddMember}
               disabled={!selectedCandidate}
               isLoading={addMember.isPending}
             >
-              Thêm thành viên
+              {t('Thêm thành viên', 'Add Member')}
             </Button>
           </>
         }
       >
         <Select
-          label="Nhân viên"
+          label={t('Nhân viên', 'Employee')}
           value={selectedCandidate}
           onChange={(event) => setSelectedCandidate(event.target.value)}
           disabled={candidatesLoading}
@@ -375,10 +379,10 @@ const DepartmentDetailPage: React.FC = () => {
             {
               value: '',
               label: candidatesLoading
-                ? 'Đang tải danh sách...'
+                ? t('Đang tải danh sách...', 'Loading candidates...')
                 : candidates.length
-                  ? 'Chọn nhân viên'
-                  : 'Không có nhân viên phù hợp',
+                  ? t('Chọn nhân viên', 'Select employee')
+                  : t('Không có nhân viên phù hợp', 'No eligible employees'),
             },
             ...candidates.map((candidate) => ({
               value: String(candidate.id),
@@ -391,27 +395,30 @@ const DepartmentDetailPage: React.FC = () => {
       <Modal
         isOpen={Boolean(transferMember)}
         onClose={() => setTransferMember(null)}
-        title="Chuyển thành viên sang phòng ban khác"
-        description={transferMember ? `Nhân viên: ${transferMember.full_name}. Team hiện tại sẽ được gỡ tự động.` : undefined}
+        title={t('Chuyển thành viên sang phòng ban khác', 'Transfer Member to Another Department')}
+        description={transferMember ? t(
+          `Nhân viên: ${transferMember.full_name}. Team hiện tại sẽ được gỡ tự động.`,
+          `Employee: ${transferMember.full_name}. Current team assignment will be cleared automatically.`,
+        ) : undefined}
         footer={
           <>
-            <Button variant="outline" onClick={() => setTransferMember(null)}>Hủy</Button>
+            <Button variant="outline" onClick={() => setTransferMember(null)}>{t('Hủy', 'Cancel')}</Button>
             <Button
               onClick={handleTransferMember}
               disabled={!targetDepartmentId}
               isLoading={transferDepartmentMember.isPending}
             >
-              Xác nhận chuyển
+              {t('Xác nhận chuyển', 'Confirm Transfer')}
             </Button>
           </>
         }
       >
         <Select
-          label="Phòng ban đích"
+          label={t('Phòng ban đích', 'Target Department')}
           value={targetDepartmentId}
           onChange={(event) => setTargetDepartmentId(event.target.value)}
           options={[
-            { value: '', label: 'Chọn phòng ban đích' },
+            { value: '', label: t('Chọn phòng ban đích', 'Select target department') },
             ...transferTargets.map((item) => ({
               value: String(item.id),
               label: item.name,
@@ -423,27 +430,27 @@ const DepartmentDetailPage: React.FC = () => {
       <Modal
         isOpen={changeManagerOpen}
         onClose={() => setChangeManagerOpen(false)}
-        title="Chỉ định Trưởng phòng mới"
-        description="Chọn nhân viên đảm nhận vị trí Trưởng phòng ban."
+        title={t('Chỉ định Trưởng phòng mới', 'Assign New Department Manager')}
+        description={t('Chọn nhân viên đảm nhận vị trí Trưởng phòng ban.', 'Select an employee to serve as department manager.')}
         footer={
           <>
-            <Button variant="outline" onClick={() => setChangeManagerOpen(false)}>Hủy</Button>
+            <Button variant="outline" onClick={() => setChangeManagerOpen(false)}>{t('Hủy', 'Cancel')}</Button>
             <Button
               onClick={handleChangeManager}
               disabled={!selectedManager}
               isLoading={updateDepartment.isPending}
             >
-              Lưu thay đổi
+              {t('Lưu thay đổi', 'Save Changes')}
             </Button>
           </>
         }
       >
         <Select
-          label="Trưởng phòng mới"
+          label={t('Trưởng phòng mới', 'New Manager')}
           value={selectedManager}
           onChange={(event) => setSelectedManager(event.target.value)}
           options={[
-            { value: '', label: '-- Chọn Trưởng phòng --' },
+            { value: '', label: t('-- Chọn Trưởng phòng --', '-- Select Manager --') },
             ...deptEmployees.map((emp) => ({
               value: String(emp.id),
               label: `${emp.full_name} (${emp.employee_code || emp.email})`,

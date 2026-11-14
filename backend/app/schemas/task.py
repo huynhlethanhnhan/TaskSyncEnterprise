@@ -122,10 +122,22 @@ class AssigneeSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TaskResponse(TaskCreate):
+class TaskResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    project_id: int
+    title: str = ""
+    name: str | None = None
+    description: str | None = None
+    priority: str = "Medium"
+    status: str = "To Do"
+    story_points: int | None = None
+    deadline: datetime | None = None
+    created_by: int | None = None
+    assigned_to: int | None = None
+    sprint_id: int | None = None
+    topic_id: int | None = None
     progress_percent: float
     created_at: datetime
     creator_name: str | None = None
@@ -134,3 +146,10 @@ class TaskResponse(TaskCreate):
     sprint_name: str | None = None
     is_standalone: bool = True
     is_from_backlog: bool = False
+
+    @field_validator("story_points", mode="before")
+    @classmethod
+    def normalize_response_story_points(cls, v):
+        if v in (None, "", 0, "0"):
+            return None
+        return v

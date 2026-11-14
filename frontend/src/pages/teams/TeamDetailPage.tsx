@@ -24,6 +24,7 @@ import {
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/common/Badge';
+import { StatusBadge } from '../../components/common/StatusBadge';
 import { Avatar } from '../../components/common/Avatar';
 import { Modal } from '../../components/common/Modal';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
@@ -40,6 +41,7 @@ import {
 } from '../../hooks/useTeams';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import type { TeamMemberItem } from '../../api/services';
 
 const TeamDetailPage: React.FC = () => {
@@ -47,6 +49,7 @@ const TeamDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
+  const { t } = useSettings();
 
   const teamId = Number(id);
   const [addOpen, setAddOpen] = React.useState(false);
@@ -84,11 +87,11 @@ const TeamDetailPage: React.FC = () => {
         id: teamId,
         payload: { leader_id: Number(selectedLeader) },
       });
-      toast.success('Đã cập nhật Trưởng nhóm', 'Team đã có Trưởng nhóm mới.');
+      toast.success(t('Đã cập nhật Trưởng nhóm', 'Team leader updated'), t('Team đã có Trưởng nhóm mới.', 'Team has been assigned a new leader.'));
       setChangeLeaderOpen(false);
       refetch();
     } catch (error) {
-      toast.error('Không thể cập nhật Trưởng nhóm', errorMessage(error));
+      toast.error(t('Không thể cập nhật Trưởng nhóm', 'Failed to update leader'), errorMessage(error));
     }
   };
   const canManageMember = (member: TeamMemberItem) =>
@@ -97,28 +100,31 @@ const TeamDetailPage: React.FC = () => {
 
   const errorMessage = (error: unknown) =>
     error instanceof AxiosError
-      ? error.response?.data?.detail || 'Không thể thực hiện thao tác thành viên.'
-      : 'Không thể thực hiện thao tác thành viên.';
+      ? error.response?.data?.detail || t('Không thể thực hiện thao tác thành viên.', 'Unable to complete member action.')
+      : t('Không thể thực hiện thao tác thành viên.', 'Unable to complete member action.');
 
   const handleAddMember = async () => {
     if (!selectedCandidate) return;
     try {
       await addMember.mutateAsync({ id: teamId, employeeId: Number(selectedCandidate) });
-      toast.success('Đã thêm thành viên', 'Nhân viên đã được thêm vào team.');
+      toast.success(t('Đã thêm thành viên', 'Member added'), t('Nhân viên đã được thêm vào team.', 'Employee has been added to this team.'));
       setSelectedCandidate('');
       setAddOpen(false);
     } catch (error) {
-      toast.error('Không thể thêm thành viên', errorMessage(error));
+      toast.error(t('Không thể thêm thành viên', 'Failed to add member'), errorMessage(error));
     }
   };
 
   const handleRemoveMember = async (member: TeamMemberItem) => {
-    if (!window.confirm(`Đưa "${member.full_name}" ra khỏi team? Nhân viên vẫn thuộc phòng ban hiện tại.`)) return;
+    if (!window.confirm(t(
+      `Đưa "${member.full_name}" ra khỏi team? Nhân viên vẫn thuộc phòng ban hiện tại.`,
+      `Remove "${member.full_name}" from this team? They will remain in their current department.`,
+    ))) return;
     try {
       await removeMember.mutateAsync({ id: teamId, employeeId: member.id });
-      toast.success('Đã gỡ thành viên', 'Nhân viên không còn thuộc team này.');
+      toast.success(t('Đã gỡ thành viên', 'Member removed'), t('Nhân viên không còn thuộc team này.', 'Employee is no longer a member of this team.'));
     } catch (error) {
-      toast.error('Không thể gỡ thành viên', errorMessage(error));
+      toast.error(t('Không thể gỡ thành viên', 'Failed to remove member'), errorMessage(error));
     }
   };
 
@@ -130,11 +136,11 @@ const TeamDetailPage: React.FC = () => {
         employeeId: transferMember.id,
         targetTeamId: Number(targetTeamId),
       });
-      toast.success('Đã chuyển team', `${transferMember.full_name} đã được chuyển sang team mới.`);
+      toast.success(t('Đã chuyển team', 'Team transferred'), `${transferMember.full_name} ${t('đã được chuyển sang team mới.', 'has been transferred to the new team.')}`);
       setTransferMember(null);
       setTargetTeamId('');
     } catch (error) {
-      toast.error('Không thể chuyển team', errorMessage(error));
+      toast.error(t('Không thể chuyển team', 'Failed to transfer member'), errorMessage(error));
     }
   };
 
@@ -142,8 +148,8 @@ const TeamDetailPage: React.FC = () => {
     return (
       <div className="space-y-6 font-sans">
         <PageHeader
-          title="Chi tiết Nhóm"
-          description="Đang tải thông tin nhóm..."
+          title={t('Chi tiết Nhóm', 'Team Details')}
+          description={t('Đang tải thông tin nhóm...', 'Loading team details...')}
         />
         <SkeletonCard />
       </div>
@@ -154,13 +160,13 @@ const TeamDetailPage: React.FC = () => {
     return (
       <div className="space-y-6 font-sans">
         <PageHeader
-          title="Chi tiết Nhóm"
-          description="Thông tin cơ cấu và thành viên nhóm"
+          title={t('Chi tiết Nhóm', 'Team Details')}
+          description={t('Thông tin cơ cấu và thành viên nhóm', 'Team structure and member details')}
         />
 
         <ErrorState
-          title="Không tìm thấy nhóm"
-          message="Nhóm không tồn tại hoặc bạn không có quyền truy cập."
+          title={t('Không tìm thấy nhóm', 'Team not found')}
+          message={t('Nhóm không tồn tại hoặc bạn không có quyền truy cập.', 'The team does not exist or you do not have access.')}
           onRetry={() => refetch()}
         />
       </div>
@@ -175,13 +181,13 @@ const TeamDetailPage: React.FC = () => {
         title={team.name}
         description={
           team.description ||
-          'Thông tin chi tiết trưởng nhóm và thành viên.'
+          t('Thông tin chi tiết trưởng nhóm và thành viên.', 'Team leader and member overview.')
         }
         breadcrumb={
           <Breadcrumb
             items={[
               {
-                label: 'Teams',
+                label: t('Nhóm', 'Teams'),
                 href: '/teams',
               },
               {
@@ -198,7 +204,7 @@ const TeamDetailPage: React.FC = () => {
               leftIcon={<Briefcase className="h-4 w-4" />}
               onClick={() => navigate(`/projects?team_id=${team.id}`)}
             >
-              Dự án của nhóm
+              {t('Dự án của nhóm', 'Team Projects')}
             </Button>
             <Button
               variant="outline"
@@ -206,7 +212,7 @@ const TeamDetailPage: React.FC = () => {
               leftIcon={<ArrowLeft className="h-4 w-4" />}
               onClick={() => navigate('/teams')}
             >
-              Quay lại
+              {t('Quay lại', 'Back')}
             </Button>
           </div>
         }
@@ -218,14 +224,14 @@ const TeamDetailPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-primary" />
-                Thông tin Nhóm
+                {t('Thông tin Nhóm', 'Team Information')}
               </CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-4 text-xs">
               <div className="flex items-center justify-between border-b border-border/60 py-2">
                 <span className="text-text-muted">
-                  Mã nhóm:
+                  {t('Mã nhóm:', 'Team Code:')}
                 </span>
 
                 <span className="flex items-center gap-1 font-mono font-bold text-text-primary">
@@ -236,22 +242,22 @@ const TeamDetailPage: React.FC = () => {
 
               <div className="flex items-center justify-between border-b border-border/60 py-2">
                 <span className="text-text-muted">
-                  Phòng ban:
+                  {t('Phòng ban:', 'Department:')}
                 </span>
 
                 <span className="font-bold text-text-primary">
-                  {team.department_name || 'Không xác định'}
+                  {team.department_name || t('Không xác định', 'Unassigned')}
                 </span>
               </div>
 
               <div className="flex items-center justify-between border-b border-border/60 py-2">
                 <span className="text-text-muted">
-                  Trưởng nhóm:
+                  {t('Trưởng nhóm:', 'Team Leader:')}
                 </span>
 
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-text-primary">
-                    {team.leader_name || 'Chưa chỉ định'}
+                    {team.leader_name || t('Chưa chỉ định', 'Unassigned')}
                   </span>
                   {(isAdmin || isManager) && (
                     <Button
@@ -263,7 +269,7 @@ const TeamDetailPage: React.FC = () => {
                         setChangeLeaderOpen(true);
                       }}
                     >
-                      Đổi
+                      {t('Đổi', 'Change')}
                     </Button>
                   )}
                 </div>
@@ -271,11 +277,11 @@ const TeamDetailPage: React.FC = () => {
 
               <div className="flex items-center justify-between py-2">
                 <span className="text-text-muted">
-                  Tổng thành viên:
+                  {t('Tổng thành viên:', 'Total Members:')}
                 </span>
 
                 <Badge variant="primary">
-                  {team.member_count ?? members.length} thành viên
+                  {team.member_count ?? members.length} {t('thành viên', 'members')}
                 </Badge>
               </div>
             </CardContent>
@@ -285,7 +291,7 @@ const TeamDetailPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserCheck className="h-4 w-4 text-primary" />
-                Trưởng nhóm
+                {t('Trưởng nhóm', 'Team Leader')}
               </CardTitle>
             </CardHeader>
 
@@ -304,13 +310,13 @@ const TeamDetailPage: React.FC = () => {
                     </p>
 
                     <p className="text-xs text-text-muted">
-                      Team Leader
+                      {t('Trưởng nhóm', 'Team Leader')}
                     </p>
                   </div>
                 </div>
               ) : (
                 <p className="text-xs italic text-text-muted">
-                  Nhóm chưa được chỉ định trưởng nhóm.
+                  {t('Nhóm chưa được chỉ định trưởng nhóm.', 'No team leader assigned yet.')}
                 </p>
               )}
             </CardContent>
@@ -321,7 +327,7 @@ const TeamDetailPage: React.FC = () => {
           <CardHeader className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <CardTitle className="flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
-              Danh sách Thành viên ({members.length})
+              {t('Danh sách Thành viên', 'Members')} ({members.length})
             </CardTitle>
             {canManageMembers && (
               <Button
@@ -329,7 +335,7 @@ const TeamDetailPage: React.FC = () => {
                 leftIcon={<UserPlus className="h-4 w-4" />}
                 onClick={() => setAddOpen(true)}
               >
-                Thêm thành viên
+                {t('Thêm thành viên', 'Add Member')}
               </Button>
             )}
           </CardHeader>
@@ -338,7 +344,7 @@ const TeamDetailPage: React.FC = () => {
             {members.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-8 text-center">
                 <p className="text-xs text-text-muted">
-                  Chưa có thành viên trực thuộc nhóm này.
+                  {t('Chưa có thành viên trực thuộc nhóm này.', 'No members assigned to this team yet.')}
                 </p>
               </div>
             ) : (
@@ -360,7 +366,7 @@ const TeamDetailPage: React.FC = () => {
                       </p>
 
                       <p className="text-xs text-text-muted">
-                        {member.job_title || 'Thành viên'}
+                        {member.job_title || t('Thành viên', 'Member')}
                       </p>
 
                       <p className="text-[11px] text-text-muted">
@@ -372,21 +378,11 @@ const TeamDetailPage: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     {member.id === team.leader_id && (
                       <Badge variant="success">
-                        Trưởng nhóm
+                        {t('Trưởng nhóm', 'Team Leader')}
                       </Badge>
                     )}
 
-                    <Badge
-                      variant={
-                        member.is_active
-                          ? 'success'
-                          : 'default'
-                      }
-                    >
-                      {member.is_active
-                        ? 'Hoạt động'
-                        : 'Ngừng hoạt động'}
-                    </Badge>
+                    <StatusBadge isActive={Boolean(member.is_active)} size="sm" />
                     {canManageMember(member) && (
                       <>
                         <Button
@@ -395,7 +391,7 @@ const TeamDetailPage: React.FC = () => {
                           leftIcon={<ArrowRightLeft className="h-3.5 w-3.5" />}
                           onClick={() => setTransferMember(member)}
                         >
-                          Chuyển
+                          {t('Chuyển', 'Transfer')}
                         </Button>
                         <Button
                           variant="danger"
@@ -404,7 +400,7 @@ const TeamDetailPage: React.FC = () => {
                           onClick={() => handleRemoveMember(member)}
                           isLoading={removeMember.isPending}
                         >
-                          Gỡ
+                          {t('Gỡ', 'Remove')}
                         </Button>
                       </>
                     )}
@@ -419,23 +415,23 @@ const TeamDetailPage: React.FC = () => {
       <Modal
         isOpen={addOpen}
         onClose={() => setAddOpen(false)}
-        title="Thêm thành viên vào team"
-        description="Chỉ hiển thị nhân viên cùng phòng ban và đang chưa thuộc team nào."
+        title={t('Thêm thành viên vào team', 'Add Member to Team')}
+        description={t('Chỉ hiển thị nhân viên cùng phòng ban và đang chưa thuộc team nào.', 'Only shows employees in the same department who are not in any team yet.')}
         footer={
           <>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Hủy</Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>{t('Hủy', 'Cancel')}</Button>
             <Button
               onClick={handleAddMember}
               disabled={!selectedCandidate}
               isLoading={addMember.isPending}
             >
-              Thêm thành viên
+              {t('Thêm thành viên', 'Add Member')}
             </Button>
           </>
         }
       >
         <Select
-          label="Nhân viên"
+          label={t('Nhân viên', 'Employee')}
           value={selectedCandidate}
           onChange={(event) => setSelectedCandidate(event.target.value)}
           disabled={candidatesLoading}
@@ -443,10 +439,10 @@ const TeamDetailPage: React.FC = () => {
             {
               value: '',
               label: candidatesLoading
-                ? 'Đang tải danh sách...'
+                ? t('Đang tải danh sách...', 'Loading candidates...')
                 : candidates.length
-                  ? 'Chọn nhân viên'
-                  : 'Không có nhân viên phù hợp',
+                  ? t('Chọn nhân viên', 'Select employee')
+                  : t('Không có nhân viên phù hợp', 'No eligible employees'),
             },
             ...candidates.map((candidate) => ({
               value: String(candidate.id),
@@ -459,27 +455,30 @@ const TeamDetailPage: React.FC = () => {
       <Modal
         isOpen={Boolean(transferMember)}
         onClose={() => setTransferMember(null)}
-        title="Chuyển thành viên sang team khác"
-        description={transferMember ? `Nhân viên: ${transferMember.full_name}. Chỉ chuyển trong cùng phòng ban.` : undefined}
+        title={t('Chuyển thành viên sang team khác', 'Transfer Member to Another Team')}
+        description={transferMember ? t(
+          `Nhân viên: ${transferMember.full_name}. Chỉ chuyển trong cùng phòng ban.`,
+          `Employee: ${transferMember.full_name}. Transfers apply within the same department.`,
+        ) : undefined}
         footer={
           <>
-            <Button variant="outline" onClick={() => setTransferMember(null)}>Hủy</Button>
+            <Button variant="outline" onClick={() => setTransferMember(null)}>{t('Hủy', 'Cancel')}</Button>
             <Button
               onClick={handleTransferMember}
               disabled={!targetTeamId}
               isLoading={transferTeamMember.isPending}
             >
-              Xác nhận chuyển
+              {t('Xác nhận chuyển', 'Confirm Transfer')}
             </Button>
           </>
         }
       >
         <Select
-          label="Team đích"
+          label={t('Team đích', 'Target Team')}
           value={targetTeamId}
           onChange={(event) => setTargetTeamId(event.target.value)}
           options={[
-            { value: '', label: 'Chọn team đích' },
+            { value: '', label: t('Chọn team đích', 'Select target team') },
             ...transferTargets.map((item) => ({
               value: String(item.id),
               label: item.name,
@@ -491,27 +490,27 @@ const TeamDetailPage: React.FC = () => {
       <Modal
         isOpen={changeLeaderOpen}
         onClose={() => setChangeLeaderOpen(false)}
-        title="Chỉ định Trưởng nhóm mới"
-        description="Chọn thành viên đảm nhận vị trí Team Leader."
+        title={t('Chỉ định Trưởng nhóm mới', 'Assign New Team Leader')}
+        description={t('Chọn thành viên đảm nhận vị trí Team Leader.', 'Select a team member to serve as Team Leader.')}
         footer={
           <>
-            <Button variant="outline" onClick={() => setChangeLeaderOpen(false)}>Hủy</Button>
+            <Button variant="outline" onClick={() => setChangeLeaderOpen(false)}>{t('Hủy', 'Cancel')}</Button>
             <Button
               onClick={handleChangeLeader}
               disabled={!selectedLeader}
               isLoading={updateTeam.isPending}
             >
-              Lưu thay đổi
+              {t('Lưu thay đổi', 'Save Changes')}
             </Button>
           </>
         }
       >
         <Select
-          label="Trưởng nhóm mới"
+          label={t('Trưởng nhóm mới', 'New Team Leader')}
           value={selectedLeader}
           onChange={(event) => setSelectedLeader(event.target.value)}
           options={[
-            { value: '', label: '-- Chọn Trưởng nhóm --' },
+            { value: '', label: t('-- Chọn Trưởng nhóm --', '-- Select Team Leader --') },
             ...members.map((member) => ({
               value: String(member.id),
               label: `${member.full_name} (${member.employee_code || member.email})`,

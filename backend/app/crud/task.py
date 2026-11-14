@@ -1,5 +1,6 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from datetime import datetime, timezone
+from sqlalchemy import or_, select
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.task import Task
 from app.models.employee import Employee
@@ -7,7 +8,6 @@ from app.models.project import Project
 from app.schemas.task import TaskCreate, TaskUpdate
 from app.services.project_access import project_scope_predicate
 from app.services.task_service import validate_task_relationships
-
 
 from app.core.constants import ROLE_ADMIN, ROLE_MANAGER
 
@@ -20,38 +20,41 @@ def get_all(
     status: str | None = None,
     current_user: Employee | None = None,
 ):
-    stmt = select(Task).where(Task.is_deleted == False)
+    stmt = (
+        select(Task)
+        .options(
+            selectinload(Task.assignments),
+            joinedload(Task.sprint),
+            joinedload(Task.topic),
+        )
+        .where(Task.is_deleted == False)  # noqa: E712
+    )
     if current_user is not None:
         if current_user.role_id == ROLE_ADMIN:
-            # Admin can view all active tasks in the system
             pass
         elif current_user.role_id == ROLE_MANAGER:
             scope = project_scope_predicate(current_user)
             if scope is not None:
-                stmt = stmt.join(Project, Project.id == Task.project_id).where(scope)
+                stmt = stmt.join(Project, Project.id == Task.project_id).where(
+                    Project.is_deleted == False,  # noqa: E712
+                    scope,
+                )
         else:
-            # Employee can view assigned tasks OR tasks in accessible projects
             from app.models.task_assignment import TaskAssignment
-            from app.models.project_member import ProjectMember
-            from sqlalchemy import or_
 
-            scope_expr = or_(
-                Task.id.in_(
-                    select(TaskAssignment.task_id).where(
-                        TaskAssignment.employee_id == current_user.id
-                    )
-                ),
-                Task.created_by == current_user.id,
-                Task.project_id.in_(
-                    select(ProjectMember.project_id).where(
-                        ProjectMember.employee_id == current_user.id
-                    )
-                ),
-                Task.project_id.in_(
-                    select(Project.id).where(Project.created_by == current_user.id)
+            scope = project_scope_predicate(current_user)
+            stmt = stmt.join(Project, Project.id == Task.project_id).where(
+                Project.is_deleted == False,  # noqa: E712
+                or_(
+                    Task.id.in_(
+                        select(TaskAssignment.task_id).where(
+                            TaskAssignment.employee_id == current_user.id
+                        )
+                    ),
+                    Task.created_by == current_user.id,
+                    scope if scope is not None else True,
                 ),
             )
-            stmt = stmt.where(scope_expr)
 
     if project_id is not None:
         stmt = stmt.where(Task.project_id == project_id)
@@ -64,12 +67,129 @@ def get_all(
     if limit is not None and limit > 0:
         stmt = stmt.limit(limit)
 
-    return db.scalars(stmt).all()
+    return list(db.scalars(stmt).unique().all())
 
 
-def get_by_id(db: Session, task_id: int):
+def search_tasks(
+    db: Session,
+    current_user: Employee,
+    *,
+    keyword: str | None = None,
+    project_id: int | None = None,
+    department_id: int | None = None,
+    team_id: int | None = None,
+    sprint_id: int | None = None,
+    topic_id: int | None = None,
+    assigned_to: int | None = None,
+    status: str | None = None,
+    priority: str | None = None,
+    overdue_only: bool = False,
+    skip: int = 0,
+    limit: int = 100,
+) -> list[Task]:
+    """Multi-table query searching Tasks joined across Project, Sprint, DiscussionTopic, and TaskAssignment."""
+    from app.models.discussion_topic import DiscussionTopic
+    from app.models.sprint import Sprint
+    from app.models.task_assignment import TaskAssignment
 
-    return db.get(Task, task_id)
+    stmt = (
+        select(Task)
+        .options(
+            selectinload(Task.assignments),
+            joinedload(Task.sprint),
+            joinedload(Task.topic),
+        )
+        .join(Project, Project.id == Task.project_id)
+        .outerjoin(Sprint, Sprint.id == Task.sprint_id)
+        .outerjoin(DiscussionTopic, DiscussionTopic.id == Task.topic_id)
+        .where(
+            Task.is_deleted == False,  # noqa: E712
+            Project.is_deleted == False,  # noqa: E712
+        )
+    )
+
+    # RBAC scoping matching Manager department scope + Team Leader delegation
+    if current_user.role_id == ROLE_ADMIN:
+        pass
+    elif current_user.role_id == ROLE_MANAGER:
+        scope = project_scope_predicate(current_user)
+        if scope is not None:
+            stmt = stmt.where(scope)
+    else:
+        scope = project_scope_predicate(current_user)
+        stmt = stmt.where(
+            or_(
+                Task.id.in_(
+                    select(TaskAssignment.task_id).where(
+                        TaskAssignment.employee_id == current_user.id
+                    )
+                ),
+                Task.created_by == current_user.id,
+                scope if scope is not None else True,
+            )
+        )
+
+    if project_id is not None:
+        stmt = stmt.where(Task.project_id == project_id)
+    if department_id is not None:
+        stmt = stmt.where(Project.department_id == department_id)
+    if team_id is not None:
+        stmt = stmt.where(Project.team_id == team_id)
+    if sprint_id is not None:
+        stmt = stmt.where(Task.sprint_id == sprint_id)
+    if topic_id is not None:
+        stmt = stmt.where(Task.topic_id == topic_id)
+    if status:
+        stmt = stmt.where(Task.status == status)
+    if priority:
+        stmt = stmt.where(Task.priority == priority)
+    if assigned_to is not None:
+        stmt = stmt.where(
+            Task.id.in_(
+                select(TaskAssignment.task_id).where(
+                    TaskAssignment.employee_id == assigned_to
+                )
+            )
+        )
+    if overdue_only:
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        stmt = stmt.where(
+            Task.deadline.is_not(None),
+            Task.deadline < now_utc,
+            Task.status != "Done",
+        )
+    if keyword and keyword.strip():
+        pattern = f"%{keyword.strip()}%"
+        stmt = stmt.where(
+            or_(
+                Task.title.ilike(pattern),
+                Task.description.ilike(pattern),
+                Project.name.ilike(pattern),
+                Sprint.name.ilike(pattern),
+                DiscussionTopic.title.ilike(pattern),
+            )
+        )
+
+    stmt = stmt.order_by(Task.id.desc())
+    if skip > 0:
+        stmt = stmt.offset(skip)
+    if limit > 0:
+        stmt = stmt.limit(limit)
+
+    return list(db.scalars(stmt).unique().all())
+
+
+def get_by_id(db: Session, task_id: int) -> Task | None:
+    stmt = (
+        select(Task)
+        .options(
+            selectinload(Task.assignments),
+            joinedload(Task.sprint),
+            joinedload(Task.topic),
+        )
+        .where(Task.id == task_id, Task.is_deleted == False)  # noqa: E712
+    )
+    return db.scalars(stmt).first()
 
 
 def create(db: Session, data: TaskCreate):
@@ -175,6 +295,9 @@ def update(db: Session, obj: Task, data: TaskUpdate):
     target_topic_id = task_data.get("topic_id") if topic_was_set else obj.topic_id
 
     target_assignee = assigned_to if assignee_was_set else None
+    sprint_changed = (sprint_was_set and target_sprint_id != obj.sprint_id) or (
+        project_was_set and target_project_id != obj.project_id
+    )
 
     validate_task_relationships(
         db,
@@ -182,6 +305,7 @@ def update(db: Session, obj: Task, data: TaskUpdate):
         sprint_id=target_sprint_id,
         assigned_to=target_assignee,
         topic_id=target_topic_id,
+        check_sprint_status=sprint_changed,
     )
 
     old_assigned_to = obj.assigned_to

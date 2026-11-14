@@ -8,6 +8,8 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/common/Badge';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { EntityActions } from '../../components/common/EntityActions';
 import { Avatar } from '../../components/common/Avatar';
 import { Dropdown } from '../../components/common/Dropdown';
 import { SkeletonCard } from '../../components/feedback/Skeleton';
@@ -17,7 +19,7 @@ import { DataTableWrapper } from '../../components/data-display/DataTableWrapper
 import { TaskDrawer } from '../../components/drawers/TaskDrawer';
 import { ConfirmationModal } from '../../components/common/ConfirmationModal';
 import { TaskDeleteRequestModal } from '../../components/modals/TaskDeleteRequestModal';
-import { useTasks, useCreateTask, useUpdateTask, useUpdateTaskStatus, useDeleteTask } from '../../hooks/useTasks';
+import { useTasks, useSearchTasks, useCreateTask, useUpdateTask, useUpdateTaskStatus, useDeleteTask } from '../../hooks/useTasks';
 import { useProjects } from '../../hooks/useProjects';
 import { useEmployees } from '../../hooks/useEmployees';
 import { useSprints } from '../../hooks/useSprintBacklog';
@@ -26,6 +28,8 @@ import { useDepartments } from '../../hooks/useDepartments';
 import { useTeams } from '../../hooks/useTeams';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../../providers/ToastProvider';
+import { useSettings } from '../../providers/SettingsProvider';
+import { GLOBAL_ACTION_TEXT, getStatusDotClass, getStatusMeta, getStatusSelectClass } from '../../utils/globalLabels';
 import { extractApiError } from '../../utils/errorHelpers';
 import { type TaskItem } from '../../api/services';
 
@@ -34,6 +38,7 @@ const STATUS_COLUMNS = ['To Do', 'In Progress', 'Done'];
 const TaskPage: React.FC = () => {
   const { user } = useAuth();
   const toast = useToast();
+  const { t, statusLabel } = useSettings();
   const role = (user?.role || '').toLowerCase();
   const roleId = Number(user?.role_id);
   const isTeamLeaderRole = Boolean((user as any)?.is_team_leader) || role === 'team_leader';
@@ -81,23 +86,40 @@ const TaskPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [priorityFilter, setPriorityFilter] = React.useState('all');
   const [projectFilter, setProjectFilter] = React.useState('all');
+  const [sprintFilter, setSprintFilter] = React.useState('all');
+  const [overdueOnly, setOverdueOnly] = React.useState(false);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
+
+  const useServerSearch = overdueOnly || sprintFilter !== 'all';
+  const { data: serverSearchTasks = [] } = useSearchTasks(
+    {
+      keyword: searchTerm.trim() || undefined,
+      project_id: projectFilter !== 'all' ? Number(projectFilter) : undefined,
+      sprint_id: sprintFilter !== 'all' ? Number(sprintFilter) : undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      priority: priorityFilter !== 'all' ? priorityFilter : undefined,
+      overdue_only: overdueOnly,
+    },
+    useServerSearch,
+  );
 
   // Drawer
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const [editingTask, setEditingTask] = React.useState<TaskItem | null>(null);
 
   const filteredTasks = React.useMemo(() => {
-    return tasks.filter((t) => {
+    const sourceTasks = useServerSearch ? serverSearchTasks : tasks;
+    return sourceTasks.filter((t) => {
       const titleStr = (t.title || t.name || '').toLowerCase();
-      const matchSearch = titleStr.includes(searchTerm.toLowerCase());
+      const matchSearch = useServerSearch || titleStr.includes(searchTerm.toLowerCase());
       const matchStatus = statusFilter === 'all' || t.status === statusFilter;
       const matchPriority = priorityFilter === 'all' || t.priority === priorityFilter;
       const matchProject = projectFilter === 'all' || String(t.project_id) === projectFilter;
-      return matchSearch && matchStatus && matchPriority && matchProject;
+      const matchSprint = sprintFilter === 'all' || String(t.sprint_id) === sprintFilter;
+      return matchSearch && matchStatus && matchPriority && matchProject && matchSprint;
     });
-  }, [tasks, searchTerm, statusFilter, priorityFilter, projectFilter]);
+  }, [useServerSearch, serverSearchTasks, tasks, searchTerm, statusFilter, priorityFilter, projectFilter, sprintFilter]);
 
   const paginatedTasks = React.useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -167,7 +189,10 @@ const TaskPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="space-y-6 font-sans">
-        <PageHeader title="Quản lý Công việc (Tasks)" description="Đang tải danh sách công việc..." />
+        <PageHeader
+          title={t('Quản lý Công việc (Tasks)', 'Task Management')}
+          description={t('Đang tải danh sách công việc...', 'Loading task list...')}
+        />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <SkeletonCard />
           <SkeletonCard />
@@ -180,10 +205,13 @@ const TaskPage: React.FC = () => {
   if (isError) {
     return (
       <div className="space-y-6 font-sans">
-        <PageHeader title="Quản lý Công việc (Tasks)" description="Kanban board & danh sách công việc" />
+        <PageHeader
+          title={t('Quản lý Công việc (Tasks)', 'Task Management')}
+          description={t('Kanban board & danh sách công việc', 'Kanban board & task list')}
+        />
         <ErrorState
-          title="Không thể tải công việc"
-          message="Đã xảy ra lỗi khi kết nối đến API server backend."
+          title={t('Không thể tải công việc', 'Unable to load tasks')}
+          message={t('Đã xảy ra lỗi khi kết nối đến API server backend.', 'Failed to connect to the backend API server.')}
           onRetry={() => refetch()}
         />
       </div>
@@ -194,41 +222,40 @@ const TaskPage: React.FC = () => {
   const columns = [
     {
       accessorKey: 'title',
-      header: 'Tên Công việc',
-      cell: ({ row }: { row: { original: TaskItem } }) => (
-        <div className="font-semibold text-text-primary">{row.original.title || row.original.name || 'Untitled Task'}</div>
-      ),
+      header: t('Tên Công việc', 'Task Name'),
+      cell: ({ row }: { row: { original: TaskItem } }) => {
+        const taskTitle = row.original.title || row.original.name || t('Công việc chưa đặt tên', 'Untitled Task');
+        return (
+          <div className="max-w-[260px] truncate font-semibold text-text-primary" title={taskTitle}>
+            {taskTitle}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'status',
-      header: 'Trạng thái',
-      cell: ({ row }: { row: { original: TaskItem } }) => {
-        const s = row.original.status || 'To Do';
-        return (
-          <Badge variant={s === 'Done' ? 'success' : s === 'In Progress' ? 'primary' : 'warning'} showDot>
-            {s}
-          </Badge>
-        );
-      },
+      header: t('Trạng thái', 'Status'),
+      cell: ({ row }: { row: { original: TaskItem } }) => (
+        <StatusBadge status={row.original.status || 'To Do'} />
+      ),
     },
     {
       accessorKey: 'priority',
-      header: 'Độ ưu tiên',
-      cell: ({ row }: { row: { original: TaskItem } }) => {
-        const p = row.original.priority || 'Medium';
-        return (
-          <Badge variant={p === 'Urgent' || p === 'High' ? 'danger' : p === 'Medium' ? 'warning' : 'primary'}>
-            {p}
-          </Badge>
-        );
-      },
+      header: t('Độ ưu tiên', 'Priority'),
+      cell: ({ row }: { row: { original: TaskItem } }) => (
+        <StatusBadge status={row.original.priority || 'Medium'} showDot={false} />
+      ),
     },
     {
       accessorKey: 'project_id',
-      header: 'Dự án',
+      header: t('Dự án', 'Project'),
       cell: ({ row }: { row: { original: TaskItem } }) => {
         const proj = projects.find((p) => p.id === row.original.project_id);
-        return <span className="text-xs text-text-secondary">{proj?.name || '—'}</span>;
+        return (
+          <span className="block max-w-[170px] truncate text-xs text-text-secondary" title={proj?.name || '—'}>
+            {proj?.name || '—'}
+          </span>
+        );
       },
     },
     {
@@ -299,12 +326,14 @@ const TaskPage: React.FC = () => {
     },
     {
       id: 'department',
-      header: 'Phòng ban',
+      header: t('Phòng ban', 'Department'),
       cell: ({ row }: { row: { original: TaskItem } }) => {
         const emp = employees.find((e) => Number(e.id) === Number(row.original.assigned_to)) || (row.original as any).assignee;
         const dept = emp?.department_id ? departmentMap.get(emp.department_id) : null;
         return dept ? (
-          <span className="font-semibold text-text-primary">{dept.name}</span>
+          <span className="block max-w-[160px] truncate font-semibold text-text-primary" title={dept.name}>
+            {dept.name}
+          </span>
         ) : (
           <span className="text-text-muted">—</span>
         );
@@ -312,13 +341,15 @@ const TaskPage: React.FC = () => {
     },
     {
       accessorKey: 'assigned_to',
-      header: 'Người thực hiện',
+      header: t('Người thực hiện', 'Assignee'),
       cell: ({ row }: { row: { original: TaskItem } }) => {
         const emp = employees.find((e) => Number(e.id) === Number(row.original.assigned_to)) || (row.original as any).assignee;
         return emp ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 max-w-[170px]">
             <Avatar name={emp.full_name} src={emp.avatar_url} size="sm" />
-            <span className="text-xs font-medium text-text-primary">{emp.full_name}</span>
+            <span className="text-xs font-medium text-text-primary truncate" title={emp.full_name}>
+              {emp.full_name}
+            </span>
           </div>
         ) : (
           <span className="text-text-muted">—</span>
@@ -327,31 +358,20 @@ const TaskPage: React.FC = () => {
     },
     {
       id: 'actions',
-      header: 'Hành động',
-      cell: ({ row }: { row: { original: TaskItem } }) => (
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={(e) => handleOpenEdit(row.original, e)}>
-            {canEditTask(row.original) ? 'Sửa' : 'Xem'}
-          </Button>
-          {canEditTask(row.original) ? (
-            <Button variant="danger" size="sm" onClick={(e) => handleDeleteClick(row.original, e)}>
-              Xóa
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-rose-600 border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-950/20"
-              onClick={(e) => {
-                e.stopPropagation();
-                setRequestDeleteTask(row.original);
-              }}
-            >
-              Yêu cầu xóa
-            </Button>
-          )}
-        </div>
-      ),
+      header: t(GLOBAL_ACTION_TEXT.actionsHeader.vi, GLOBAL_ACTION_TEXT.actionsHeader.en),
+      cell: ({ row }: { row: { original: TaskItem } }) => {
+        const editable = canEditTask(row.original);
+        return (
+          <EntityActions
+            layout="menu"
+            align="center"
+            onView={!editable ? (e) => handleOpenEdit(row.original, e) : undefined}
+            onEdit={editable ? (e) => handleOpenEdit(row.original, e) : undefined}
+            onDelete={editable ? (e) => handleDeleteClick(row.original, e) : undefined}
+            onRequestDelete={!editable ? (e) => { e.stopPropagation(); setRequestDeleteTask(row.original); } : undefined}
+          />
+        );
+      },
     },
   ];
 
@@ -359,23 +379,23 @@ const TaskPage: React.FC = () => {
     <div className="space-y-6 font-sans pb-12">
       {/* Page Header */}
       <PageHeader
-        title="Quản lý Công việc (Tasks)"
-        description="Theo dõi tiến độ thực thi công việc theo giao diện Kanban Board hoặc Bảng dữ liệu Chi tiết"
+        title={t('Quản lý Công việc (Tasks)', 'Task Management')}
+        description={t('Theo dõi tiến độ thực thi công việc theo giao diện Kanban Board hoặc Bảng dữ liệu Chi tiết', 'Track task execution progress via Kanban Board or Table view')}
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: 'Dashboard', href: '/dashboard' },
-              { label: 'Danh sách Tasks' },
+              { label: t('Trang chủ', 'Dashboard'), href: '/dashboard' },
+              { label: t('Danh sách Công việc', 'Tasks List') },
             ]}
           />
         }
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center rounded-lg border border-border bg-surface p-1">
               <button
                 type="button"
                 onClick={() => setViewMode('kanban')}
-                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 ${viewMode === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
+                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${viewMode === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
                   }`}
               >
                 <LayoutGrid className="h-4 w-4" />
@@ -384,17 +404,17 @@ const TaskPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
+                className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'text-text-muted hover:text-text-primary'
                   }`}
               >
                 <List className="h-4 w-4" />
-                Bảng (Table)
+                {t('Bảng (Table)', 'Table')}
               </button>
             </div>
 
             {canEditTask(null) && (
               <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
-                Tạo Task Mới
+                {t('Tạo Công việc Mới', 'New Task')}
               </Button>
             )}
           </div>
@@ -403,9 +423,9 @@ const TaskPage: React.FC = () => {
 
       {/* Search & Filter Toolbar */}
       <Card>
-        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-center">
           <Input
-            placeholder="Tìm kiếm công việc..."
+            placeholder={t('Tìm kiếm công việc, dự án, sprint...', 'Search tasks, projects, sprints...')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             leftIcon={<Search className="h-4 w-4 text-text-muted" />}
@@ -415,10 +435,10 @@ const TaskPage: React.FC = () => {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             options={[
-              { value: 'all', label: 'Tất cả trạng thái' },
-              { value: 'To Do', label: 'To Do (Cần làm)' },
-              { value: 'In Progress', label: 'In Progress (Đang làm)' },
-              { value: 'Done', label: 'Done (Hoàn thành)' },
+              { value: 'all', label: t('Tất cả trạng thái', 'All Statuses') },
+              { value: 'To Do', label: statusLabel('To Do') },
+              { value: 'In Progress', label: statusLabel('In Progress') },
+              { value: 'Done', label: statusLabel('Done') },
             ]}
           />
 
@@ -426,10 +446,11 @@ const TaskPage: React.FC = () => {
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
             options={[
-              { value: 'all', label: 'Tất cả độ ưu tiên' },
-              { value: 'High', label: 'High (Cao)' },
-              { value: 'Medium', label: 'Medium (Trung bình)' },
-              { value: 'Low', label: 'Low (Thấp)' },
+              { value: 'all', label: t('Tất cả độ ưu tiên', 'All Priorities') },
+              { value: 'Urgent', label: statusLabel('Urgent') },
+              { value: 'High', label: statusLabel('High') },
+              { value: 'Medium', label: statusLabel('Medium') },
+              { value: 'Low', label: statusLabel('Low') },
             ]}
           />
 
@@ -437,10 +458,31 @@ const TaskPage: React.FC = () => {
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
             options={[
-              { value: 'all', label: 'Tất cả dự án' },
+              { value: 'all', label: t('Tất cả dự án', 'All Projects') },
               ...projects.map((p) => ({ value: String(p.id), label: p.name })),
             ]}
           />
+
+          <Select
+            value={sprintFilter}
+            onChange={(e) => setSprintFilter(e.target.value)}
+            options={[
+              { value: 'all', label: t('Tất cả Sprint', 'All Sprints') },
+              ...allSprints
+                .filter((s) => projectFilter === 'all' || String(s.project_id) === projectFilter)
+                .map((s) => ({ value: String(s.id), label: s.name })),
+            ]}
+          />
+
+          <label className="inline-flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none px-2">
+            <input
+              type="checkbox"
+              checked={overdueOnly}
+              onChange={(e) => setOverdueOnly(e.target.checked)}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+            />
+            <span>{t('Chỉ task quá hạn', 'Overdue only')}</span>
+          </label>
         </CardContent>
       </Card>
 
@@ -453,19 +495,16 @@ const TaskPage: React.FC = () => {
               <div key={colStatus} className="space-y-4 rounded-2xl border border-border bg-surface/50 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`h-3 w-3 rounded-full ${colStatus === 'Done' ? 'bg-emerald-500' : colStatus === 'In Progress' ? 'bg-sky-500' : 'bg-amber-500'
-                        }`}
-                    />
-                    <h3 className="text-sm font-bold text-text-primary">{colStatus}</h3>
+                    <span className={`h-3 w-3 rounded-full ${getStatusDotClass(colStatus)}`} />
+                    <h3 className="text-sm font-bold text-text-primary">{statusLabel(colStatus)}</h3>
                   </div>
-                  <Badge variant="primary">{colTasks.length}</Badge>
+                  <Badge variant={getStatusMeta(colStatus).variant}>{colTasks.length}</Badge>
                 </div>
 
                 <div className="space-y-3 min-h-[300px]">
                   {colTasks.length === 0 ? (
                     <div className="p-8 text-center text-xs text-text-muted border border-dashed border-border rounded-xl">
-                      Không có task trong cột này
+                      {t('Không có công việc nào trong cột này', 'No tasks in this column')}
                     </div>
                   ) : (
                     colTasks.map((task) => {
@@ -495,7 +534,7 @@ const TaskPage: React.FC = () => {
                                     <button
                                       type="button"
                                       className="p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-secondary/80 transition-colors"
-                                      title="Thao tác"
+                                      title={t(GLOBAL_ACTION_TEXT.actionsHeader.vi, GLOBAL_ACTION_TEXT.actionsHeader.en)}
                                     >
                                       <MoreVertical className="h-3.5 w-3.5" />
                                     </button>
@@ -503,21 +542,23 @@ const TaskPage: React.FC = () => {
                                   items={[
                                     {
                                       key: 'edit',
-                                      label: canEditTask(task) ? 'Chỉnh sửa' : 'Xem chi tiết',
+                                      label: canEditTask(task)
+                                        ? t(GLOBAL_ACTION_TEXT.edit.vi, GLOBAL_ACTION_TEXT.edit.en)
+                                        : t(GLOBAL_ACTION_TEXT.view.vi, GLOBAL_ACTION_TEXT.view.en),
                                       icon: <Edit3 className="h-3.5 w-3.5" />,
                                       onClick: () => handleOpenEdit(task),
                                     },
                                     canEditTask(task)
                                       ? {
                                           key: 'delete',
-                                          label: 'Xóa công việc',
+                                          label: t(GLOBAL_ACTION_TEXT.delete.vi, GLOBAL_ACTION_TEXT.delete.en),
                                           icon: <Trash2 className="h-3.5 w-3.5" />,
                                           destructive: true,
                                           onClick: () => handleDeleteClick(task),
                                         }
                                       : {
                                           key: 'request-delete',
-                                          label: 'Yêu cầu xóa',
+                                          label: t(GLOBAL_ACTION_TEXT.requestDelete.vi, GLOBAL_ACTION_TEXT.requestDelete.en),
                                           icon: <Trash2 className="h-3.5 w-3.5" />,
                                           destructive: true,
                                           onClick: () => setRequestDeleteTask(task),
@@ -530,20 +571,9 @@ const TaskPage: React.FC = () => {
                             {/* Row 2: Project name & Priority Badge */}
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-[11px] font-medium text-text-muted truncate flex-1">
-                                {proj?.name || 'Chưa gán dự án'}
+                                {proj?.name || t('Chưa gán dự án', 'Unassigned project')}
                               </p>
-                              <Badge
-                                variant={
-                                  task.priority === 'Urgent' || task.priority === 'High'
-                                    ? 'danger'
-                                    : task.priority === 'Medium'
-                                      ? 'warning'
-                                      : 'primary'
-                                }
-                                size="sm"
-                              >
-                                {task.priority || 'Medium'}
-                              </Badge>
+                              <StatusBadge status={task.priority || 'Medium'} size="sm" showDot={false} />
                             </div>
 
                             {/* Row 3: Assignee & Quick Status Dropdown */}
@@ -556,7 +586,7 @@ const TaskPage: React.FC = () => {
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-[11px] text-text-muted">Chưa gán</span>
+                                <span className="text-[11px] text-text-muted">{t('Chưa gán', 'Unassigned')}</span>
                               )}
 
                               <div onClick={(e) => e.stopPropagation()} className="shrink-0">
@@ -564,11 +594,11 @@ const TaskPage: React.FC = () => {
                                   value={task.status || 'To Do'}
                                   disabled={!canEditTask(task) && Number(task.assigned_to) !== Number(user?.id)}
                                   onChange={(e) => handleStatusChange(task.id, e.target.value, e)}
-                                  className="h-6 text-[10px] font-semibold rounded-md border border-border/80 bg-surface px-1.5 text-text-primary cursor-pointer hover:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                                  className={`h-6 text-[10px] font-semibold rounded-full border px-2 cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60 disabled:cursor-not-allowed ${getStatusSelectClass(task.status || 'To Do')}`}
                                 >
-                                  <option value="To Do">To Do</option>
-                                  <option value="In Progress">In Progress</option>
-                                  <option value="Done">Done</option>
+                                  <option value="To Do" className="bg-surface text-text-primary">{statusLabel('To Do')}</option>
+                                  <option value="In Progress" className="bg-surface text-text-primary">{statusLabel('In Progress')}</option>
+                                  <option value="Done" className="bg-surface text-text-primary">{statusLabel('Done')}</option>
                                 </select>
                               </div>
                             </div>
@@ -618,9 +648,9 @@ const TaskPage: React.FC = () => {
       <ConfirmationModal
         isOpen={!!taskToDelete}
         onClose={() => setTaskToDelete(null)}
-        title="Xóa công việc"
-        message="Bạn có chắc chắn muốn xóa công việc này? Hành động này không thể hoàn tác."
-        confirmText="Xóa"
+        title={t('Xóa công việc', 'Delete Task')}
+        message={t('Bạn có chắc chắn muốn xóa công việc này? Hành động này không thể hoàn tác.', 'Are you sure you want to delete this task? This action cannot be undone.')}
+        confirmText={t(GLOBAL_ACTION_TEXT.delete.vi, GLOBAL_ACTION_TEXT.delete.en)}
         onConfirm={confirmDelete}
         isLoading={deleteTask.isPending}
       />

@@ -73,10 +73,12 @@ export const useNotificationRealtime = () => {
             if (eventType === 'task.changed') {
               queryClient.invalidateQueries({ queryKey: ['tasks'] });
               queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+              queryClient.invalidateQueries({ queryKey: ['hrm'] });
             } else if (eventType === 'employee.changed') {
               queryClient.invalidateQueries({ queryKey: ['employees'] });
               queryClient.invalidateQueries({ queryKey: ['tasks'] });
               queryClient.invalidateQueries({ queryKey: ['project-eligible-assignees'] });
+              queryClient.invalidateQueries({ queryKey: ['hrm'] });
             } else if (eventType === 'project.changed') {
               queryClient.invalidateQueries({ queryKey: ['projects'] });
               queryClient.invalidateQueries({ queryKey: ['project-eligible-assignees'] });
@@ -101,6 +103,9 @@ export const useNotificationRealtime = () => {
             } else if (eventType === 'vacation.changed') {
               queryClient.invalidateQueries({ queryKey: ['vacations'] });
               queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+              queryClient.invalidateQueries({ queryKey: ['hrm'] });
+            } else if (eventType === 'hrm.changed') {
+              queryClient.invalidateQueries({ queryKey: ['hrm'] });
             }
 
             window.dispatchEvent(

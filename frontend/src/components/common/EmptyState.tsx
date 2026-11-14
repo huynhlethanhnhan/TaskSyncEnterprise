@@ -8,6 +8,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useSettings } from '../../providers/SettingsProvider';
 import { cn } from '../../utils/cn';
 
 export interface EmptyStateProps {
@@ -31,30 +32,31 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   icon,
   className,
 }) => {
+  const { t } = useSettings();
   const config = {
     'no-data': {
-      defaultTitle: 'Chưa có dữ liệu',
-      defaultDesc: 'Hiện chưa có bản ghi nào trong danh sách. Hãy tạo mới để bắt đầu.',
+      defaultTitle: t('Chưa có dữ liệu', 'No data yet'),
+      defaultDesc: t('Hiện chưa có bản ghi nào trong danh sách. Hãy tạo mới để bắt đầu.', 'There are no records yet. Create one to get started.'),
       icon: <FolderOpen className="h-10 w-10 text-text-muted" />,
     },
     'no-results': {
-      defaultTitle: 'Không tìm thấy kết quả',
-      defaultDesc: 'Không tìm thấy thông tin phù hợp với từ khóa hoặc bộ lọc đã chọn.',
+      defaultTitle: t('Không tìm thấy kết quả', 'No results found'),
+      defaultDesc: t('Không tìm thấy thông tin phù hợp với từ khóa hoặc bộ lọc đã chọn.', 'No items match your search query or filters.'),
       icon: <SearchX className="h-10 w-10 text-text-muted" />,
     },
     'permission-denied': {
-      defaultTitle: 'Quyền truy cập bị từ chối',
-      defaultDesc: 'Tài khoản của bạn không được cấp quyền truy cập tài nguyên này.',
+      defaultTitle: t('Quyền truy cập bị từ chối', 'Access Denied'),
+      defaultDesc: t('Tài khoản của bạn không được cấp quyền truy cập tài nguyên này.', 'Your account does not have permission to access this resource.'),
       icon: <ShieldAlert className="h-10 w-10 text-rose-500" />,
     },
     offline: {
-      defaultTitle: 'Mất kết nối mạng',
-      defaultDesc: 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra lại đường truyền internet.',
+      defaultTitle: t('Mất kết nối mạng', 'Network Offline'),
+      defaultDesc: t('Không thể kết nối tới máy chủ. Vui lòng kiểm tra lại đường truyền internet.', 'Unable to connect to the server. Please check your connection.'),
       icon: <WifiOff className="h-10 w-10 text-amber-500" />,
     },
     error: {
-      defaultTitle: 'Đã xảy ra lỗi hệ thống',
-      defaultDesc: 'Không thể tải dữ liệu. Vui lòng thử lại sau giây lát.',
+      defaultTitle: t('Đã xảy ra lỗi hệ thống', 'System Error'),
+      defaultDesc: t('Không thể tải dữ liệu. Vui lòng thử lại sau giây lát.', 'Failed to load data. Please try again shortly.'),
       icon: <AlertCircle className="h-10 w-10 text-rose-500" />,
     },
   }[type];
@@ -89,7 +91,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
           className="mt-2"
         >
-          {actionLabel || 'Tải lại trang'}
+          {actionLabel || t('Tải lại trang', 'Refresh')}
         </Button>
       ) : null}
     </div>

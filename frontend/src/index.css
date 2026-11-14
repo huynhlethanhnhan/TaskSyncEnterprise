@@ -213,8 +213,17 @@
 .z-modal { z-index: 1050 !important; }
 .z-toast { z-index: 9999 !important; }
 
-/* Base Body Styles */
 /* Base Body & Layout Standardization */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--text-primary));
@@ -224,6 +233,40 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Container-aware main frame + fluid organic card grids */
+#main-content {
+  container-type: inline-size;
+  container-name: main-frame;
+}
+
+.card-grid-fluid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 305px), 1fr));
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+@media (min-width: 1280px) {
+  .card-grid-fluid {
+    gap: 1.5rem;
+  }
+}
+
+@keyframes pageEnterSoft {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#main-content > * {
+  animation: pageEnterSoft 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* 🎯 Focus Ring Accessibility Standardization */
@@ -266,6 +309,40 @@ body {
 }
 .hover-lift:hover {
   transform: translateY(-2px);
+}
+
+/* Normalize native <select> arrows and prevent multiline text wrapping */
+select {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-image: none !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+select::-ms-expand {
+  display: none;
+}
+select::picker-icon {
+  display: none;
+}
+
+/* Hide Edge/Chromium native password reveal icon so <Input type="password"> displays a single clean toggle */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+/* Compact Mode synchronized from UserPreferences */
+html.compact table th,
+html.compact table td {
+  padding-top: 0.45rem !important;
+  padding-bottom: 0.45rem !important;
+}
+
+html.compact #main-content {
+  padding: 0.85rem !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

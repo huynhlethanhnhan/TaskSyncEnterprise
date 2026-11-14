@@ -15,13 +15,14 @@ import {
   Users,
   UserPlus,
   Trash2,
-  Edit3,
   AlertTriangle,
 } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Breadcrumb } from '../../components/navigation/Breadcrumb';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { EntityActions } from '../../components/common/EntityActions';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
@@ -50,14 +51,17 @@ import { SprintsManager } from '../../components/sprints/SprintsManager';
 import { TopicsManager } from '../../components/topics/TopicsManager';
 import { FilesManager } from '../../components/files/FilesManager';
 import { useAuth } from '../../providers/AuthProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 import { useTeams } from '../../hooks/useTeams';
 import { useDepartments } from '../../hooks/useDepartments';
+import { getStatusSelectClass } from '../../utils/globalLabels';
 
 const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();
+  const { t, statusLabel, formatDate } = useSettings();
   const projectId = Number(id);
   const role = (user?.role || '').toLowerCase();
   const isStaff = role === 'employee' || role === 'staff' || Number(user?.role_id) === 3;
@@ -94,12 +98,15 @@ const ProjectDetailPage: React.FC = () => {
         projectId,
         employeeId: Number(selectedEmployeeId),
       });
-      toast.success('Thêm thành viên thành công', 'Nhân sự đã được thêm vào dự án.');
+      toast.success(
+        t('Thêm thành viên thành công', 'Member added'),
+        t('Nhân sự đã được thêm vào dự án.', 'Employee has been added to the project.'),
+      );
       setSelectedEmployeeId('');
       setIsAddMemberOpen(false);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.detail || 'Không thể thêm thành viên';
-      toast.error('Lỗi thêm thành viên', msg);
+      const msg = err?.response?.data?.message || err?.response?.data?.detail || t('Không thể thêm thành viên', 'Unable to add member');
+      toast.error(t('Lỗi thêm thành viên', 'Failed to add member'), msg);
     }
   };
 
@@ -116,9 +123,15 @@ const ProjectDetailPage: React.FC = () => {
     if (!taskToDelete) return;
     try {
       await deleteTaskMutation.mutateAsync(taskToDelete.id);
-      toast.success('Xóa công việc thành công', `Đã xóa task ${taskToDelete.title || taskToDelete.name}.`);
+      toast.success(
+        t('Xóa công việc thành công', 'Task deleted'),
+        `${t('Đã xóa task', 'Deleted task')} ${taskToDelete.title || taskToDelete.name}.`,
+      );
     } catch {
-      toast.error('Lỗi khi xóa công việc', 'Không thể xóa task vào lúc này.');
+      toast.error(
+        t('Lỗi khi xóa công việc', 'Failed to delete task'),
+        t('Không thể xóa task vào lúc này.', 'Unable to delete task right now.'),
+      );
     } finally {
       setTaskToDelete(null);
     }
@@ -127,10 +140,16 @@ const ProjectDetailPage: React.FC = () => {
   const handleConfirmDeleteProject = async () => {
     try {
       await deleteProjectMutation.mutateAsync(projectId);
-      toast.success('Xóa dự án thành công', `Đã xóa vĩnh viễn dự án ${project.name}.`);
+      toast.success(
+        t('Xóa dự án thành công', 'Project deleted'),
+        `${t('Đã xóa vĩnh viễn dự án', 'Permanently deleted project')} ${project.name}.`,
+      );
       navigate('/projects');
     } catch {
-      toast.error('Lỗi khi xóa dự án', 'Không thể xóa dự án vào lúc này.');
+      toast.error(
+        t('Lỗi khi xóa dự án', 'Failed to delete project'),
+        t('Không thể xóa dự án vào lúc này.', 'Unable to delete project right now.'),
+      );
     } finally {
       setIsDeleteProjectOpen(false);
     }
@@ -157,14 +176,14 @@ const ProjectDetailPage: React.FC = () => {
   }, [project]);
 
   const projectTasks = React.useMemo(() => {
-    return allTasks.filter((t) => Number(t.project_id) === projectId);
+    return allTasks.filter((taskItem) => Number(taskItem.project_id) === projectId);
   }, [allTasks, projectId]);
 
   const taskCounts = React.useMemo(() => {
     return projectTasks.reduce(
-      (acc, t) => {
-        if (t.status === 'Done') acc.done += 1;
-        else if (t.status === 'In Progress') acc.inProgress += 1;
+      (acc, taskItem) => {
+        if (taskItem.status === 'Done') acc.done += 1;
+        else if (taskItem.status === 'In Progress') acc.inProgress += 1;
         else acc.todo += 1;
         return acc;
       },
@@ -192,16 +211,16 @@ const ProjectDetailPage: React.FC = () => {
     try {
       if (editingTask) {
         await updateTask.mutateAsync({ id: editingTask.id, payload: data });
-        toast.success('Cập nhật task thành công');
+        toast.success(t('Cập nhật task thành công', 'Task updated successfully'));
       } else {
         await createTask.mutateAsync({ ...data, project_id: projectId });
-        toast.success('Tạo task mới thành công');
+        toast.success(t('Tạo task mới thành công', 'Task created successfully'));
       }
       setIsDrawerOpen(false);
       refetchTasks();
       refetch();
     } catch {
-      toast.error('Lỗi khi lưu công việc');
+      toast.error(t('Lỗi khi lưu công việc', 'Failed to save task'));
     }
   };
 
@@ -218,11 +237,11 @@ const ProjectDetailPage: React.FC = () => {
   const handleStatusChange = async (taskId: number, newStatus: string) => {
     try {
       await updateTaskStatus.mutateAsync({ id: taskId, status: newStatus });
-      toast.success('Cập nhật trạng thái thành công');
+      toast.success(t('Cập nhật trạng thái thành công', 'Status updated successfully'));
       refetchTasks();
       refetch();
     } catch {
-      toast.error('Lỗi cập nhật trạng thái');
+      toast.error(t('Lỗi cập nhật trạng thái', 'Failed to update status'));
     }
   };
 
@@ -242,7 +261,7 @@ const ProjectDetailPage: React.FC = () => {
           team_id: projTeamId ? Number(projTeamId) : null,
         },
       });
-      toast.success('Cập nhật cài đặt dự án thành công');
+      toast.success(t('Cập nhật cài đặt dự án thành công', 'Project settings updated'));
       refetch();
     } catch (err: any) {
       const errorMsg =
@@ -250,8 +269,8 @@ const ProjectDetailPage: React.FC = () => {
         (Array.isArray(err?.response?.data?.detail)
           ? err?.response?.data?.detail[0]?.msg
           : err?.response?.data?.detail) ||
-        'Lỗi khi lưu cài đặt dự án';
-      toast.error('Cập nhật thất bại', errorMsg);
+        t('Lỗi khi lưu cài đặt dự án', 'Failed to save project settings');
+      toast.error(t('Cập nhật thất bại', 'Update failed'), errorMsg);
     } finally {
       setIsSavingSettings(false);
     }
@@ -260,7 +279,10 @@ const ProjectDetailPage: React.FC = () => {
   if (isProjectLoading) {
     return (
       <div className="space-y-6 font-sans pb-12">
-        <PageHeader title="Chi tiết Dự án" description="Đang tải dữ liệu dự án..." />
+        <PageHeader
+          title={t('Chi tiết Dự án', 'Project Details')}
+          description={t('Đang tải dữ liệu dự án...', 'Loading project data...')}
+        />
         <SkeletonCard />
       </div>
     );
@@ -269,10 +291,10 @@ const ProjectDetailPage: React.FC = () => {
   if (isProjectError || !project) {
     return (
       <div className="space-y-6 font-sans pb-12">
-        <PageHeader title="Chi tiết Dự án" description="Thông tin dự án" />
+        <PageHeader title={t('Chi tiết Dự án', 'Project Details')} description={t('Thông tin dự án', 'Project overview')} />
         <ErrorState
-          title="Không tìm thấy dự án"
-          message="Dự án không tồn tại hoặc đã bị xóa khỏi hệ thống."
+          title={t('Không tìm thấy dự án', 'Project not found')}
+          message={t('Dự án không tồn tại hoặc đã bị xóa khỏi hệ thống.', 'The project does not exist or has been removed.')}
           onRetry={() => refetch()}
         />
       </div>
@@ -281,18 +303,18 @@ const ProjectDetailPage: React.FC = () => {
 
   // Define dynamic project level tabs
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: <Briefcase className="h-4 w-4" /> },
-    { id: 'members', label: 'Thành viên', icon: <Users className="h-4 w-4" /> },
-    { id: 'timeline', label: 'Timeline (Jira)', icon: <CalendarIcon className="h-4 w-4" /> },
-    { id: 'tasks', label: 'Công việc (Kanban)', icon: <CheckSquare className="h-4 w-4" /> },
-    { id: 'backlog', label: 'Backlog', icon: <Layers className="h-4 w-4" /> },
-    { id: 'sprints', label: 'Sprints', icon: <RefreshCw className="h-4 w-4" /> },
-    { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="h-4 w-4" /> },
-    { id: 'files', label: 'Files', icon: <FolderOpen className="h-4 w-4" /> },
-    { id: 'discussions', label: 'Discussions', icon: <MessageSquare className="h-4 w-4" /> },
-    { id: 'activity', label: 'Activity', icon: <Activity className="h-4 w-4" /> },
+    { id: 'overview', label: t('Tổng quan', 'Overview'), icon: <Briefcase className="h-4 w-4" /> },
+    { id: 'members', label: t('Thành viên', 'Members'), icon: <Users className="h-4 w-4" /> },
+    { id: 'timeline', label: t('Timeline (Jira)', 'Timeline (Jira)'), icon: <CalendarIcon className="h-4 w-4" /> },
+    { id: 'tasks', label: t('Công việc (Kanban)', 'Tasks (Kanban)'), icon: <CheckSquare className="h-4 w-4" /> },
+    { id: 'backlog', label: t('Backlog', 'Backlog'), icon: <Layers className="h-4 w-4" /> },
+    { id: 'sprints', label: t('Sprints', 'Sprints'), icon: <RefreshCw className="h-4 w-4" /> },
+    { id: 'calendar', label: t('Lịch biểu', 'Calendar'), icon: <CalendarIcon className="h-4 w-4" /> },
+    { id: 'files', label: t('Tài liệu', 'Files'), icon: <FolderOpen className="h-4 w-4" /> },
+    { id: 'discussions', label: t('Thảo luận', 'Discussions'), icon: <MessageSquare className="h-4 w-4" /> },
+    { id: 'activity', label: t('Hoạt động', 'Activity'), icon: <Activity className="h-4 w-4" /> },
     ...(isAdminOrManager
-      ? [{ id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> }]
+      ? [{ id: 'settings', label: t('Cài đặt', 'Settings'), icon: <Settings className="h-4 w-4" /> }]
       : []),
   ];
 
@@ -301,11 +323,11 @@ const ProjectDetailPage: React.FC = () => {
       {/* Page Header */}
       <PageHeader
         title={project.name}
-        description={project.description || 'Chi tiết thông tin công việc và tiến độ dự án.'}
+        description={project.description || t('Chi tiết thông tin công việc và tiến độ dự án.', 'Detailed tasks and progress tracking for this project.')}
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: 'Dự án', href: '/projects' },
+              { label: t('Dự án', 'Projects'), href: '/projects' },
               { label: project.name },
             ]}
           />
@@ -317,7 +339,7 @@ const ProjectDetailPage: React.FC = () => {
             leftIcon={<ArrowLeft className="h-4 w-4" />}
             onClick={() => navigate('/projects')}
           >
-            Quay lại danh sách
+            {t('Quay lại danh sách', 'Back to List')}
           </Button>
         }
       />
@@ -355,8 +377,8 @@ const ProjectDetailPage: React.FC = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
-                    <span>Tiến độ Dự án</span>
-                    <Badge variant="primary">{computedProgress}% Hoàn thành</Badge>
+                    <span>{t('Tiến độ Dự án', 'Project Progress')}</span>
+                    <Badge variant="primary">{computedProgress}% {statusLabel('Done')}</Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -369,15 +391,15 @@ const ProjectDetailPage: React.FC = () => {
 
                   <div className="grid grid-cols-3 gap-4 text-center pt-2">
                     <div className="p-3 rounded-xl border border-amber-200/40 bg-amber-500/[0.02]">
-                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Cần làm (To Do)</span>
+                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">{statusLabel('To Do')}</span>
                       <p className="text-xl font-bold text-amber-600 mt-1">{taskCounts.todo}</p>
                     </div>
                     <div className="p-3 rounded-xl border border-sky-200/40 bg-sky-500/[0.02]">
-                      <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider">Đang làm (In Progress)</span>
+                      <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider">{statusLabel('In Progress')}</span>
                       <p className="text-xl font-bold text-sky-600 mt-1">{taskCounts.inProgress}</p>
                     </div>
                     <div className="p-3 rounded-xl border border-emerald-200/40 bg-emerald-500/[0.02]">
-                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Hoàn thành (Done)</span>
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">{statusLabel('Done')}</span>
                       <p className="text-xl font-bold text-emerald-600 mt-1">{taskCounts.done}</p>
                     </div>
                   </div>
@@ -388,17 +410,17 @@ const ProjectDetailPage: React.FC = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
-                    <span>Công việc gần đây ({projectTasks.length})</span>
+                    <span>{t('Công việc gần đây', 'Recent Tasks')} ({projectTasks.length})</span>
                     {canManageTasks && (
                       <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
-                        Thêm công việc
+                        {t('Thêm công việc', 'Add Task')}
                       </Button>
                     )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {projectTasks.length === 0 ? (
-                    <p className="text-xs text-text-muted text-center py-6">Chưa có công việc nào gắn với dự án này.</p>
+                    <p className="text-xs text-text-muted text-center py-6">{t('Chưa có công việc nào gắn với dự án này.', 'No tasks assigned to this project yet.')}</p>
                   ) : (
                     <div className="divide-y divide-border/60">
                       {projectTasks.slice(0, 10).map((task) => (
@@ -412,18 +434,18 @@ const ProjectDetailPage: React.FC = () => {
                               {task.title || task.name}
                             </p>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <span className="text-[10px] text-text-muted">Độ ưu tiên: {task.priority || 'Medium'}</span>
+                              <span className="text-[10px] text-text-muted">{t('Độ ưu tiên:', 'Priority:')} {statusLabel(task.priority || 'Medium')}</span>
                               {task.sprint_id ? (
                                 <Badge variant="primary" size="sm" className="text-[9px] py-0 px-1.5 font-semibold">
-                                  🏃 Sprint: {task.sprint_name || `#${task.sprint_id}`}
+                                  🏃 {t('Sprint:', 'Sprint:')} {task.sprint_name || `#${task.sprint_id}`}
                                 </Badge>
                               ) : task.is_from_backlog ? (
                                 <Badge variant="warning" size="sm" className="text-[9px] py-0 px-1.5 font-semibold">
-                                  📦 Backlog
+                                  📦 {t('Backlog', 'Backlog')}
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" size="sm" className="text-[9px] py-0 px-1.5 font-semibold text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-800">
-                                  ⚡ Riêng lẻ
+                                  ⚡ {t('Riêng lẻ', 'Standalone')}
                                 </Badge>
                               )}
                             </div>
@@ -433,44 +455,20 @@ const ProjectDetailPage: React.FC = () => {
                               <select
                                 value={task.status || 'To Do'}
                                 onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                                className={`h-6 px-2 rounded-md font-bold text-[10px] uppercase border cursor-pointer focus:outline-none transition-colors ${
-                                  task.status === 'Done'
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/90 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
-                                    : task.status === 'In Progress'
-                                      ? 'bg-blue-50 text-blue-700 border-blue-200/90 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/60'
-                                      : 'bg-amber-50 text-amber-800 border-amber-200/90 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60'
-                                }`}
+                                className={`h-6 px-2.5 rounded-full font-semibold text-[11px] border cursor-pointer focus:outline-none transition-colors ${getStatusSelectClass(task.status || 'To Do')}`}
                               >
-                                <option value="To Do">To Do</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Done">Done</option>
+                                <option value="To Do" className="bg-surface text-text-primary">{statusLabel('To Do')}</option>
+                                <option value="In Progress" className="bg-surface text-text-primary">{statusLabel('In Progress')}</option>
+                                <option value="Done" className="bg-surface text-text-primary">{statusLabel('Done')}</option>
                               </select>
                             ) : (
-                              <Badge variant={task.status === 'Done' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} showDot>
-                                {task.status || 'To Do'}
-                              </Badge>
+                              <StatusBadge status={task.status || 'To Do'} size="sm" />
                             )}
                             {canManageTasks && (
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="p-1 h-7 w-7 text-text-muted hover:text-text-primary"
-                                  onClick={() => handleOpenEdit(task)}
-                                  title="Sửa công việc"
-                                >
-                                  <Edit3 className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="p-1 h-7 w-7 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
-                                  onClick={() => setTaskToDelete(task)}
-                                  title="Xóa công việc"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
+                              <EntityActions
+                                onEdit={() => handleOpenEdit(task)}
+                                onDelete={() => setTaskToDelete(task)}
+                              />
                             )}
                           </div>
                         </div>
@@ -485,62 +483,49 @@ const ProjectDetailPage: React.FC = () => {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Thông tin dự án</CardTitle>
+                  <CardTitle>{t('Thông tin dự án', 'Project Information')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 text-xs">
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
-                    <span className="text-text-muted">Mã Dự án:</span>
+                    <span className="text-text-muted">{t('Mã Dự án:', 'Project Code:')}</span>
                     <span className="font-mono font-bold text-text-primary">{project.project_code || `PRJ-${project.id}`}</span>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
-                    <span className="text-text-muted">Trạng thái:</span>
-                    <Badge variant={effectiveProjectStatus === 'Completed' ? 'success' : effectiveProjectStatus === 'Active' ? 'primary' : 'warning'} showDot>
-                      {effectiveProjectStatus}
-                    </Badge>
+                    <span className="text-text-muted">{t('Trạng thái:', 'Status:')}</span>
+                    <StatusBadge status={effectiveProjectStatus} size="sm" />
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
-                    <span className="text-text-muted">Độ ưu tiên:</span>
+                    <span className="text-text-muted">{t('Độ ưu tiên:', 'Priority:')}</span>
                     {project.priority ? (
-                      <Badge
-                        variant={
-                          project.priority === 'High'
-                            ? 'danger'
-                            : project.priority === 'Medium'
-                              ? 'warning'
-                              : 'primary'
-                        }
-                      >
-                        {project.priority}
-                      </Badge>
+                      <StatusBadge status={project.priority} size="sm" />
                     ) : (
                       <span className="text-text-muted italic">—</span>
                     )}
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
-                    <span className="text-text-muted">Tiến độ:</span>
+                    <span className="text-text-muted">{t('Tiến độ:', 'Progress:')}</span>
                     <span className="font-bold text-text-primary">{computedProgress}%</span>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
-                    <span className="text-text-muted">Phòng ban:</span>
+                    <span className="text-text-muted">{t('Phòng ban:', 'Department:')}</span>
                     <span className="font-semibold text-text-primary">
-                      {project.department_name || <span className="text-text-muted italic">Chưa gán</span>}
+                      {project.department_name || <span className="text-text-muted italic">{t('Chưa gán', 'Unassigned')}</span>}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
-                    <span className="text-text-muted">Team phụ trách:</span>
+                    <span className="text-text-muted">{t('Team phụ trách:', 'Primary Team:')}</span>
                     <span className="font-semibold text-text-primary">
-                      {project.team_name || <span className="text-text-muted italic">Chưa gán</span>}
+                      {project.team_name || <span className="text-text-muted italic">{t('Chưa gán', 'Unassigned')}</span>}
                     </span>
                   </div>
 
-
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
-                    <span className="text-text-muted">Người tạo:</span>
+                    <span className="text-text-muted">{t('Người tạo:', 'Created By:')}</span>
                     <span className="font-semibold text-text-primary">
                       {(() => {
                         if (!project.created_by) return <span className="text-text-muted italic">—</span>;
@@ -553,29 +538,29 @@ const ProjectDetailPage: React.FC = () => {
                             </span>
                           );
                         }
-                        return `Nhân sự #${project.created_by}`;
+                        return `${t('Nhân sự', 'Employee')} #${project.created_by}`;
                       })()}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
-                    <span className="text-text-muted">Ngày bắt đầu:</span>
+                    <span className="text-text-muted">{t('Ngày bắt đầu:', 'Start Date:')}</span>
                     <span className="font-semibold text-text-primary">
-                      {project.start_date ? new Date(project.start_date).toLocaleDateString('vi-VN') : '—'}
+                      {project.start_date ? formatDate(project.start_date) : '—'}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
-                    <span className="text-text-muted">Ngày kết thúc:</span>
+                    <span className="text-text-muted">{t('Ngày kết thúc:', 'End Date:')}</span>
                     <span className="font-semibold text-text-primary">
-                      {project.end_date ? new Date(project.end_date).toLocaleDateString('vi-VN') : '—'}
+                      {project.end_date ? formatDate(project.end_date) : '—'}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-border/60">
-                    <span className="text-text-muted">Ngày khởi tạo:</span>
+                    <span className="text-text-muted">{t('Ngày khởi tạo:', 'Created At:')}</span>
                     <span className="font-semibold text-text-primary">
-                      {project.created_at ? new Date(project.created_at).toLocaleDateString('vi-VN') : '—'}
+                      {project.created_at ? formatDate(project.created_at) : '—'}
                     </span>
                   </div>
                 </CardContent>
@@ -589,9 +574,9 @@ const ProjectDetailPage: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
-                <CardTitle>Thành viên Dự án ({projectMembers.length})</CardTitle>
+                <CardTitle>{t('Thành viên Dự án', 'Project Members')} ({projectMembers.length})</CardTitle>
                 <CardDescription>
-                  Danh sách nhân sự tham gia trực tiếp và được cấp quyền theo dõi dự án này.
+                  {t('Danh sách nhân sự tham gia trực tiếp và được cấp quyền theo dõi dự án này.', 'Employees assigned directly with access to track and collaborate on this project.')}
                 </CardDescription>
               </div>
               {canManageTasks && (
@@ -601,16 +586,16 @@ const ProjectDetailPage: React.FC = () => {
                   leftIcon={<UserPlus className="h-4 w-4" />}
                   onClick={() => setIsAddMemberOpen(true)}
                 >
-                  Thêm thành viên
+                  {t('Thêm thành viên', 'Add Member')}
                 </Button>
               )}
             </CardHeader>
             <CardContent>
               {isMembersLoading ? (
-                <p className="text-xs text-text-muted text-center py-6">Đang tải danh sách thành viên...</p>
+                <p className="text-xs text-text-muted text-center py-6">{t('Đang tải danh sách thành viên...', 'Loading project members...')}</p>
               ) : projectMembers.length === 0 ? (
                 <div className="text-center py-12 text-xs text-text-muted border border-dashed border-border rounded-xl">
-                  Chưa có thành viên cụ thể nào được gán trực tiếp cho dự án này.
+                  {t('Chưa có thành viên cụ thể nào được gán trực tiếp cho dự án này.', 'No members directly assigned to this project yet.')}
                 </div>
               ) : (
                 <div className="divide-y divide-border/60">
@@ -626,14 +611,12 @@ const ProjectDetailPage: React.FC = () => {
                             )}
                           </div>
                           <span className="text-[11px] text-text-muted">
-                            {member.job_title || member.position || member.email || 'Thành viên dự án'}
+                            {member.job_title || member.position || member.email || t('Thành viên dự án', 'Project Member')}
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={member.is_active ? 'success' : 'danger'} showDot>
-                          {member.is_active ? 'Hoạt động' : 'Tạm khóa'}
-                        </Badge>
+                        <StatusBadge isActive={Boolean(member.is_active)} size="sm" />
                       </div>
                     </div>
                   ))}
@@ -648,81 +631,79 @@ const ProjectDetailPage: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
-                <CardTitle>Tasks List ({projectTasks.length})</CardTitle>
-                <CardDescription>Bảng phân phối công việc dự án</CardDescription>
+                <CardTitle>{t('Danh sách Công việc', 'Tasks List')} ({projectTasks.length})</CardTitle>
+                <CardDescription>{t('Bảng phân phối công việc dự án', 'Project task allocation table')}</CardDescription>
               </div>
               {canManageTasks && (
                 <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />} onClick={handleOpenCreate}>
-                  Tạo Task Mới
+                  {t('Tạo Task Mới', 'Create Task')}
                 </Button>
               )}
             </CardHeader>
             <CardContent>
               {projectTasks.length === 0 ? (
                 <div className="text-center py-12 text-xs text-text-muted border border-dashed border-border rounded-xl">
-                  Chưa có công việc nào. Nhấp "Tạo Task Mới" để bắt đầu.
+                  {t('Chưa có công việc nào. Nhấp "Tạo Task Mới" để bắt đầu.', 'No tasks yet. Click "Create Task" to get started.')}
                 </div>
               ) : (
                 <div className="overflow-x-auto border border-border rounded-xl">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-accent/40 border-b border-border text-text-muted uppercase tracking-wider font-semibold">
-                        <th className="p-3">Tên Task</th>
-                        <th className="p-3">Độ ưu tiên</th>
-                        <th className="p-3">Thời hạn</th>
-                        <th className="p-3">Người thực hiện</th>
-                        <th className="p-3">Trạng thái</th>
-                        <th className="p-3 text-right">Hành động</th>
+                        <th className="p-3">{t('Tên Task', 'Task Name')}</th>
+                        <th className="p-3">{t('Độ ưu tiên', 'Priority')}</th>
+                        <th className="p-3">{t('Thời hạn', 'Deadline')}</th>
+                        <th className="p-3">{t('Người thực hiện', 'Assignee')}</th>
+                        <th className="p-3">{t('Trạng thái', 'Status')}</th>
+                        <th className="p-3 text-center w-20">{t('Hành động', 'Actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
-                      {projectTasks.map((t) => {
-                        const assignee = employees.find(emp => emp.id === t.assigned_to);
+                      {projectTasks.map((taskItem) => {
+                        const assignee = employees.find(emp => emp.id === taskItem.assigned_to);
+                        const taskTitle = taskItem.title || taskItem.name;
                         return (
-                          <tr key={t.id} className="hover:bg-accent/20 transition-colors">
-                            <td className="p-3 font-semibold text-text-primary">{t.title || t.name}</td>
-                            <td className="p-3">
-                              <Badge
-                                variant={
-                                  t.priority === 'Urgent' || t.priority === 'High'
-                                    ? 'danger'
-                                    : t.priority === 'Medium'
-                                      ? 'warning'
-                                      : 'primary'
-                                }
-                              >
-                                {t.priority || 'Medium'}
-                              </Badge>
+                          <tr key={taskItem.id} className="hover:bg-accent/20 transition-colors">
+                            <td className="p-3 font-semibold text-text-primary max-w-[260px] truncate" title={taskTitle}>
+                              {taskTitle}
                             </td>
-                            <td className="p-3 text-text-muted">
-                              {t.deadline ? new Date(t.deadline).toLocaleDateString('vi-VN') : '—'}
+                            <td className="p-3">
+                              <StatusBadge status={taskItem.priority || 'Medium'} size="sm" />
+                            </td>
+                            <td className="p-3 text-text-muted whitespace-nowrap">
+                              {taskItem.deadline ? formatDate(taskItem.deadline) : '—'}
                             </td>
                             <td className="p-3">
                               {assignee ? (
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 min-w-0 max-w-[160px]">
                                   <Avatar name={assignee.full_name} src={assignee.avatar_url} size="sm" />
-                                  <span className="font-medium text-text-primary">{assignee.full_name}</span>
+                                  <span className="font-medium text-text-primary truncate" title={assignee.full_name}>
+                                    {assignee.full_name}
+                                  </span>
                                 </div>
                               ) : (
                                 <span className="text-text-muted">—</span>
                               )}
                             </td>
                             <td className="p-3">
-                              <Select
-                                value={t.status || 'To Do'}
+                              <select
+                                value={taskItem.status || 'To Do'}
                                 disabled={!canManageTasks}
-                                onChange={(e) => handleStatusChange(t.id, e.target.value)}
-                                options={[
-                                  { value: 'To Do', label: 'To Do' },
-                                  { value: 'In Progress', label: 'In Progress' },
-                                  { value: 'Done', label: 'Done' },
-                                ]}
-                              />
+                                onChange={(e) => handleStatusChange(taskItem.id, e.target.value)}
+                                className={`h-7 px-2.5 rounded-full font-semibold text-xs border cursor-pointer focus:outline-none transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${getStatusSelectClass(taskItem.status || 'To Do')}`}
+                              >
+                                <option value="To Do" className="bg-surface text-text-primary">{statusLabel('To Do')}</option>
+                                <option value="In Progress" className="bg-surface text-text-primary">{statusLabel('In Progress')}</option>
+                                <option value="Done" className="bg-surface text-text-primary">{statusLabel('Done')}</option>
+                              </select>
                             </td>
-                            <td className="p-3 text-right">
-                              <Button variant="outline" size="sm" onClick={() => handleOpenEdit(t)}>
-                                Sửa / Xem chi tiết
-                              </Button>
+                            <td className="p-3 text-center">
+                              <EntityActions
+                                layout="menu"
+                                align="center"
+                                onView={() => handleOpenEdit(taskItem)}
+                                onEdit={canManageTasks ? () => handleOpenEdit(taskItem) : undefined}
+                              />
                             </td>
                           </tr>
                         );
@@ -739,7 +720,7 @@ const ProjectDetailPage: React.FC = () => {
         {activeTab === 'tasks' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {['To Do', 'In Progress', 'Done'].map((colStatus) => {
-              const colTasks = projectTasks.filter(t => (t.status || 'To Do') === colStatus);
+              const colTasks = projectTasks.filter(taskItem => (taskItem.status || 'To Do') === colStatus);
               return (
                 <div key={colStatus} className="space-y-4 rounded-2xl border border-border bg-surface/50 p-4">
                   <div className="flex items-center justify-between">
@@ -747,7 +728,7 @@ const ProjectDetailPage: React.FC = () => {
                       <span className={`h-3 w-3 rounded-full ${
                         colStatus === 'Done' ? 'bg-emerald-500' : colStatus === 'In Progress' ? 'bg-sky-500' : 'bg-amber-500'
                       }`} />
-                      <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">{colStatus}</h3>
+                      <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">{statusLabel(colStatus)}</h3>
                     </div>
                     <Badge variant="primary">{colTasks.length}</Badge>
                   </div>
@@ -755,15 +736,15 @@ const ProjectDetailPage: React.FC = () => {
                   <div className="space-y-3 min-h-[300px]">
                     {colTasks.length === 0 ? (
                       <p className="text-center py-12 text-[10px] text-text-muted border border-dashed border-border rounded-xl">
-                        Không có task trong cột này
+                        {t('Không có task trong cột này', 'No tasks in this column')}
                       </p>
                     ) : (
-                      colTasks.map((t) => {
-                        const assignee = employees.find(e => e.id === t.assigned_to);
+                      colTasks.map((taskItem) => {
+                        const assignee = employees.find(e => e.id === taskItem.assigned_to);
                         return (
-                          <Card key={t.id} variant="interactive" onClick={() => handleOpenEdit(t)}>
+                          <Card key={taskItem.id} variant="interactive" onClick={() => handleOpenEdit(taskItem)}>
                             <CardContent className="p-3 space-y-3">
-                              <h4 className="text-xs font-bold text-text-primary leading-tight">{t.title || t.name}</h4>
+                              <h4 className="text-xs font-bold text-text-primary leading-tight">{taskItem.title || taskItem.name}</h4>
                               <div className="flex items-center justify-between text-[10px] pt-2 border-t border-border/60">
                                 {assignee ? (
                                   <div className="flex items-center gap-1">
@@ -771,20 +752,9 @@ const ProjectDetailPage: React.FC = () => {
                                     <span className="font-semibold text-text-primary truncate max-w-[80px]">{assignee.full_name}</span>
                                   </div>
                                 ) : (
-                                  <span className="text-text-muted">Chưa gán</span>
+                                  <span className="text-text-muted">{t('Chưa gán', 'Unassigned')}</span>
                                 )}
-                                <Badge
-                                  variant={
-                                    t.priority === 'Urgent' || t.priority === 'High'
-                                      ? 'danger'
-                                      : t.priority === 'Medium'
-                                        ? 'warning'
-                                        : 'outline'
-                                  }
-                                  size="sm"
-                                >
-                                  {t.priority || 'Medium'}
-                                </Badge>
+                                <StatusBadge status={taskItem.priority || 'Medium'} size="sm" />
                               </div>
                             </CardContent>
                           </Card>
@@ -812,24 +782,24 @@ const ProjectDetailPage: React.FC = () => {
         {activeTab === 'calendar' && (
           <Card>
             <CardHeader>
-              <CardTitle>Lịch hạn chót công việc dự án (Project Calendar)</CardTitle>
-              <CardDescription>Thời hạn hoàn thành (Deadlines) của các task trong dự án này</CardDescription>
+              <CardTitle>{t('Lịch hạn chót công việc dự án', 'Project Deadline Calendar')}</CardTitle>
+              <CardDescription>{t('Thời hạn hoàn thành (Deadlines) của các task trong dự án này', 'Task due dates scheduled within this project')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {projectTasks.filter(t => t.deadline).length === 0 ? (
-                  <p className="text-xs text-text-muted text-center py-6 w-full col-span-2">Không có hạn chót công việc nào được cấu hình cho dự án này.</p>
+                {projectTasks.filter(taskItem => taskItem.deadline).length === 0 ? (
+                  <p className="text-xs text-text-muted text-center py-6 w-full col-span-2">{t('Không có hạn chót công việc nào được cấu hình cho dự án này.', 'No task deadlines configured for this project.')}</p>
                 ) : (
-                  projectTasks.filter(t => t.deadline).map((task) => (
+                  projectTasks.filter(taskItem => taskItem.deadline).map((task) => (
                     <div key={task.id} className="p-3.5 rounded-xl border border-border flex items-center justify-between text-xs">
                       <div>
                         <p className="font-bold text-text-primary">{task.title || task.name}</p>
                         <p className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
                           <CalendarIcon className="h-3.5 w-3.5 text-primary" />
-                          <span>Hạn: {new Date(task.deadline || '').toLocaleDateString('vi-VN')}</span>
+                          <span>{t('Hạn:', 'Due:')} {formatDate(task.deadline || '')}</span>
                         </p>
                       </div>
-                      <Badge variant={task.status === 'Done' ? 'success' : 'warning'}>{task.status}</Badge>
+                      <StatusBadge status={task.status} size="sm" />
                     </div>
                   ))
                 )}
@@ -852,20 +822,20 @@ const ProjectDetailPage: React.FC = () => {
         {activeTab === 'activity' && (
           <Card>
             <CardHeader>
-              <CardTitle>Nhật ký hoạt động dự án (Activity Log)</CardTitle>
-              <CardDescription>Các cập nhật, chỉnh sửa và hoạt động gần đây thuộc dự án</CardDescription>
+              <CardTitle>{t('Nhật ký hoạt động dự án', 'Project Activity Log')}</CardTitle>
+              <CardDescription>{t('Các cập nhật, chỉnh sửa và hoạt động gần đây thuộc dự án', 'Recent updates, edits, and milestones for this project')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="relative border-l border-border pl-6 space-y-5 text-xs text-text-secondary">
                 <div className="relative">
                   <span className="absolute -left-[30px] top-0.5 p-1 rounded-full bg-emerald-500 text-white"><CheckSquare className="h-3 w-3" /></span>
-                  <p className="font-semibold text-text-primary">Hoàn thành thống kê tiến độ</p>
-                  <p className="text-[10px] text-text-muted mt-0.5">Vừa xong · Hệ thống tự động phân tích</p>
+                  <p className="font-semibold text-text-primary">{t('Hoàn thành thống kê tiến độ', 'Progress summary synchronized')}</p>
+                  <p className="text-[10px] text-text-muted mt-0.5">{t('Vừa xong · Hệ thống tự động phân tích', 'Just now · Automated analytics')}</p>
                 </div>
                 <div className="relative">
                   <span className="absolute -left-[30px] top-0.5 p-1 rounded-full bg-primary text-white"><Briefcase className="h-3 w-3" /></span>
-                  <p className="font-semibold text-text-primary">Khởi tạo dự án và cấu hình thành viên</p>
-                  <p className="text-[10px] text-text-muted mt-0.5">Ngày {project.created_at ? new Date(project.created_at).toLocaleDateString('vi-VN') : '—'} · Quản trị viên</p>
+                  <p className="font-semibold text-text-primary">{t('Khởi tạo dự án và cấu hình thành viên', 'Project initialized and members configured')}</p>
+                  <p className="text-[10px] text-text-muted mt-0.5">{t('Ngày', 'Date')} {project.created_at ? formatDate(project.created_at) : '—'} · {t('Quản trị viên', 'Administrator')}</p>
                 </div>
               </div>
             </CardContent>
@@ -876,25 +846,25 @@ const ProjectDetailPage: React.FC = () => {
         {activeTab === 'settings' && isAdminOrManager && (
           <Card>
             <CardHeader>
-              <CardTitle>Thiết lập dự án</CardTitle>
-              <CardDescription>Cập nhật tên, mã dự án, mô tả và trạng thái hoạt động</CardDescription>
+              <CardTitle>{t('Thiết lập dự án', 'Project Settings')}</CardTitle>
+              <CardDescription>{t('Cập nhật tên, mã dự án, mô tả và trạng thái hoạt động', 'Update project title, code, description, and status')}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSaveSettings} className="space-y-4 max-w-xl">
                 <Input
-                  label="Tên dự án *"
+                  label={t('Tên dự án *', 'Project Name *')}
                   value={projName}
                   onChange={(e) => setProjName(e.target.value)}
                   required
                 />
                 <Input
-                  label="Mã dự án *"
+                  label={t('Mã dự án *', 'Project Code *')}
                   value={projCode}
                   onChange={(e) => setProjCode(e.target.value)}
                   required
                 />
                 <Select
-                  label="Phòng ban phụ trách *"
+                  label={t('Phòng ban phụ trách *', 'Department *')}
                   value={projDeptId ? String(projDeptId) : ''}
                   onChange={(e) => {
                     const val = e.target.value ? Number(e.target.value) : null;
@@ -902,7 +872,7 @@ const ProjectDetailPage: React.FC = () => {
                     setProjTeamId(null);
                   }}
                   options={[
-                    { value: '', label: '-- Chọn Phòng ban phụ trách --' },
+                    { value: '', label: t('-- Chọn Phòng ban phụ trách --', '-- Select Department --') },
                     ...departments.map((d) => ({
                       value: String(d.id),
                       label: d.name,
@@ -911,48 +881,48 @@ const ProjectDetailPage: React.FC = () => {
                   required
                 />
                 <Select
-                  label="Team phụ trách (Primary Team)"
+                  label={t('Team phụ trách (Primary Team)', 'Primary Team')}
                   value={projTeamId ? String(projTeamId) : ''}
                   onChange={(e) => setProjTeamId(e.target.value ? Number(e.target.value) : null)}
                   options={[
-                    { value: '', label: projDeptId ? '-- Chọn Team (Tùy chọn) --' : '-- Chọn Phòng ban trước --' },
+                    { value: '', label: projDeptId ? t('-- Chọn Team (Tùy chọn) --', '-- Select Team (Optional) --') : t('-- Chọn Phòng ban trước --', '-- Select Department First --') },
                     ...teams
-                      .filter((t) => Number(t.department_id) === Number(projDeptId))
-                      .map((t) => ({
-                        value: String(t.id),
-                        label: t.name,
+                      .filter((teamItem) => Number(teamItem.department_id) === Number(projDeptId))
+                      .map((teamItem) => ({
+                        value: String(teamItem.id),
+                        label: teamItem.name,
                       })),
                   ]}
                   disabled={!projDeptId}
                 />
                 <Textarea
-                  label="Mô tả chi tiết"
+                  label={t('Mô tả chi tiết', 'Description')}
                   value={projDesc}
                   onChange={(e) => setProjDesc(e.target.value)}
                   rows={4}
                 />
                 <Select
-                  label="Trạng thái"
+                  label={t('Trạng thái', 'Status')}
                   value={projStatus}
                   onChange={(e) => setProjStatus(e.target.value)}
                   options={[
-                    { value: 'Planning', label: 'Planning (Lập kế hoạch)' },
-                    { value: 'Active', label: 'Active (Đang hoạt động)' },
-                    { value: 'Completed', label: 'Completed (Hoàn thành)' },
+                    { value: 'Planning', label: statusLabel('Planning') },
+                    { value: 'Active', label: statusLabel('Active') },
+                    { value: 'Completed', label: statusLabel('Completed') },
                   ]}
                 />
                 <Button variant="primary" size="sm" type="submit" isLoading={isSavingSettings}>
-                  Cập nhật Thiết lập
+                  {t('Cập nhật Thiết lập', 'Save Settings')}
                 </Button>
               </form>
 
               {/* Danger Zone */}
               <div className="mt-8 pt-6 border-t border-rose-500/20 max-w-xl">
                 <h4 className="text-xs font-bold text-rose-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <AlertTriangle className="h-4 w-4" /> Vùng Nguy Hiểm (Danger Zone)
+                  <AlertTriangle className="h-4 w-4" /> {t('Vùng Nguy Hiểm (Danger Zone)', 'Danger Zone')}
                 </h4>
                 <p className="text-xs text-text-muted mb-4">
-                  Xóa dự án này sẽ gỡ bỏ liên kết của toàn bộ sprint, backlog và các công việc liên quan. Hành động này không thể hoàn tác.
+                  {t('Xóa dự án này sẽ gỡ bỏ liên kết của toàn bộ sprint, backlog và các công việc liên quan. Hành động này không thể hoàn tác.', 'Deleting this project will remove all associated sprints, backlog items, and tasks. This action cannot be undone.')}
                 </p>
                 <Button
                   variant="danger"
@@ -961,7 +931,7 @@ const ProjectDetailPage: React.FC = () => {
                   type="button"
                   onClick={() => setIsDeleteProjectOpen(true)}
                 >
-                  Xóa Vĩnh viễn Dự án
+                  {t('Xóa Vĩnh viễn Dự án', 'Delete Project Permanently')}
                 </Button>
               </div>
             </CardContent>
@@ -990,12 +960,12 @@ const ProjectDetailPage: React.FC = () => {
       <Modal
         isOpen={isAddMemberOpen}
         onClose={() => setIsAddMemberOpen(false)}
-        title="Thêm thành viên vào dự án"
-        description="Chọn nhân sự từ danh sách thuộc Phòng ban / Team để thêm vào dự án."
+        title={t('Thêm thành viên vào dự án', 'Add Member to Project')}
+        description={t('Chọn nhân sự từ danh sách thuộc Phòng ban / Team để thêm vào dự án.', 'Select an employee from the Department / Team to assign to this project.')}
         footer={
           <div className="flex items-center justify-end gap-2 w-full">
             <Button variant="outline" size="sm" onClick={() => setIsAddMemberOpen(false)}>
-              Hủy bỏ
+              {t('Hủy bỏ', 'Cancel')}
             </Button>
             <Button
               variant="primary"
@@ -1004,17 +974,17 @@ const ProjectDetailPage: React.FC = () => {
               disabled={!selectedEmployeeId}
               isLoading={addProjectMember.isPending}
             >
-              Thêm vào dự án
+              {t('Thêm vào dự án', 'Add to Project')}
             </Button>
           </div>
         }
       >
         <Select
-          label="Chọn nhân viên *"
+          label={t('Chọn nhân viên *', 'Select Employee *')}
           value={selectedEmployeeId}
           onChange={(e) => setSelectedEmployeeId(e.target.value)}
           options={[
-            { value: '', label: '-- Chọn nhân viên hợp lệ --' },
+            { value: '', label: t('-- Chọn nhân viên hợp lệ --', '-- Select Eligible Employee --') },
             ...eligibleAssignees.map((emp: any) => ({
               value: String(emp.id),
               label: `${emp.full_name}${emp.employee_code ? ` (${emp.employee_code})` : ''}`,
@@ -1027,9 +997,12 @@ const ProjectDetailPage: React.FC = () => {
       <ConfirmationModal
         isOpen={!!taskToDelete}
         onClose={() => setTaskToDelete(null)}
-        title="Xóa công việc"
-        message={`Bạn có chắc chắn muốn xóa công việc "${taskToDelete?.title || taskToDelete?.name}"?`}
-        confirmText="Xóa"
+        title={t('Xóa công việc', 'Delete Task')}
+        message={t(
+          `Bạn có chắc chắn muốn xóa công việc "${taskToDelete?.title || taskToDelete?.name}"?`,
+          `Are you sure you want to delete task "${taskToDelete?.title || taskToDelete?.name}"?`,
+        )}
+        confirmText={t('Xóa', 'Delete')}
         onConfirm={handleConfirmDeleteTask}
         isLoading={deleteTaskMutation.isPending}
       />
@@ -1038,9 +1011,12 @@ const ProjectDetailPage: React.FC = () => {
       <ConfirmationModal
         isOpen={isDeleteProjectOpen}
         onClose={() => setIsDeleteProjectOpen(false)}
-        title="Xóa vĩnh viễn dự án"
-        message={`Bạn có chắc chắn muốn xóa vĩnh viễn dự án "${project.name}"? Toàn bộ tài nguyên liên quan sẽ bị gỡ bỏ.`}
-        confirmText="Xóa Dự án"
+        title={t('Xóa vĩnh viễn dự án', 'Delete Project Permanently')}
+        message={t(
+          `Bạn có chắc chắn muốn xóa vĩnh viễn dự án "${project.name}"? Toàn bộ tài nguyên liên quan sẽ bị gỡ bỏ.`,
+          `Are you sure you want to permanently delete "${project.name}"? All linked resources will be removed.`,
+        )}
+        confirmText={t('Xóa Dự án', 'Delete Project')}
         onConfirm={handleConfirmDeleteProject}
         isLoading={deleteProjectMutation.isPending}
       />

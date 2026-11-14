@@ -1,5 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { employeesApi, type EmployeeItem } from '../api/services';
+import {
+  employeesApi,
+  type AdminResetPasswordPayload,
+  type EmployeeItem,
+  type PasswordResetRequestItem,
+} from '../api/services';
 import { useAuth } from '../providers/AuthProvider';
 import { isValidEntityId } from '../utils/entityId';
 
@@ -69,6 +74,40 @@ export const useUpdateEmployeeStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       queryClient.invalidateQueries({ queryKey: ['employees', id] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+
+export const usePasswordResetRequests = (enabled = false) => {
+  return useQuery<PasswordResetRequestItem[], Error>({
+    queryKey: ['employees', 'password-reset-requests'],
+    queryFn: employeesApi.getPasswordResetRequests,
+    enabled,
+    refetchInterval: 1000 * 30,
+  });
+};
+
+export const useAdminResetPassword = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: AdminResetPasswordPayload }) =>
+      employeesApi.resetPassword(id, payload),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employees', id] });
+      queryClient.invalidateQueries({ queryKey: ['employees', 'password-reset-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+};
+
+export const useDismissPasswordResetRequest = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (employeeId: number) => employeesApi.dismissPasswordResetRequest(employeeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees', 'password-reset-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };

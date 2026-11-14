@@ -3,8 +3,8 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from sqlalchemy import select, update
-from pydantic import BaseModel, ConfigDict, EmailStr
+from sqlalchemy import func, select, update
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.database import get_db
 from app.models.employee import Employee
@@ -18,6 +18,16 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     get_password_hash,
+    password_fingerprint,
+    verify_password_reset_token,
+)
+from app.schemas.employee import validate_password_policy_value
+from app.services.notification.websocket_manager import websocket_manager
+from app.services.password_reset_service import (
+    apply_password_change,
+    build_reset_link,
+    notify_admins_password_reset_request,
+    try_send_password_reset_email,
 )
 from app.core.deps import get_current_user, oauth2_scheme
 from app.core.constants import ROLE_MAP
@@ -75,6 +85,22 @@ class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
     confirm_password: str | None = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+    note: str | None = Field(default=None, max_length=300)
+
+
+class ResetPasswordConfirmRequest(BaseModel):
+    token: str = Field(..., min_length=10)
+    new_password: str
+    confirm_password: str | None = None
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        return validate_password_policy_value(v)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -265,6 +291,125 @@ def change_password(
     current_user.updated_at = datetime.now(timezone.utc)
     db.commit()
     return {"message": "Mật khẩu đã được cập nhật thành công."}
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    request: Request,
+    data: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    normalized_email = data.email.strip().lower()
+    employee = db.scalars(
+        select(Employee).where(
+            func.lower(Employee.email) == normalized_email,
+            Employee.is_deleted == False,  # noqa: E712
+        )
+    ).first()
+
+    admin_notified = False
+    email_sent = False
+    if employee is not None and employee.is_active:
+        notified_admin_ids, payload_ctx = notify_admins_password_reset_request(
+            db, employee, note=data.note
+        )
+        db.add(
+            AuditLog(
+                employee_id=employee.id,
+                employee_email=employee.email,
+                action="PASSWORD_RESET_REQUEST",
+            )
+        )
+        reset_link = build_reset_link(request, employee)
+        email_sent = try_send_password_reset_email(
+            employee.email,
+            employee.full_name,
+            reset_link=reset_link,
+        )
+        db.commit()
+
+        admin_notified = len(notified_admin_ids) > 0
+        ws_payload = {
+            "event": "employee.changed",
+            "type": "PASSWORD_RESET_REQUEST",
+            "title": "Yêu cầu đặt lại mật khẩu",
+            "message": f"{employee.full_name} ({employee.email}) vừa gửi yêu cầu đặt lại mật khẩu.",
+            **payload_ctx,
+        }
+        for admin_id in notified_admin_ids:
+            try:
+                await websocket_manager.send_private_notification(admin_id, ws_payload)
+            except Exception:
+                pass
+
+    return {
+        "message": (
+            "Yêu cầu đặt lại mật khẩu đã được ghi nhận và gửi tới Quản trị viên hệ thống. "
+            "Nếu email doanh nghiệp đã cấu hình SMTP, liên kết đặt lại cũng sẽ được gửi vào hộp thư của bạn."
+        ),
+        "admin_notified": admin_notified,
+        "email_sent": email_sent,
+    }
+
+
+@router.post("/reset-password")
+def reset_password_with_token(
+    data: ResetPasswordConfirmRequest,
+    db: Session = Depends(get_db),
+):
+    if data.confirm_password is not None and data.new_password != data.confirm_password:
+        raise HTTPException(
+            status_code=400, detail="Mật khẩu mới và xác nhận mật khẩu không trùng khớp."
+        )
+
+    payload = verify_password_reset_token(data.token.strip())
+    if not payload:
+        raise HTTPException(
+            status_code=400,
+            detail="Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.",
+        )
+
+    try:
+        emp_id = int(payload["sub"])
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Mã đặt lại mật khẩu không hợp lệ.")
+
+    employee = db.get(Employee, emp_id)
+    if (
+        employee is None
+        or employee.is_deleted
+        or not employee.is_active
+        or password_fingerprint(employee.password_hash) != payload.get("fp")
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Liên kết đặt lại mật khẩu đã được sử dụng hoặc không còn hiệu lực.",
+        )
+
+    apply_password_change(
+        db,
+        employee,
+        data.new_password,
+        force_first_login=False,
+    )
+    db.add(
+        AuditLog(
+            employee_id=employee.id,
+            employee_email=employee.email,
+            action="PASSWORD_RESET_COMPLETED",
+        )
+    )
+    db.commit()
+    websocket_manager.broadcast_threadsafe(
+        {
+            "event": "employee.changed",
+            "action": "password_reset_completed",
+            "employee_id": employee.id,
+        }
+    )
+    return {
+        "message": "Mật khẩu đã được đặt lại thành công. Bạn có thể đăng nhập bằng mật khẩu mới."
+    }
 
 
 @router.get("/sessions", response_model=list[SessionResponse])

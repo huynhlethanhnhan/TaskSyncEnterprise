@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
 import { feedbackApi, type TaskItem } from '../../api/services';
 import { useToast } from '../../providers/ToastProvider';
+import { useSettings } from '../../providers/SettingsProvider';
 
 export interface TaskDeleteRequestModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const TaskDeleteRequestModal: React.FC<TaskDeleteRequestModalProps> = ({
   onSubmitted,
 }) => {
   const toast = useToast();
+  const { t, statusLabel } = useSettings();
   const [reason, setReason] = React.useState('');
   const [additionalInfo, setAdditionalInfo] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -35,7 +37,7 @@ export const TaskDeleteRequestModal: React.FC<TaskDeleteRequestModalProps> = ({
     if (!task) return;
 
     if (!reason.trim()) {
-      toast.error('Thiếu thông tin', 'Vui lòng nhập lý do yêu cầu xóa công việc.');
+      toast.error(t('Thiếu thông tin', 'Missing Information'), t('Vui lòng nhập lý do yêu cầu xóa công việc.', 'Please enter a reason for the task deletion request.'));
       return;
     }
 
@@ -51,13 +53,16 @@ export const TaskDeleteRequestModal: React.FC<TaskDeleteRequestModalProps> = ({
       });
 
       toast.success(
-        'Đã gửi yêu cầu xóa thành công',
-        'Yêu cầu của bạn đang ở trạng thái Chờ duyệt (Pending) và sẽ được Quản lý/Admin xem xét.'
+        t('Đã gửi yêu cầu xóa thành công', 'Deletion Request Submitted'),
+        t(
+          'Yêu cầu của bạn đang ở trạng thái Chờ duyệt (Pending) và sẽ được Quản lý/Admin xem xét.',
+          'Your request is now Pending approval and will be reviewed by a Manager/Admin.'
+        )
       );
       onSubmitted?.();
       onClose();
     } catch {
-      toast.error('Gửi yêu cầu thất bại', 'Không thể gửi yêu cầu xóa vào lúc này. Vui lòng thử lại sau.');
+      toast.error(t('Gửi yêu cầu thất bại', 'Submission Failed'), t('Không thể gửi yêu cầu xóa vào lúc này. Vui lòng thử lại sau.', 'Unable to submit deletion request right now. Please try again later.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -67,15 +72,15 @@ export const TaskDeleteRequestModal: React.FC<TaskDeleteRequestModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Yêu cầu Xóa Công việc (Delete Request)"
+      title={t('Yêu cầu Xóa Công việc (Delete Request)', 'Task Deletion Request')}
       size="md"
       footer={
         <>
           <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
-            Hủy bỏ
+            {t('Hủy bỏ', 'Cancel')}
           </Button>
           <Button variant="danger" size="sm" onClick={handleSubmit} isLoading={isSubmitting}>
-            Gửi yêu cầu
+            {t('Gửi yêu cầu', 'Submit Request')}
           </Button>
         </>
       }
@@ -84,21 +89,24 @@ export const TaskDeleteRequestModal: React.FC<TaskDeleteRequestModalProps> = ({
         {task && (
           <div className="p-3 rounded-lg bg-accent/20 border border-border">
             <p className="font-semibold text-text-primary">
-              Công việc: <span className="font-bold text-primary">{task.title || task.name}</span>
+              {t('Công việc:', 'Task:')} <span className="font-bold text-primary">{task.title || task.name}</span>
             </p>
             <p className="text-[11px] text-text-muted mt-0.5">
-              Trạng thái: {task.status} · Ưu tiên: {task.priority || 'Normal'}
+              {t('Trạng thái:', 'Status:')} {statusLabel(task.status)} · {t('Ưu tiên:', 'Priority:')} {statusLabel(task.priority || 'Normal')}
             </p>
           </div>
         )}
 
         <div className="text-[11px] text-text-secondary leading-relaxed">
-          Theo chính sách bảo toàn dữ liệu, Nhân viên không thể trực tiếp xóa công việc. Vui lòng cung cấp lý do để người quản trị hoặc trưởng nhóm phê duyệt.
+          {t(
+            'Theo chính sách bảo toàn dữ liệu, Nhân viên không thể trực tiếp xóa công việc. Vui lòng cung cấp lý do để người quản trị hoặc trưởng nhóm phê duyệt.',
+            'Under our data integrity policy, employees cannot directly delete tasks. Please provide a reason for your administrator or team lead to review.'
+          )}
         </div>
 
         <Textarea
-          label="Lý do xóa (Reason) *"
-          placeholder="Nêu rõ lý do cần xóa công việc này (ví dụ: tạo trùng lặp, hủy bỏ dự án, sai yêu cầu)..."
+          label={t('Lý do xóa (Reason) *', 'Reason for Deletion *')}
+          placeholder={t('Nêu rõ lý do cần xóa công việc này (ví dụ: tạo trùng lặp, hủy bỏ dự án, sai yêu cầu)...', 'Describe why this task should be deleted (e.g. duplicate, canceled scope, wrong requirement)...')}
           rows={3}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
@@ -106,8 +114,8 @@ export const TaskDeleteRequestModal: React.FC<TaskDeleteRequestModalProps> = ({
         />
 
         <Textarea
-          label="Thông tin bổ sung (Additional information)"
-          placeholder="Ghi chú thêm tài liệu hoặc nhân sự liên quan nếu có..."
+          label={t('Thông tin bổ sung (Additional information)', 'Additional Information')}
+          placeholder={t('Ghi chú thêm tài liệu hoặc nhân sự liên quan nếu có...', 'Add supporting documents or related stakeholders if applicable...')}
           rows={2}
           value={additionalInfo}
           onChange={(e) => setAdditionalInfo(e.target.value)}

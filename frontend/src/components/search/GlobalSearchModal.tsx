@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router';
 import { Search, Briefcase, CheckSquare, X, Command } from 'lucide-react';
 import { useProjects } from '../../hooks/useProjects';
 import { useTasks } from '../../hooks/useTasks';
-import { Badge } from '../common/Badge';
+import { StatusBadge } from '../common/StatusBadge';
+import { useSettings } from '../../providers/SettingsProvider';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface GlobalSearchModalProps {
 
 export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const { t } = useSettings();
   const [query, setQuery] = React.useState('');
   const [debouncedQuery, setDebouncedQuery] = React.useState('');
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -123,7 +125,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
           <Search className="h-4.5 w-4.5 text-text-muted shrink-0" />
           <input
             type="text"
-            placeholder="Tìm kiếm dự án, công việc..."
+            placeholder={t('Tìm kiếm dự án, công việc...', 'Search projects, tasks...')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 py-4 text-sm bg-transparent outline-none border-none text-text-primary placeholder:text-text-muted focus:ring-0"
@@ -146,27 +148,29 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         <div className="flex-1 overflow-y-auto p-2 min-h-[150px]">
           {projectsLoading || tasksLoading ? (
             <div className="flex items-center justify-center py-12 text-xs text-text-muted">
-              Đang đồng bộ cơ sở dữ liệu tìm kiếm...
+              {t('Đang đồng bộ cơ sở dữ liệu tìm kiếm...', 'Syncing search index...')}
             </div>
           ) : !debouncedQuery.trim() ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Command className="h-8 w-8 text-text-muted/60 mb-2 stroke-[1.25]" />
-              <p className="text-xs text-text-muted">Nhập từ khóa để tìm kiếm dự án hoặc task công việc.</p>
+              <p className="text-xs text-text-muted">{t('Nhập từ khóa để tìm kiếm dự án hoặc task công việc.', 'Type keywords to search projects or tasks.')}</p>
               <div className="flex gap-4 mt-3 text-[10px] text-text-muted">
-                <span><kbd className="border border-border bg-muted px-1 py-0.5 rounded">↑↓</kbd> Di chuyển</span>
-                <span><kbd className="border border-border bg-muted px-1 py-0.5 rounded">Enter</kbd> Chọn</span>
+                <span><kbd className="border border-border bg-muted px-1 py-0.5 rounded">↑↓</kbd> {t('Di chuyển', 'Navigate')}</span>
+                <span><kbd className="border border-border bg-muted px-1 py-0.5 rounded">Enter</kbd> {t('Chọn', 'Select')}</span>
               </div>
             </div>
           ) : flatResults.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-xs text-text-muted">Không tìm thấy kết quả nào trùng khớp với "{debouncedQuery}"</p>
+              <p className="text-xs text-text-muted">
+                {t('Không tìm thấy kết quả nào trùng khớp với', 'No matching results found for')} "{debouncedQuery}"
+              </p>
             </div>
           ) : (
             <div className="space-y-4 py-2">
               {searchResults.projects.length > 0 && (
                 <div>
                   <h4 className="px-3 text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">
-                    Dự án ({searchResults.projects.length})
+                    {t('Dự án', 'Projects')} ({searchResults.projects.length})
                   </h4>
                   <div className="space-y-0.5">
                     {searchResults.projects.map((proj, pIdx) => {
@@ -194,9 +198,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
                             </div>
                           </div>
                           {proj.status && (
-                            <Badge variant={proj.status === 'Active' ? 'success' : 'outline'} size="sm">
-                              {proj.status}
-                            </Badge>
+                            <StatusBadge status={proj.status} size="sm" />
                           )}
                         </button>
                       );
@@ -208,7 +210,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
               {searchResults.tasks.length > 0 && (
                 <div>
                   <h4 className="px-3 text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">
-                    Công việc ({searchResults.tasks.length})
+                    {t('Công việc', 'Tasks')} ({searchResults.tasks.length})
                   </h4>
                   <div className="space-y-0.5">
                     {searchResults.tasks.map((task, tIdx) => {
@@ -236,12 +238,8 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <Badge variant={task.priority === 'High' || task.priority === 'Urgent' ? 'danger' : 'outline'} size="sm">
-                              {task.priority}
-                            </Badge>
-                            <Badge variant={task.status === 'Done' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} size="sm">
-                              {task.status}
-                            </Badge>
+                            <StatusBadge status={task.priority} size="sm" />
+                            <StatusBadge status={task.status} size="sm" />
                           </div>
                         </button>
                       );

@@ -2,9 +2,11 @@ import * as React from 'react';
 import { useNavigate } from 'react-router';
 import { FileQuestion, ArrowLeft, LayoutDashboard } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { useSettings } from '../../providers/SettingsProvider';
 
 export const NotFoundPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useSettings();
 
   return (
     <div className="min-h-screen w-full bg-background flex items-center justify-center p-4 text-center font-sans">
@@ -13,13 +15,16 @@ export const NotFoundPage: React.FC = () => {
           <FileQuestion className="h-8 w-8 stroke-[1.75]" />
         </div>
         <span className="text-xs font-mono font-bold tracking-widest text-primary uppercase">
-          404 Page Not Found
+          {t('404 Không tìm thấy trang', '404 Page Not Found')}
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-text-primary mt-1">
-          Route Does Not Exist
+          {t('Đường dẫn không tồn tại', 'Route Does Not Exist')}
         </h1>
         <p className="text-xs text-text-muted mt-2 mb-6 leading-relaxed">
-          The page or resource you requested could not be located. It may have been moved, renamed, or deleted.
+          {t(
+            'Không thể tìm thấy trang hoặc tài nguyên bạn yêu cầu. Liên kết có thể đã được di chuyển, đổi tên hoặc xóa.',
+            'The page or resource you requested could not be located. It may have been moved, renamed, or deleted.'
+          )}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -30,7 +35,7 @@ export const NotFoundPage: React.FC = () => {
             leftIcon={<ArrowLeft className="h-4 w-4" />}
             onClick={() => navigate(-1)}
           >
-            Go Back
+            {t('Quay lại', 'Go Back')}
           </Button>
           <Button
             variant="primary"
@@ -39,7 +44,7 @@ export const NotFoundPage: React.FC = () => {
             leftIcon={<LayoutDashboard className="h-4 w-4" />}
             onClick={() => navigate('/dashboard')}
           >
-            Dashboard
+            {t('Bảng điều khiển', 'Dashboard')}
           </Button>
         </div>
       </div>

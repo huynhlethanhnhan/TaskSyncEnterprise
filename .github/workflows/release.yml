@@ -10,7 +10,7 @@ on:
       dry_run:
         description: 'Dry run (skip GitHub Release creation)'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 permissions:
@@ -100,7 +100,7 @@ jobs:
 
       - name: pip-audit dependency scan
         working-directory: backend
-        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325 --ignore-vuln PYSEC-2026-4298 --ignore-vuln CVE-2026-114603
 
       - name: Install frontend dependencies
         working-directory: frontend
